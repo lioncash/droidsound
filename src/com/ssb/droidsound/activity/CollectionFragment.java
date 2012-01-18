@@ -50,7 +50,7 @@ public class CollectionFragment extends Fragment {
 	protected static final int MENU_GROUP_REMOVE_FROM_PLAYLIST = 3;
 	protected static final int MENU_GROUP_CREATE_PLAYLIST = 4;
 
-	protected long currentSongId;
+	protected FastListFragment parentFragment;
 
 	protected SearchView searchView;
 
@@ -58,26 +58,10 @@ public class CollectionFragment extends Fragment {
 
 	protected FrameLayout progressContainerView;
 
-	private void navigateStart() {
-		Application.getSongDatabase().scan(false);
-
-		CollectionViewAdapter cva = new CollectionViewAdapter(getActivity(), new ICursorFactory() {
-			@Override
-			public Cursor getCursor() {
-				return Application.getSongDatabase().getFilesByParentId(null, getSorting());
-			}
-		});
-		ListFragment lf = new FastListFragment();
-		lf.setListAdapter(cva);
-
-		FragmentTransaction ft = getFragmentManager().beginTransaction();
-		ft.replace(R.id.collection_view, lf);
-		ft.commit();
-	}
-
 	protected void navigateWithBackStack(ICursorFactory cf) {
 		/* Move to subfolder */
 		ListFragment lf = new FastListFragment();
+		lf.setRetainInstance(true);
 		CollectionViewAdapter cva = new CollectionViewAdapter(getActivity(), cf);
 		lf.setListAdapter(cva);
 
@@ -100,7 +84,9 @@ public class CollectionFragment extends Fragment {
 			public void onReceive(Context c, Intent i) {
 				Log.i(TAG, "Song change received, redisplaying");
 				CollectionViewAdapter listAdapter = (CollectionViewAdapter) getListAdapter();
-				listAdapter.notifyDataSetChanged();
+				if (listAdapter != null) {
+					listAdapter.notifyDataSetChanged();
+				}
 			}
 		};
 
@@ -170,7 +156,9 @@ public class CollectionFragment extends Fragment {
 			final String composer = cursor.getString(SongDatabase.COL_COMPOSER);
 			final int date = cursor.getInt(SongDatabase.COL_DATE);
 
-			playingView.setVisibility(childId == currentSongId ? View.VISIBLE : View.GONE);
+			Long currentSongId = Application.getCurrentlyPlayingSongId();
+			playingView.setVisibility(currentSongId != null && currentSongId.equals(childId)
+					? View.VISIBLE : View.GONE);
 
 			final int icon;
 			switch (type) {
@@ -399,18 +387,6 @@ public class CollectionFragment extends Fragment {
 		menu.add(MENU_GROUP_CREATE_PLAYLIST, Menu.NONE, Menu.NONE, R.string.create_playlist);
 	}
 
-	private final BroadcastReceiver songChangeReceiver = new BroadcastReceiver() {
-		@Override
-		public void onReceive(Context c, Intent i) {
-			String a = i.getAction();
-			if (a.equals(Player.ACTION_LOADING_SONG)) {
-				currentSongId = i.getLongExtra("file.id", 0);
-			} else if (a.equals(Player.ACTION_UNLOADING_SONG)) {
-				currentSongId = 0;
-			}
-		}
-	};
-
 	private final BroadcastReceiver searchReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context c, Intent i) {
@@ -422,15 +398,8 @@ public class CollectionFragment extends Fragment {
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
-		Log.i(TAG, "Creating fragment");
 		super.onCreate(savedInstanceState);
 		setHasOptionsMenu(true);
-
-		IntentFilter intentFilter = new IntentFilter();
-		intentFilter.addAction(Player.ACTION_LOADING_SONG);
-		intentFilter.addAction(Player.ACTION_UNLOADING_SONG);
-		getActivity().getApplicationContext().registerReceiver(songChangeReceiver, intentFilter);
-		getActivity().getApplicationContext().registerReceiver(searchReceiver, new IntentFilter(Scanner.ACTION_SCAN));
 	}
 
 	@Override
@@ -484,12 +453,17 @@ public class CollectionFragment extends Fragment {
 
 			@Override
 			public boolean onQueryTextChange(final String newText) {
-				/* Do not try search if old query has not yet returned. */
-				CursorAdapter old = searchView.getSuggestionsAdapter();
-				if (old != null && old.getCursor() == null) {
+				/* Remove adapter to hide obsolete result sets.
+				 * Would be lovely to be able to interrupt any previous
+				 * query, but that does not strike as possible to me. */
+				searchView.setSuggestionsAdapter(null);
+
+				if (newText.length() < 3) {
 					return false;
 				}
 
+				/* We should probably ratelimit the asynctask spam we can cause.
+				 * Ideally we'd maintain an internal queue here. I'll just spam them for now. */
 				Log.i(TAG, "Firing a new suggestions scan for: '%s'", newText);
 				Cursor c = Application.getSongDatabase().search(newText, getSorting());
 				CursorAdapter ca = new SimpleCursorAdapter(
@@ -500,29 +474,41 @@ public class CollectionFragment extends Fragment {
 						new int[] { android.R.id.text1, android.R.id.text2 }
 				);
 				searchView.setSuggestionsAdapter(ca);
-				new AsyncQueryResult(c, ca).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+				new AsyncQueryResult(c, ca).executeOnExecutor(AsyncTask.SERIAL_EXECUTOR);
 				return true;
 			}
 		});
 
 		/* Restore list fragment */
-		Fragment topFragment = getFragmentManager().findFragmentById(R.id.collection_view);
-		if (topFragment != null) {
-			FragmentTransaction ft = getFragmentManager().beginTransaction();
-			ft.replace(R.id.collection_view, topFragment);
-			ft.commit();
-		} else {
-			navigateStart();
+		FastListFragment topFragment = (FastListFragment) getFragmentManager().findFragmentById(R.id.collection_view);
+		if (topFragment == parentFragment) {
+			parentFragment = new FastListFragment();
+			parentFragment.setRetainInstance(true);
+			CollectionViewAdapter cva = new CollectionViewAdapter(getActivity(), new ICursorFactory() {
+				@Override
+				public Cursor getCursor() {
+					return Application.getSongDatabase().getFilesByParentId(null, getSorting());
+				}
+			});
+			parentFragment.setListAdapter(cva);
+			topFragment = parentFragment;
 		}
+
+		FragmentTransaction ft = getFragmentManager().beginTransaction();
+		ft.replace(R.id.collection_view, topFragment);
+		ft.commit();
+
+		IntentFilter intentFilter = new IntentFilter();
+		intentFilter.addAction(Player.ACTION_LOADING_SONG);
+		intentFilter.addAction(Player.ACTION_UNLOADING_SONG);
+		getActivity().registerReceiver(searchReceiver, new IntentFilter(Scanner.ACTION_SCAN));
 
 		return view;
 	}
 
 	@Override
-	public void onDestroy() {
-		super.onDestroy();
-
-		getActivity().getApplicationContext().unregisterReceiver(songChangeReceiver);
-		getActivity().getApplicationContext().unregisterReceiver(searchReceiver);
+	public void onDestroyView() {
+		super.onDestroyView();
+		getActivity().unregisterReceiver(searchReceiver);
 	}
 }
