@@ -1,9 +1,9 @@
 /*! \file aciacore.c \n
- *  \author André Fachat, Spiro Trikaliotis\n
+ *  \author Andre Fachat, Spiro Trikaliotis\n
  *  \brief  Template file for ACIA 6551 emulation.
  *
  * Written by
- *  André Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *  Spiro Trikaliotis <spiro.trikaliotis@gmx.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -1003,9 +1003,9 @@ static BYTE myacia_read_(WORD addr)
         return 0xff;
       case T232_ECTRL:
         return acia.ectrl 
-                     + ((acia.ctrl & ACIA_CTRL_BITS_BPS_MASK) == ACIA_CTRL_BITS_BPS_16X_EXT_CLK) 
+                     + (((acia.ctrl & ACIA_CTRL_BITS_BPS_MASK) == ACIA_CTRL_BITS_BPS_16X_EXT_CLK) 
                        ? T232_ECTRL_BITS_EXT_ACTIVE 
-                       : 0;
+                       : 0);
     }
     /* should never happen */
     return 0;

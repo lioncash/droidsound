@@ -3,7 +3,7 @@
  *
  * Written by
  *  Ettore Perazzoli <ettore@comm2000.it>
- *  André Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *  Andreas Boose <viceteam@t-online.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -59,7 +59,8 @@ extern int pet_mem_init_resources(void);
 extern int pet_mem_init_cmdline_options(void);
 
 extern void mem_initialize_memory(void);
-extern void get_mem_access_tables(read_func_ptr_t **read, store_func_ptr_t **write);
+extern void get_mem_access_tables(read_func_ptr_t **read, store_func_ptr_t **write, BYTE ***base, int **limit);
+extern void invalidate_mem_limit(int lower, int upper);
 extern void petmem_check_info(struct petres_s *pi);
 
 extern void petmem_reset(void);
@@ -80,4 +81,3 @@ extern BYTE petmem_map_reg;
 extern BYTE petmem_2001_buf_ef[];
 
 #endif
-

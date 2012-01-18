@@ -39,6 +39,7 @@
 #include "machine.h"
 #include "raster-cache.h"
 #include "raster-canvas.h"
+#include "raster-changes.h"
 #include "raster-modes.h"
 #include "raster-resources.h"
 #include "raster-sprite-status.h"
@@ -52,7 +53,7 @@
 #include "viewport.h"
 
 
-int raster_calc_frame_buffer_width(raster_t *raster)
+static int raster_calc_frame_buffer_width(raster_t *raster)
 {
     return raster->geometry->screen_size.width
         + raster->geometry->extra_offscreen_border_left
@@ -563,4 +564,3 @@ void raster_shutdown(raster_t *raster)
     raster_resources_chip_shutdown(raster);
     raster_destroy_raster(raster);
 }
-

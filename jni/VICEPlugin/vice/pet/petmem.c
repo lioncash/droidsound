@@ -3,7 +3,7 @@
  *
  * Written by
  *  Ettore Perazzoli <ettore@comm2000.it>
- *  André Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *  Andreas Boose <viceteam@t-online.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -473,7 +473,7 @@ static void set_std_9tof(void)
     }
 
     if (petdww_enabled && petdww_mem_at_9000()) {
-        petdww_override_std_9toa(_mem_read_tab, _mem_write_tab);
+        petdww_override_std_9toa(_mem_read_tab, _mem_write_tab, _mem_read_base_tab, mem_read_limit_tab);
     }
 
     /* Setup ROM at $B000 - $E7FF. */
@@ -526,15 +526,29 @@ static void set_std_9tof(void)
     mem_read_limit_tab_ptr = mem_read_limit_tab;
 }
 
-void get_mem_access_tables(read_func_ptr_t **read, store_func_ptr_t **write)
+void get_mem_access_tables(read_func_ptr_t **read, store_func_ptr_t **write, BYTE ***base, int **limit)
 {
     *read = _mem_read_tab;
     *write = _mem_write_tab;
+    *base = _mem_read_base_tab;
+    *limit = mem_read_limit_tab;
 }
+
+static BYTE **mem_base_ptr;
+static int *mem_limit_ptr;
 
 void mem_set_bank_pointer(BYTE **base, int *limit)
 {
-    /* We do not need MMU support.  */
+    mem_base_ptr = base;
+    mem_limit_ptr = limit;
+}
+
+void invalidate_mem_limit(int lower, int upper)
+{
+    if (mem_limit_ptr && *mem_limit_ptr >= lower && *mem_limit_ptr < upper) {
+	*mem_limit_ptr = -1;
+	*mem_base_ptr = NULL;
+    }
 }
 
 /* FIXME: TODO! */
@@ -624,6 +638,7 @@ static void store_8x96(WORD addr, BYTE value)
                     _mem_read_base_tab[l] = mem_ram + bank8offset + (l << 8);
                     mem_read_limit_tab[l] = 0xbffd;
                 }
+		invalidate_mem_limit(0x8000, 0xc000);
             }
             if (changed & 0xca) {       /* $c000-$ffff */
                 protected = value & 0x02;
@@ -651,6 +666,7 @@ static void store_8x96(WORD addr, BYTE value)
                 }
                 store_ff = _mem_write_tab[0xff];
                 _mem_write_tab[0xff] = store_8x96;
+		invalidate_mem_limit(0xc000, 0x10000);
             }
         } else {                /* disable ext. RAM */
             for (l = 0x80; l < 0x90; l++) {
@@ -662,11 +678,40 @@ static void store_8x96(WORD addr, BYTE value)
             set_std_9tof();
             store_ff = _mem_write_tab[0xff];
             _mem_write_tab[0xff] = store_8x96;
+	    invalidate_mem_limit(0x8000, 0x10000);
         }
         petmem_map_reg = value;
 
     }
     return;
+}
+
+static int fff0_dump()
+{
+    mon_out("fff0 = %02x: ", petmem_map_reg);
+    if (petmem_map_reg & 0x80) {
+	mon_out("enabled, ");
+	if (petmem_map_reg & 0x40) {
+	    mon_out("I/O peek through, ");
+	}
+	if (petmem_map_reg & 0x20) {
+	    mon_out("screen peek through, ");
+	}
+	if (petmem_map_reg & 0x10) {
+	    mon_out("$10 unused bit set, ");
+	}
+	mon_out("\nC000-FFFF: bank %d %s, ",
+	    ((petmem_map_reg & 0x08) ? 3 : 1),
+	    ((petmem_map_reg & 0x02) ? "(write protected)" : "(r/w)")
+	       );
+	mon_out("8000-BFFF: bank %d %s.\n",
+	    ((petmem_map_reg & 0x04) ? 2 : 0),
+	    ((petmem_map_reg & 0x01) ? "(write protected)" : "(r/w)")
+	       );
+    } else {
+	mon_out("disabled.\n");
+    }
+    return 0;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -720,7 +765,12 @@ void mem_initialize_memory(void)
         l = 128;                /* fix 8096 / 8296 */
 
     /* Setup RAM from $0000 to petres.ramSize */
-    for (i = 0x00; i < l; i++) {
+    _mem_read_tab[0] = zero_read;
+    _mem_write_tab[0] = zero_store;
+    _mem_read_base_tab[0] = mem_ram;
+    mem_read_limit_tab[0] = 0x00fd;     /* is this correct? */
+
+    for (i = 0x01; i < l; i++) {
         _mem_read_tab[i] = ram_read;
         _mem_write_tab[i] = ram_store;
         _mem_read_base_tab[i] = mem_ram + (i << 8);
@@ -973,6 +1023,10 @@ static int mem_dump_io(WORD addr) {
         if (petdww_enabled) {
             /* return dwwpiacore_dump(machine_context.dwwpia); */ /* FIXME */
         }
+    } else if (addr == 0xfff0) {
+	if (petres.map) {
+	    return fff0_dump();
+	}
     }
     return -1;
 }
@@ -989,6 +1043,9 @@ mem_ioreg_list_t *mem_ioreg_list_get(void *context)
     }
     if (petdww_enabled) {
         mon_ioreg_add_list(&mem_ioreg_list, "DWWPIA", 0xeb00, 0xeb0f, mem_dump_io);
+    }
+    if (petres.map) {
+        mon_ioreg_add_list(&mem_ioreg_list, "8096", 0xfff0, 0xfff0, mem_dump_io);
     }
 
     return mem_ioreg_list;
@@ -1174,4 +1231,3 @@ void petmem_check_info(petres_t *pi)
         pi->videoSize = 0x1000;
     }
 }
-

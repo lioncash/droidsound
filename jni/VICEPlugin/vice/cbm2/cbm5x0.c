@@ -2,7 +2,7 @@
  * cbm5x0.c
  *
  * Written by
- *  André Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *  Andreas Boose <viceteam@t-online.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -359,7 +359,7 @@ int machine_specific_init(void)
     kbdbuf_init(939, 209, 10, (CLOCK)(machine_timing.rfsh_per_sec * machine_timing.cycles_per_rfsh));
 
     /* Initialize the CBM-II-specific part of the UI.  */
-#if defined(__BEOS__) || defined(USE_SDLUI) || defined(USE_GNOMEUI) /* XAW? */
+#if defined(__BEOS__) || defined(USE_SDLUI) || defined(USE_GNOMEUI) || defined(USE_XAWUI) || defined(WIN32)
     /* FIXME make this available on other ports */
     cbm5x0ui_init();
 #else
@@ -371,8 +371,7 @@ int machine_specific_init(void)
 
     machine_drive_stub();
 
-#if defined (USE_XF86_EXTENSIONS) && \
-    (defined(USE_XF86_VIDMODE_EXT) || defined (HAVE_XRANDR))
+#if defined (USE_XF86_EXTENSIONS) && (defined(USE_XF86_VIDMODE_EXT) || defined (HAVE_XRANDR))
     {
         /* set fullscreen if user used `-fullscreen' on cmdline */
         int fs;
@@ -425,7 +424,7 @@ void machine_specific_shutdown(void)
     /* close the video chip(s) */
     vicii_shutdown();
 
-#if defined(__BEOS__) || defined(USE_SDLUI) || defined(USE_GNOMEUI) /* XAW? */
+#if defined(__BEOS__) || defined(USE_SDLUI) || defined(USE_GNOMEUI) || defined(USE_XAWUI)
     /* FIXME make this available on other ports too */
     cbm5x0ui_shutdown();
 #else
