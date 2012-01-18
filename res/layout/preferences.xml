@@ -1,0 +1,101 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:key="main_prefs" >
+
+    <EditTextPreference
+        android:defaultValue="900"
+        android:dialogTitle="Length (in seconds)"
+        android:key="default_length"
+        android:numeric="integer"
+        android:summary="Length to use when real length is unknown."
+        android:title="Default song length" />
+
+    <PreferenceScreen
+        android:key="audio_prefs"
+        android:title="Audio settings..." >
+
+        <PreferenceCategory
+            android:key="VICEPlugin"
+            android:title="VICE (Commodore 64 music player)" >
+
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="VICEPlugin.filter"
+                android:summary="Emulate the SID filter"
+                android:title="SID Filter" />
+
+            <ListPreference
+                android:defaultValue="0"
+                android:entries="@array/filter_bias_opts"
+                android:entryValues="@array/filter_bias_vals"
+                android:key="VICEPlugin.filter_bias"
+                android:title="Filter Bias" />
+
+            <ListPreference
+                android:defaultValue="0"
+                android:entries="@array/sid_model_opts"
+                android:entryValues="@array/sid_model_vals"
+                android:key="VICEPlugin.sid_model"
+                android:title="SID Model" />
+
+            <ListPreference
+                android:defaultValue="0"
+                android:entries="@array/videomode_opts"
+                android:entryValues="@array/videomode_vals"
+                android:key="VICEPlugin.ntsc"
+                android:title="Video Mode" />
+
+            <ListPreference
+                android:defaultValue="1"
+                android:entries="@array/resampling_opts"
+                android:entryValues="@array/resampling_vals"
+                android:key="VICEPlugin.resampling"
+                android:title="Resampling Mode" />
+        </PreferenceCategory>
+
+        <PreferenceCategory
+            android:key="UADEPlugin"
+            android:title="UADE (amiga module player)" >
+
+            <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="UADEPlugin.filter"
+                android:summary="Emulate the Paula filter"
+                android:title="Amiga Filter" />
+
+            <ListPreference
+                android:defaultValue="100 % (stereo)"
+                android:entries="@array/panning_opts"
+                android:entryValues="@array/panning_opts"
+                android:key="UADEPlugin.panning"
+                android:title="Panning" />
+
+            <CheckBoxPreference
+                android:defaultValue="false"
+                android:key="UADEPlugin.ntsc"
+                android:summary="Emulate NTSC mode"
+                android:title="NTSC Mode" />
+        </PreferenceCategory>
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:key="database_prefs"
+        android:title="Music index options...">
+
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="rescan_full"
+            android:summary="Clear database first, then scan all files"
+            android:title="Full rebuild of index" />
+        
+        <Preference
+            android:key="rescan_pref"
+            android:summary="Scan sdcard for changes and update database"
+            android:title="Refresh index" />
+        
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:key="about_prefs"
+        android:title="About..." />
+
+</PreferenceScreen>

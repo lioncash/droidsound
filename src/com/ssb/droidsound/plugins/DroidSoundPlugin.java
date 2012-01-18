@@ -1,0 +1,146 @@
+package com.ssb.droidsound.plugins;
+
+import java.util.Arrays;
+import java.util.List;
+
+import com.ssb.droidsound.utils.HashUtil;
+
+public abstract class DroidSoundPlugin {
+	public static class MusicInfo {
+		public String title;
+		public String composer;
+		public String copyright;
+		public String format;
+
+		public int channels;
+		public int date = -1;
+	}
+
+	private static final MusicInfo EMPTY_INFO = new MusicInfo();
+
+	private static final List<DroidSoundPlugin> PLUGINS = Arrays.asList(
+			new VICEPlugin(),
+			new GMEPlugin(),
+			new SC68Plugin(),
+			new UADEPlugin(),
+			new ModPlugin(),
+			new HivelyPlugin()
+	);
+
+	public static final int INFO_TITLE = 0;
+	public static final int INFO_AUTHOR = 1;
+	public static final int INFO_LENGTH = 2;
+	public static final int INFO_TYPE = 3;
+	public static final int INFO_COPYRIGHT = 4;
+	public static final int INFO_GAME = 5;
+	public static final int INFO_SUBTUNE_COUNT = 6;
+	public static final int INFO_STARTTUNE = 7;
+	public static final int INFO_SUBTUNE_TITLE = 8;
+	public static final int INFO_SUBTUNE_AUTHOR = 9;
+	public static final int INFO_SUBTUNE_NO = 10;
+
+	public static final int OPT_FILTER = 1;
+	public static final int OPT_RESAMPLING = 2;
+	public static final int OPT_NTSC = 3;
+	public static final int OPT_SPEED_HACK = 4;
+	public static final int OPT_PANNING = 5;
+	public static final int OPT_FILTER_BIAS = 6;
+	public static final int OPT_SID_MODEL = 7;
+
+	public static List<DroidSoundPlugin> getPluginList() {
+		return PLUGINS;
+	}
+
+	public byte[] md5(byte[] data) {
+		return HashUtil.md5(data);
+	}
+
+	public abstract boolean canHandle(String name);
+
+	protected abstract boolean load(String name, byte[] module);
+
+	public boolean load(String f1, byte[] data1, String f2, byte[] data2) {
+		if (f2 != null) {
+			throw new RuntimeException("This plugin is not handling a 2nd file.");
+		}
+		return load(f1, data1);
+	}
+
+	public abstract int getSoundData(short[] dest);
+
+	public abstract void unload();
+
+	public int getIntInfo(int what) {
+		return 0;
+	}
+
+	public boolean seekTo(int msec) {
+		return false;
+	}
+
+	public boolean setTune(int tune) {
+		return false;
+	}
+
+	public String[] getDetailedInfo() {
+		return null;
+	}
+
+	public abstract String getStringInfo(int what);
+
+	public abstract void setOption(String string, Object val);
+
+	public boolean canSeek() {
+		return false;
+	}
+
+	public abstract String getVersion();
+
+	protected abstract MusicInfo getMusicInfo(String name, byte[] module);
+
+	private static void fixInfo(String basename, MusicInfo info) {
+		if (info.composer != null) {
+			info.composer = info.composer.trim();
+			if ("".equals(info.composer)) {
+				info.composer = null;
+			}
+		}
+
+		if (info.title != null) {
+			info.title = info.title.trim();
+			if ("".equals(info.title)) {
+				info.title = null;
+			}
+		}
+
+		if (info.title == null) {
+			info.title = basename;
+		}
+
+		if (info.date == -1 && info.copyright != null && info.copyright.length() >= 4) {
+			info.date = 0;
+			try {
+				int year = Integer.parseInt(info.copyright.substring(0,4));
+				if (year > 1000 && year < 2100) {
+					info.date = year * 10000;
+				}
+			} catch (NumberFormatException e) {
+			}
+		}
+	}
+
+	public static MusicInfo identify(String name1, byte[] module1) {
+		boolean handle = false;
+		for (DroidSoundPlugin plugin : DroidSoundPlugin.getPluginList()) {
+			if (plugin.canHandle(name1)) {
+				handle = true;
+				MusicInfo info = plugin.getMusicInfo(name1, module1);
+				if (info != null) {
+					fixInfo(name1, info);
+					return info;
+				}
+			}
+		}
+		return handle ? EMPTY_INFO : null;
+	}
+}
