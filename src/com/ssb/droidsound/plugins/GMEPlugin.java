@@ -43,7 +43,7 @@ public class GMEPlugin extends DroidSoundPlugin {
 		String s = N_getStringInfo(currentSong, INFO_TYPE);
 		if (s != null && s.length() > 0) {
 			list.add("Format");
-			list.add("GME: " + s);
+			list.add(s);
 		}
 		s = N_getStringInfo(currentSong, INFO_COPYRIGHT);
 		if (s != null && s.length() > 0) {
@@ -103,11 +103,6 @@ public class GMEPlugin extends DroidSoundPlugin {
 	}
 
 	@Override
-	public String getStringInfo(int what) {
-		return N_getStringInfo(currentSong, what);
-	}
-
-	@Override
 	protected MusicInfo getMusicInfo(String name, byte[] module) {
 		if (module.length < 27) {
 			return null;
@@ -141,11 +136,11 @@ public class GMEPlugin extends DroidSoundPlugin {
 
 		return null;
 	}
-    
-    @Override
-    public int getIntInfo(int what){
-        return N_getIntInfo(currentSong, what);
-    }
+
+	@Override
+	public int getIntInfo(int what){
+	    return N_getIntInfo(currentSong, what);
+	}
 
 	native private long N_load(byte[] module, int size);
 
