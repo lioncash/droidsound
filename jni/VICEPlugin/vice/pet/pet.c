@@ -3,7 +3,7 @@
  *
  * Written by
  *  Ettore Perazzoli <ettore@comm2000.it>
- *  André Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *  Andreas Boose <viceteam@t-online.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -546,7 +546,7 @@ void pet_crtc_set_screen(void)
 */
     crtc_set_screen_options(cols, 25 * 10);
     crtc_set_screen_addr(mem_ram + 0x8000);
-    crtc_set_hw_options((cols == 80) ? 2 : 0, vmask, 0x800, 512, 0x1000);
+    crtc_set_hw_options((cols == 80) ? 2 : 0, vmask, 0x2000, 512, 0x1000);
     crtc_set_retrace_type(petres.crtc ? 1 : 0);
 
     /* No CRTC -> assume 40 columns */
