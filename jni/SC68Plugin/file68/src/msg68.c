@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2001-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-22 18:00:58 ben>
+ * Time-stamp: <2011-10-27 12:29:07 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -64,8 +64,8 @@ struct struct_cat_bit {
   { msg68_CRITICAL, "critical", "critical error message" },
   { msg68_ERROR   , "error"   , "error message"          },
   { msg68_WARNING , "warning" , "warning message"        },
-  { msg68_NOTICE  , "notice"  , "notice message"         },
   { msg68_INFO    , "info"    , "informational message"  },
+  { msg68_NOTICE  , "notice"  , "notice message"         },
   { msg68_DEBUG   , "debug"   , "debug message"          },
   { msg68_TRACE   , "trace"   , "trace message"          }
 };

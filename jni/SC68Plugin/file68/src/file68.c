@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-23 14:05:34 ben>
+ * Time-stamp: <2011-10-30 19:57:59 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -77,6 +77,8 @@ const char file68_idstr_v1[56] = SC68_IDSTR;
 const char file68_idstr_v2[8]  = SC68_IDSTR_V2;
 const char file68_mimestr[]    = SC68_MIMETYPE;
 
+#define DEF_TRACK_MS (150*1000u)        /* 2"30' */
+
 #ifndef DEBUG_FILE68_O
 # define DEBUG_FILE68_O 0
 #endif
@@ -138,7 +140,7 @@ static /* const */ struct strings_table {
 static inline int is_disk_data(const disk68_t * const mb, const void * const _s)
 {
   const char * const s = (const char *) _s;
-  return (mb && s >= mb->__data && s < mb->__data+mb->datasz);
+  return (mb && s >= mb->data && s < mb->data+mb->datasz);
 }
 
 /* Does this memory belongs to the static string array ? */
@@ -482,24 +484,41 @@ static int valid(disk68_t * mb)
       m->frq = 50;
 
     /* Compute ms from frames prior to frames from ms. */
-    if (m->frames)
-      m->time_ms = frames_to_ms(m->frames, m->frq);
+    if (m->first_fr)
+      m->first_ms = frames_to_ms(m->first_fr, m->frq);
     else
-      m->frames = ms_to_frames(m->time_ms, m->frq);
+      m->first_fr = ms_to_frames(m->first_ms, m->frq);
 
-    if (m->loop_fr == ~0) {
+    if (m->loops_fr == ~0) {
       /* loop time not set, default to track time. */
-      m->loop_fr = m->frames;
-      m->loop_ms = m->time_ms;
-    } else
+      m->loops_fr = m->first_fr;
+      m->loops_ms = m->first_ms;
+    } else {
       /* Compute ms from frames. */
-      m->loop_ms = frames_to_ms(m->loop_fr, m->frq);
+      m->loops_ms = frames_to_ms(m->loops_fr, m->frq);
+    }
 
-    /* Set start time in the disk. */
+    if (!m->loops) {
+      /* loop not set, set it to have at least DEF_TRACK_MS total track time */
+      m->loops = (m->loops_ms && m->first_ms < DEF_TRACK_MS)
+        ? 1 + (DEF_TRACK_MS - m->first_ms + (m->loops_ms >> 1)) / m->loops_ms
+        : 1
+        ;
+      if (m->loops > 5)
+        m->loops = 5;
+      TRACE68(file68_cat, "file68: set track #%02d loop to -- *%d*\n",i+1,m->loops);
+    } else {
+      TRACE68(file68_cat, "file68: has track #%02d loop of -- *%d*\n",i+1,m->loops);
+    }
+
+    m->total_fr = m->first_fr + (m->loops - 1) * m->loops_fr;
+    m->total_ms = frames_to_ms(m->total_fr, m->frq);
+
+    /* set start time in the disk. */
     m->start_ms = mb->time_ms;
 
     /* Advance disk total time. */
-    mb->time_ms += m->time_ms;
+    mb->time_ms += m->total_ms;
 
     /* default mode is YM2149 (Atari ST) */
     if (!m->hwflags.all) {
@@ -762,9 +781,9 @@ int file68_diskname(istream68_t * is, char *dest, int max)
 
 disk68_t * file68_load_url(const char * fname)
 {
-  disk68_t * d;
+  disk68_t    * d;
   istream68_t * is;
-  rsc68_info_t info;
+  rsc68_info_t  info;
 
   TRACE68(file68_cat,"file68: load -- %s\n", strnull(fname));
 
@@ -776,7 +795,7 @@ disk68_t * file68_load_url(const char * fname)
     int i;
 
     TRACE68(file68_cat,
-            "file68: load -- on the fly path -- #%d/%d/%d\n",
+            "file68: load -- on the fly patch -- #%d/%d/%d\n",
             info.data.music.track,
             info.data.music.loop,
             info.data.music.time);
@@ -786,24 +805,31 @@ disk68_t * file68_load_url(const char * fname)
       d->mus[0].start_ms = 0;
       d->mus[0].track = info.data.music.track;
       d->def_mus = 0;
-      d->nb_mus = 1;
-      d->time_ms = d->mus[0].time_ms;
+      d->nb_mus  = 1;
+      d->time_ms = d->mus[0].total_ms;
       d->hwflags.all = d->mus[0].hwflags.all;
     }
     if (info.data.music.loop != -1) {
       for (i=0; i<d->nb_mus; ++i) {
-        d->mus[i].loop = info.data.music.loop;
+        music68_t * m = d->mus + i;
+        m->loops    = info.data.music.loop;
+        m->total_fr = m->first_fr + ( m->loops - 1 ) * m->loops_fr;
+        m->total_ms = frames_to_ms(m->total_fr, m->frq);
       }
     }
     if (info.data.music.time != -1) {
       unsigned int ms = info.data.music.time * 1000u;
-      d->time_ms = 0;
       for (i=0; i<d->nb_mus; ++i) {
-        d->mus[i].frames   = ms_to_frames(ms, d->mus[i].frq);
-        d->mus[i].time_ms  = ms;
-        d->mus[i].start_ms = d->time_ms;
-        d->time_ms += ms;
+        music68_t * m = d->mus + i;
+        m->total_fr = ms_to_frames(ms, m->frq);
+        m->total_ms = ms;
       }
+    }
+    d->time_ms = 0;
+    for (i=0; i<d->nb_mus; ++i) {
+      music68_t * m = d->mus + i;
+      m->start_ms = d->time_ms;
+      d->time_ms += m->total_ms;
     }
   }
 
@@ -842,7 +868,7 @@ static int sndh_info(disk68_t * mb, int len)
   int i, vbl = 0, frq = 0, time = 0 , musicmon = 0, steonly = 0,
     unknowns = 0, fail = 0;
 
-  char * b = mb->__data;
+  char * b = mb->data;
   char empty_tag[4] = { 0, 0, 0, 0 };
 
   /* Default */
@@ -930,7 +956,7 @@ static int sndh_info(disk68_t * mb, int len)
       t = i; i += 4;
       for ( j = 0; j < tracks; ++j ) {
         if (i < len-2 && j < SC68_MAX_TRACK)
-          mb->mus[j].time_ms = 1000u *
+          mb->mus[j].first_ms = 1000u *
             ( ( ( (unsigned char) b[i]) << 8 ) | (unsigned char) b[i+1] );
         i += 2;
       }
@@ -1022,13 +1048,13 @@ static int sndh_info(disk68_t * mb, int len)
   if (mb->nb_mus > SC68_MAX_TRACK) {
     mb->nb_mus = SC68_MAX_TRACK;
   }
-  time *= 1000;
+  time *= 1000u;
 
   for (i=0; i<mb->nb_mus; ++i) {
-    mb->mus[i].d0 = i+1;
-    mb->mus[i].loop = 1;
-    mb->mus[i].frq = frq ? frq : vbl;
-    mb->mus[i].hwflags.bit.ym = 1;
+    mb->mus[i].d0    = i+1;
+    mb->mus[i].loops = 0;
+    mb->mus[i].frq   = frq ? frq : vbl;
+    mb->mus[i].hwflags.bit.ym  = 1;
     mb->mus[i].hwflags.bit.ste = steonly;
   }
   return 0;
@@ -1147,9 +1173,9 @@ void file68_free(disk68_t * disk)
         disk->mus[i].datasz = 0;
       }
     }
-    if (disk->__data != disk->buffer) {
-      free68(disk->__data);
-      disk->__data = 0;
+    if (disk->data != disk->buffer) {
+      free68(disk->data);
+      disk->data = 0;
     }
     free68(disk);
   }
@@ -1165,7 +1191,7 @@ static disk68_t * alloc_disk(int datasz)
     music68_t *cursix;
 
     /* data points into buffer */
-    mb->__data = mb->buffer;
+    mb->data = mb->buffer;
     mb->datasz = datasz;
 
     /* Setup static tags */
@@ -1173,7 +1199,7 @@ static disk68_t * alloc_disk(int datasz)
     mb->tags.tag.artist.key = tagstr.artist;
     mb->tags.tag.genre.key  = tagstr.format;
     for (cursix = mb->mus; cursix < mb->mus+SC68_MAX_TRACK; ++cursix) {
-      cursix->loop_fr = ~0;
+      cursix->loops_fr = ~0;
       cursix->tags.tag.title.key  = tagstr.title;
       cursix->tags.tag.artist.key = tagstr.artist;
       cursix->tags.tag.genre.key  = tagstr.genre;
@@ -1252,7 +1278,7 @@ disk68_t * file68_load(istream68_t * is)
           break;
         }
         mb->tags.tag.genre.val = tagstr.sndh;
-        if (istream68_read(is, mb->__data, len) != len) {
+        if (istream68_read(is, mb->data, len) != len) {
           break;
         }
         if (sndh_info(mb, len)) {
@@ -1281,12 +1307,12 @@ disk68_t * file68_load(istream68_t * is)
   }
   mb->tags.tag.genre.val = tagstr.sc68;
 
-  if (istream68_read(is, mb->__data, len) != len) {
+  if (istream68_read(is, mb->data, len) != len) {
     errorstr = "read data";
     goto error;
   }
 
-  for (b = mb->__data, cursix = 0, tags = &mb->tags;
+  for (b = mb->data, cursix = 0, tags = &mb->tags;
        len >= 8;
        b += chk_size, len -= chk_size) {
     char chk[8];
@@ -1320,8 +1346,8 @@ disk68_t * file68_load(istream68_t * is)
         break;
       }
       cursix = mb->mus + mb->nb_mus;
-      cursix->loop = 1;     /* default loop */
-      cursix->loop_fr = ~0; /* loop length not set */
+      cursix->loops    = 0;             /* default loop        */
+      cursix->loops_fr = ~0;            /* loop length not set */
       tags = &cursix->tags;
       mb->nb_mus++;
     }
@@ -1364,7 +1390,7 @@ disk68_t * file68_load(istream68_t * is)
         errorstr = chk;
         goto error;
       }
-      cursix->time_ms = LPeek(b) * 1000u;
+      cursix->first_ms = LPeek(b) * 1000u;
     }
     /* Playing time (frames) */
     else if (ISCHK(chk, CH68_FRAME)) {
@@ -1372,7 +1398,7 @@ disk68_t * file68_load(istream68_t * is)
         errorstr = chk;
         goto error;
       }
-      cursix->frames = LPeek(b);
+      cursix->first_fr = LPeek(b);
     }
     /* Replay frequency */
     else if (ISCHK(chk, CH68_FRQ)) {
@@ -1388,7 +1414,9 @@ disk68_t * file68_load(istream68_t * is)
         errorstr = chk;
         goto error;
       }
-      cursix->loop = LPeek(b);
+      cursix->loops = LPeek(b);
+      TRACE68(file68_cat, "file68: read track #%02d loop of -- *%d*\n",
+              mb->nb_mus,cursix->loops);
     }
     /* Loop length */
     else if (ISCHK(chk, CH68_LOOPFR)) {
@@ -1396,7 +1424,7 @@ disk68_t * file68_load(istream68_t * is)
         errorstr = chk;
         goto error;
       }
-      cursix->loop_fr = LPeek(b);
+      cursix->loops_fr = LPeek(b);
     }
     /* SFX flag */
     else if (ISCHK(chk, CH68_SFX)) {
@@ -1791,14 +1819,13 @@ static const char * save_sc68(istream68_t * os, const disk68_t * mb, int len, in
     if (0
         || save_string (os, CH68_REPLAY, mus->replay)
         || save_nonzero(os, CH68_D0,     mus->d0)
-        || save_nonzero(os, CH68_AT,     mus->a0 == SC68_LOADADDR ? 0 : mus->a0)
-        || save_nonzero(os, CH68_FRAME,  mus->frames)
-        /* || save_nonzero(os, CH68_TIME,   (mus->time_ms+999u) / 1000u) @DEPRECATED */
-        || save_nonzero(os, CH68_FRQ,    (mus->frq == 50) ? 0 : mus->frq)
-        || save_nonzero(os, CH68_LOOP,   (mus->loop > 1) ? mus->loop : 0)
-        || ( mus->loop_fr != ~0 &&
-             mus->loop_fr != mus->frames &&
-             save_number(os, CH68_LOOPFR,  mus->loop_fr) )
+        || save_nonzero(os, CH68_AT,     (mus->a0 != SC68_LOADADDR) * mus->a0)
+        || save_nonzero(os, CH68_FRAME,  mus->first_fr)
+        || save_nonzero(os, CH68_FRQ,    (mus->frq != 50) * mus->frq)
+        || save_nonzero(os, CH68_LOOP,   (mus->loops > 1) * mus->loops)
+        || ( mus->loops_fr != ~0 &&
+             mus->loops_fr != mus->first_fr &&
+             save_number(os, CH68_LOOPFR,  mus->loops_fr) )
         || save_number (os, CH68_TYP,    flags)
         || ( mus->sfx &&
              save_chunk(os, CH68_SFX, 0, 0) )

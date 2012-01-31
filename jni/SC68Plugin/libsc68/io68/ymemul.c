@@ -1,25 +1,28 @@
 /*
- *                     sc68 - YM-2149 emulator
- *            Copyright (C) 2001-2009 Ben(jamin) Gerard
- *           <benjihan -4t- users.sourceforge -d0t- net>
+ * @file    ym_atarist_oldtable.c
+ * @brief   YM-2149 emulator
+ * @author  http://sourceforge.net/users/benjihan
  *
- * This  program is  free  software: you  can  redistribute it  and/or
- * modify  it under the  terms of  the GNU  General Public  License as
- * published by the Free Software  Foundation, either version 3 of the
+ * Copyright (C) 1998-2011 Benjamin Gerard
+ *
+ * Time-stamp: <2011-10-27 11:44:49 ben>
+ *
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but
- * WITHOUT  ANY  WARRANTY;  without   even  the  implied  warranty  of
- * MERCHANTABILITY or  FITNESS FOR A PARTICULAR PURPOSE.   See the GNU
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
  *
- * You should have  received a copy of the  GNU General Public License
+ * You should have received a copy of the GNU General Public License
  * along with this program.
+ *
  * If not, see <http://www.gnu.org/licenses/>.
  *
  */
-
-/* $Id: ymemul.c 202 2011-10-16 01:14:21Z benjihan $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -375,7 +378,7 @@ int ym_active_channels(ym_t * const ym, const int clr, const int set)
     v = ( voice_mute & 1 ) | ( (voice_mute>>5) & 2 ) | ( (voice_mute>>10) & 4);
     v = ( (v & ~clr ) | set ) & 7;
     ym->voice_mute = ym_smsk_table[v];
-    msg68_info("ym-2149: active channels -- *%c%c%c*\n",
+    msg68_notice("ym-2149: active channels -- *%c%c%c*\n",
                (v&1)?'A':'.', (v&2)?'B':'.', (v&4)?'C':'.');
   }
   return v;
@@ -419,7 +422,7 @@ int ym_engine(ym_t * const ym, int engine)
     /* Valid values */
     if (!ym) {
       default_parms.engine = engine;
-      msg68_info("ym-2149: default engine -- *%s*\n",
+      msg68_notice("ym-2149: default engine -- *%s*\n",
                  ym_engine_name(engine));
     } else {
       engine = ym->engine;
@@ -454,7 +457,7 @@ int ym_clock(ym_t * const ym, int clock)
     clock = YM_CLOCK_ATARIST;
     if (!ym) {
       default_parms.clock = clock;
-      msg68_info("ym-2149: default clock -- *ATARI-ST*\n",
+      msg68_notice("ym-2149: default clock -- *ATARI-ST*\n",
                  (unsigned int)clock);
     } else {
       clock = ym->clock;
@@ -505,7 +508,7 @@ int ym_volume_model(ym_t * const ym, int model)
       } else {
         ym_create_5bit_atarist_table(ymout5, output_level);
       }
-      msg68_info("ym-2149: default volume model -- *%s*\n",
+      msg68_notice("ym-2149: default volume model -- *%s*\n",
                  ym_volmodel_name(model));
     }
     break;
@@ -542,7 +545,7 @@ int ym_sampling_rate(ym_t * const ym, int hz)
     } else {
       default_parms.hz = hz;
     }
-    msg68_info("ym-2149: %ssampling rate -- *%dhz*\n",
+    msg68_notice("ym-2149: %ssampling rate -- *%dhz*\n",
                ym ? "" : "default ", hz);
   }
   return hz;
@@ -644,7 +647,7 @@ int ym_setup(ym_t * const ym, ym_parms_t * const parms)
       err = -1;
     }
     if (!err)
-      msg68_info("ym-2149: engine -- *%s*\n", ym_engine_name(ym->engine));
+      msg68_notice("ym-2149: engine -- *%s*\n", ym_engine_name(ym->engine));
 
 
     /* at this point specific sampling rate callback can be call */

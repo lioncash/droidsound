@@ -63,12 +63,12 @@ enum msg68_cat_e
   msg68_NEVER    = -3, /**< Never printed message.    */
   msg68_ALWAYS   = -2, /**< Always printed message.   */
   msg68_CRITICAL = 0,  /**< Critical error message.   */
-  msg68_ERROR    = 1,  /**< Error message.            */
-  msg68_WARNING  = 2,  /**< Warning message.          */
-  msg68_NOTICE   = 3,  /**< Notice message.           */
-  msg68_INFO     = 4,  /**< Informationnal message.   */
-  msg68_DEBUG    = 5,  /**< Debug message.            */
-  msg68_TRACE    = 6,  /**< Trace message.            */
+  msg68_ERROR       ,  /**< Error message.            */
+  msg68_WARNING     ,  /**< Warning message.          */
+  msg68_INFO        ,  /**< Informationnal message.   */
+  msg68_NOTICE      ,  /**< Notice message.           */
+  msg68_DEBUG       ,  /**< Debug message.            */
+  msg68_TRACE       ,  /**< Trace message.            */
 
 # ifndef DEBUG
   msg68_DEFAULT  = msg68_NEVER
@@ -376,10 +376,10 @@ void msg68x_trace(void * cookie, const char * fmt, ...);
 
 #ifndef TRACE68
 # ifdef NDEBUG
-#  if defined(__GNUC__) || defined(CPP_VA_MACRO)
+#  if defined(__GNUC__) || defined(CPP_SUPPORTS_VA_MACROS)
 #   define TRACE68(cat,fmt,...)
 #  else
-#  define  TRACE68 while (0) msg68_dummy
+#   define TRACE68 while (0) msg68_dummy
 static void msg68_dummy(int cat, const char * fmt, ...) {}
 #  endif
 #  define VTRACE68(cat,fmt,list)
