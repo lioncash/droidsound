@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-11-15 16:41:08 ben>
+ * Time-stamp: <2011-11-21 19:59:29 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -67,6 +67,8 @@
 #include <ctype.h>
 #include <stdio.h>
 
+int aSIDify = 0;                        /* 0:off, 1:safe, 2:force */
+
 #define FOURCC(A,B,C,D) ((int)( ((A)<<24) | ((B)<<16) | ((C)<<8) | (D) ))
 #define gzip_cc FOURCC('g','z','i','p')
 #define ice_cc  FOURCC('i','c','e','!')
@@ -77,7 +79,6 @@
 const char file68_idstr_v1[56] = SC68_IDSTR;
 const char file68_idstr_v2[8]  = SC68_IDSTR_V2;
 const char file68_mimestr[]    = SC68_MIMETYPE;
-
 #define MAX_TRACK_LP 4          /* maximum number of guessed loop allowed                */
 #define MIN_TRACK_MS (45*1000u) /* below this value, force a few loops                   */
 #define DEF_TRACK_MS (90*1000u) /* time we use as default if track contains no such info */
@@ -113,7 +114,7 @@ static /* const */ struct strings_table {
   char amiga_chiptune[15];
   char atari_st_chiptune[18];
 
-  int  _reserved;
+  char _reserved;
 } tagstr = {
   SC68_NOFILENAME,
   TAG68_AKA,
@@ -577,16 +578,8 @@ static int valid(disk68_t * mb)
   }
 
   /* aSIDidy */
-  if (1) {
-    option68_t * opt = option68_get("asid",1);
-    const char * str = opt ? opt->val.str : 0;
-    int j, asidify_mode;
-    if (!strcmp68(str,"no"))
-      asidify_mode = 0;                 /* disable */
-    else if (!strcmp68(str,"force"))
-      asidify_mode = 2;                 /* force   */
-    else
-      asidify_mode = 1;                 /* default to "safe" */
+  if (aSIDify) {
+    int j;
 
     /* Init all music in this file */
     for (i=j=0; i<mb->nb_mus && mb->nb_mus+j<SC68_MAX_TRACK ; i++) {
@@ -595,7 +588,7 @@ static int valid(disk68_t * mb)
       if (!s->hwflags.bit.ym)
         continue;                  /* not a YM track, can't aSIDify */
 
-      switch (asidify_mode) {
+      switch (aSIDify) {
 
       case 1:
         /* "safe" mode */
@@ -628,14 +621,12 @@ static int valid(disk68_t * mb)
         }
         mb->nb_asid++;
 
-      case 0:
       default:
         break;
       }
     }
     mb->nb_mus += j;
     TRACE68(file68_cat,"file68: aSID tracks -- %d/%d\n", mb->nb_asid,mb->nb_mus );
-
   }
 
   return 0;
@@ -1095,7 +1086,11 @@ static int sndh_info(disk68_t * mb, int len)
 
           /* HAXXX: using name can help determine STE needs */
           if (p == &mb->tags.tag.title.val)
-            steonly = !!strstr(mb->tags.tag.title.val,"STE only");
+            steonly = 0
+              || !!strstr(mb->tags.tag.title.val,"STE only") 
+              || !!strstr(mb->tags.tag.title.val,"(STe)")
+              || !!strstr(mb->tags.tag.title.val,"(STE)")
+              ;
 
           TRACE68(file68_cat,
                   "file68: sndh -- got ARG -- '%s'\n",

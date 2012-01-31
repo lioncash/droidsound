@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2001-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-11-15 15:55:40 ben>
+ * Time-stamp: <2012-01-28 16:45:05 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -29,9 +29,8 @@
 #endif
 
 #include "file68_api.h"
-/* #include "init68.h" */
+#include "file68.h"
 #include "option68.h"
-
 #include "msg68.h"
 #include "error68.h"
 #include "alloc68.h"
@@ -44,6 +43,8 @@
 #include <string.h>
 
 static volatile int init;
+
+extern int aSIDify;                     /* defined in file68.c */
 
 void istream68_ao_shutdown(void);  /* defined in istream68_ao.c */
 int  istream68_z_init(void);       /* defined in istream68_z.c  */
@@ -107,7 +108,7 @@ static option68_t opts[] = {
   { option68_STR,prefix,"home"    ,rsccat,"private (user) resource path"  },
   { option68_STR,prefix,"music"   ,rsccat,"music database path"           },
   { option68_STR,prefix,"rmusic"  ,rsccat,"online music base URI"         },
-  { option68_STR,prefix,"asid"    ,rsccat,"create aSID tracks [no|safe|force]" }
+  { option68_STR,prefix,"asid"    ,rsccat,"create aSID tracks [no*|safe|force]" }
 };
 
 int file68_init(int argc, char **argv)
@@ -152,6 +153,18 @@ int file68_init(int argc, char **argv)
   if (opt && opt->val.num) {
     /* Remove all debug messages whatsoever. */
     msg68_set_handler(0);
+  }
+
+  /* Check for --sc68-asid=off|safe|force */
+  if (opt = option68_get("asid",1), opt) {
+    if (!strcmp68(opt->val.str,"no"))
+      aSIDify = 0;
+    else if (!strcmp68(opt->val.str,"safe"))
+      aSIDify = 1;
+    else if (!strcmp68(opt->val.str,"force"))
+      aSIDify = 2;
+    else
+      msg68_notice("file68: ignore invalid mode for --sc68-asid -- *%s*\n", opt->val.str);
   }
 
   /* Check for --sc68-debug= */
