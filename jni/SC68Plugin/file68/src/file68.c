@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-23 03:57:14 ben>
+ * Time-stamp: <2011-10-23 14:05:34 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -1793,7 +1793,7 @@ static const char * save_sc68(istream68_t * os, const disk68_t * mb, int len, in
         || save_nonzero(os, CH68_D0,     mus->d0)
         || save_nonzero(os, CH68_AT,     mus->a0 == SC68_LOADADDR ? 0 : mus->a0)
         || save_nonzero(os, CH68_FRAME,  mus->frames)
-        || save_nonzero(os, CH68_TIME,   (mus->time_ms+999u) / 1000u)
+        /* || save_nonzero(os, CH68_TIME,   (mus->time_ms+999u) / 1000u) @DEPRECATED */
         || save_nonzero(os, CH68_FRQ,    (mus->frq == 50) ? 0 : mus->frq)
         || save_nonzero(os, CH68_LOOP,   (mus->loop > 1) ? mus->loop : 0)
         || ( mus->loop_fr != ~0 &&
@@ -1801,7 +1801,7 @@ static const char * save_sc68(istream68_t * os, const disk68_t * mb, int len, in
              save_number(os, CH68_LOOPFR,  mus->loop_fr) )
         || save_number (os, CH68_TYP,    flags)
         || ( mus->sfx &&
-             save_chunk  ( os, CH68_SFX, 0, 0) )
+             save_chunk(os, CH68_SFX, 0, 0) )
       ) {
       errstr = "chunk write";
       goto error;

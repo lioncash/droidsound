@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-22 17:55:03 ben>
+ * Time-stamp: <2011-10-23 16:28:16 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -34,40 +34,41 @@
 #ifdef DEBUG
 # include <sc68/msg68.h>
 
-static const char * const regnames[0x18] = {
-  "GPIP", /* 00 - General Purpose I/O Interrupt port     */
-  "AER",  /* 01 - Active Edge Register                   */
-  "DDR",  /* 02 - Data Direction Register                */
-  "IERA", /* 03 - IERA (Interrupt Enable Register A)     */
-  "IERB", /* 04 - IERB (Interrupt Enable Register B)     */
-  "IPRA", /* 05 - IPRA (Interrupt Pending Register A)    */
-  "IPRB", /* 06 - IPRB (Interrupt Pending Register B)    */
-  "ISRA", /* 07 - ISRA (Interrupt In Service Register A) */
-  "ISRB", /* 08 - ISRB (Interrupt In Service Register B) */
-  "IMRA", /* 09 - IMRA (Interrupt Mask Register A)       */
-  "IMRB", /* 0A - IMRB (Interrupt Mask Register B)       */
-  "VR",   /* 0B - VR (Vector Register)                   */
-  "TACR", /* 0C - TACR  (Timer A Control Register)       */
-  "TBCR", /* 0D - TBCR  (Timer B Control Register)       */
-  "TCDCR",/* 0E - TCDCR (Timer C/D Control Register)     */
-  "TADR", /* 0F - TADR  (Timer A Data Register)          */
-  "TBDR", /* 10 - TBDR  (Timer B Data Register)          */
-  "TCDR", /* 11 - TCDR  (Timer C Data Register)          */
-  "TDDR", /* 12 - TDDR  (Timer D Data Register)          */
-  "SCR",  /* 13 - SCR (Synchronous Character Register)   */
-  "UCR",  /* 14 - UCR,USART (Control Register)           */
-  "RSR",  /* 15 - RSR (Receiver Status Register)         */
-  "TSR",  /* 16 - TSR (Tranmitter Status Register)       */
-  "UDR",  /* 17 - UDR,USART (DataRegister)               */
+static const char * const regnames[] = {
+  "GPIP", /* 01 - General Purpose I/O Interrupt port     */
+  "AER",  /* 03 - Active Edge Register                   */
+  "DDR",  /* 05 - Data Direction Register                */
+  "IERA", /* 07 - IERA (Interrupt Enable Register A)     */
+  "IERB", /* 09 - IERB (Interrupt Enable Register B)     */
+  "IPRA", /* 0B - IPRA (Interrupt Pending Register A)    */
+  "IPRB", /* 0D - IPRB (Interrupt Pending Register B)    */
+  "ISRA", /* 0F - ISRA (Interrupt In Service Register A) */
+  "ISRB", /* 11 - ISRB (Interrupt In Service Register B) */
+  "IMRA", /* 13 - IMRA (Interrupt Mask Register A)       */
+  "IMRB", /* 15 - IMRB (Interrupt Mask Register B)       */
+  "VR",   /* 17 - VR (Vector Register)                   */
+  "TACR", /* 19 - TACR  (Timer A Control Register)       */
+  "TBCR", /* 1B - TBCR  (Timer B Control Register)       */
+  "TCDCR",/* 1D - TCDCR (Timer C/D Control Register)     */
+  "TADR", /* 1F - TADR  (Timer A Data Register)          */
+  "TBDR", /* 21 - TBDR  (Timer B Data Register)          */
+  "TCDR", /* 23 - TCDR  (Timer C Data Register)          */
+  "TDDR", /* 25 - TDDR  (Timer D Data Register)          */
+  "SCR",  /* 27 - SCR (Synchronous Character Register)   */
+  "UCR",  /* 29 - UCR,USART (Control Register)           */
+  "RSR",  /* 2B - RSR (Receiver Status Register)         */
+  "TSR",  /* 2D - TSR (Tranmitter Status Register)       */
+  "UDR",  /* 2F - UDR,USART (DataRegister)               */
 };
 
 static const char * regname(int reg)
 {
   if (! (reg & 1) )
-    return "EVEN-LINE";
-  if (reg < 0 || reg > 0x30)
-    return "OUT-OF-RANGE";
-  return regnames[reg >> 1];
+    return "!ODD";                      /* not even (odd) */
+  reg >>= 1;
+  if (reg < 0 || reg >= sizeof(regnames)/sizeof(*regnames))
+    return "!OOR";                      /* out-of-rand */
+  return regnames[reg];
 }
 
 extern int mfp_cat;
@@ -89,70 +90,130 @@ typedef struct {
 
 /* 0  GPIP   General purpose I/O */
 static int68_t mfpr_01(mfp_t * const mfp, const bogoc68_t bogoc) {
-  REPORTR(0x01);
-  return mfp->map[0x01];
+  REPORTR(GPIP);
+  return mfp->map[GPIP];
 }
+static void mfpw_01(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  REPORTW(GPIP,v);
+  mfp->map[GPIP] = v;
+}
+
 /* 1  AER    Active edge register */
 static int68_t mfpr_03(mfp_t * const mfp, const bogoc68_t bogoc) {
-  REPORTR(0x03);
-  return mfp->map[0x03];
+  REPORTR(AER);
+  return mfp->map[AER];
 }
+static void mfpw_03(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  /* $$$ Writing AER might trigger an interrupt */
+  REPORTW(AER,v);
+  mfp->map[AER]=v;
+}
+
 /* 2  DDR    Data direction register */
 static int68_t mfpr_05(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x05];
+  return mfp->map[DDR];
 }
+static void mfpw_05(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  mfp->map[DDR] = v;
+}
+
 /* 3  IERA   Interrupt enable register A */
 static int68_t mfpr_07(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x07];
+  return mfp->map[IERA];
 }
+static void mfpw_07(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  /* Disabling a line clears pending interrupt on that line */
+  mfp->map[IPRA] &= v;
+  mfp->map[IERA]  = v;
+}
+
 /* 4  IERB   Interrupt enable register B */
 static int68_t mfpr_09(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x09];
+  return mfp->map[IERB];
 }
+static void mfpw_09(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  /* Disabling a line clears pending interrupt on that line */
+  mfp->map[IPRB] &= v;
+  mfp->map[IERB]  = v;
+}
+
 /* 5  IPRA   Interrupt pending register A */
 static int68_t mfpr_0B(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x0B];
+  return mfp->map[IPRA];
 }
+static void mfpw_0B(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  /* Writing IP register only clears pending interrupts. */
+  mfp->map[IPRA] &= v;
+}
+
 /* 6  IPRB   Interrupt pending register B */
 static int68_t mfpr_0D(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x0D];
+  return mfp->map[IPRB];
 }
+static void mfpw_0D(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  /* Writing IP register only clears pending interrupts. */
+  mfp->map[IPRB] &=v;
+}
+
 /* 7  ISRA   Interrupt in-service register A */
 static int68_t mfpr_0F(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x0F];
+  return mfp->map[ISRA];
 }
+static void mfpw_0F(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  mfp->map[ISRA] = v;
+}
+
 /* 8  ISRB   Interrupt in-service register B */
 static int68_t mfpr_11(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x11];
+  return mfp->map[ISRB];
 }
+static void mfpw_11(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  mfp->map[ISRB] = v;
+}
+
 /* 9  IMRA   Interrupt mask register A */
 static int68_t mfpr_13(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x13];
+  return mfp->map[IMRA];
 }
+static void mfpw_13(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  mfp->map[IMRA] = v;
+}
+
 /* A  IMRB   Interrupt mask register B */
 static int68_t mfpr_15(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x15];
+  return mfp->map[IMRB];
 }
+static void mfpw_15(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  mfp->map[IMRB] = v;
+}
+
 /* B  VR     Vector register */
 static int68_t mfpr_17(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x17];
+  return mfp->map[VR];
 }
+static void mfpw_17(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  mfp->map[VR] = v;
+}
+
 /* C  TACR   Timer A control register */
 static int68_t mfpr_19(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x19];
+  return mfp->map[TACR];
 }
+
 /* D  TBCR   Timer B control register */
 static int68_t mfpr_1B(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x1B];
+  return mfp->map[TBCR];
 }
 /* E  TCDCR  Timers C and D control registers */
 static int68_t mfpr_1D(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x1D];
+  return mfp->map[TCDCR];
 }
+
 /* F  TADR   Timer A data register */
 static int68_t mfpr_1F(mfp_t * const mfp, const bogoc68_t bogoc) {
   return mfp_get_tdr(mfp, TIMER_A, bogoc);
 }
+
 /* 10 TBDR   Timer B data register */
 static int68_t mfpr_21(mfp_t * const mfp, const bogoc68_t bogoc) {
   return mfp_get_tdr(mfp, TIMER_B, bogoc);
@@ -165,10 +226,17 @@ static int68_t mfpr_23(mfp_t * const mfp, const bogoc68_t bogoc) {
 static int68_t mfpr_25(mfp_t * const mfp, const bogoc68_t bogoc) {
   return mfp_get_tdr(mfp, TIMER_D, bogoc);
 }
+
 /* 13 SCR    Sync character register */
 static int68_t mfpr_27(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x27];
+  return mfp->map[SCR];
 }
+static void mfpw_27(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  mfp->map[SCR] = v;
+}
+
+
+
 /* 14 UCR    USART control register */
 static int68_t mfpr_29(mfp_t * const mfp, const bogoc68_t bogoc) {
   return mfp->map[0x29];
@@ -185,6 +253,7 @@ static int68_t mfpr_2D(mfp_t * const mfp, const bogoc68_t bogoc) {
 static int68_t mfpr_2F(mfp_t * const mfp, const bogoc68_t bogoc) {
   return mfp->map[0x2F];
 }
+
 static int68_t mfpr_31(mfp_t * const mfp, const bogoc68_t bogoc) {
   return mfp->map[0x31];
 }
@@ -210,47 +279,28 @@ static int68_t mfpr_3F(mfp_t * const mfp, const bogoc68_t bogoc) {
   return mfp->map[0x3F];
 }
 
-
-static void mfpw_01(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ REPORTW(0x01,v); mfp->map[0x01]=v; }
-static void mfpw_03(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ REPORTW(0x03,v); mfp->map[0x03]=v; }
-static void mfpw_05(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x05]=v; }
-static void mfpw_07(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x07]=v; }
-static void mfpw_09(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x09]=v; }
-static void mfpw_0B(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x0B]=v; }
-static void mfpw_0D(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x0D]=v; }
-static void mfpw_0F(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x0F]=v; }
-static void mfpw_11(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x11]=v; }
-static void mfpw_13(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x13]=v; }
-static void mfpw_15(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x15]=v; }
-static void mfpw_17(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x17]=v; }
 static void mfpw_19(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
 { mfp_put_tcr(mfp, TIMER_A, v, bogoc); }
+
 static void mfpw_1B(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
 { mfp_put_tcr(mfp, TIMER_B, v, bogoc); }
+
 static void mfpw_1D(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
 { mfp_put_tcr(mfp, TIMER_C, v, bogoc); }
+
 static void mfpw_1F(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
 { mfp_put_tdr(mfp, TIMER_A, v, bogoc); }
+
 static void mfpw_21(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
 { mfp_put_tdr(mfp, TIMER_B, v, bogoc); }
+
 static void mfpw_23(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
 { mfp_put_tdr(mfp, TIMER_C, v, bogoc); }
+
 static void mfpw_25(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
 { mfp_put_tdr(mfp, TIMER_D, v, bogoc); }
-static void mfpw_27(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x27]=v; }
+
+
 static void mfpw_29(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
 { mfp->map[0x29]=v; }
 static void mfpw_2B(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
@@ -470,7 +520,7 @@ void mfpio_destroy(io68_t * const io)
 static io68_t mfp_io =
 {
   0,
-  "MFP-68901",
+  "MK-68901",
   0xFFFFFA00, 0xFFFFFA2F,
   mfpio_readB,mfpio_readW,mfpio_readL,
   mfpio_writeB,mfpio_writeW,mfpio_writeL,

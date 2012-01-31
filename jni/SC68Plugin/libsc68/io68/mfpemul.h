@@ -218,10 +218,38 @@ typedef struct
 
 /** @} */
 
+/** MFP register name. */
+enum {
+  GPIP  = 0x01,
+  AER   = 0x03,
+  DDR   = 0x05,
+  IERA  = 0x07,
+  IERB  = 0x09,
+  IPRA  = 0x0B,
+  IPRB  = 0x0D,
+  ISRA  = 0x0F,
+  ISRB  = 0x11,
+  IMRA  = 0x13,
+  IMRB  = 0x15,
+  VR    = 0x17,
+  TACR  = 0x19,
+  TBCR  = 0x1B,
+  TCDCR = 0x1D,
+  TADR  = 0x1F,
+  TBDR  = 0x21,
+  TCDR  = 0x23,
+  TDDR  = 0x25,
+  SCR   = 0x27,
+  UCR   = 0x29,
+  RSR   = 0x2B,
+  TSR   = 0x2D,
+  UDR   = 0x2F,
+};
+
 /** MFP-68901 emulator. */
 typedef struct {
-  u8 map[0x40];          /**< Registers map.        */
-  mfp_timer_t timers[4]; /**< Timers.               */
+  u8 map[0x40];                       /**< Registers map.        */
+  mfp_timer_t timers[4];              /**< Timers.               */
 } mfp_t;
 
 /** @name  MFP-68901 emulator library.
