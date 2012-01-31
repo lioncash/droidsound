@@ -31,8 +31,8 @@
 # include "default_option68.h"
 #endif
 
-#include <io68/paulaemul.h>
-#include <emu68/assert68.h>
+#include "io68/paulaemul.h"
+#include "emu68/assert68.h"
 #include <sc68/msg68.h>
 
 #ifndef DEBUG_PL_O

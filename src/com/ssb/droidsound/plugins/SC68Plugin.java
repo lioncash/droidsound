@@ -100,7 +100,7 @@ public class SC68Plugin extends DroidSoundPlugin {
 
 	@Override
 	public String getVersion() {
-		return "SC68 3.0.0";
+		return "SC68 3.0.0a";
 	}
 
 	@Override

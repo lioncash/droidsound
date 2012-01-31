@@ -19,7 +19,7 @@
  *
  */
 
-/* $Id: ymemul.c 127 2009-09-14 02:51:23Z benjihan $ */
+/* $Id: ymemul.c 202 2011-10-16 01:14:21Z benjihan $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -53,7 +53,6 @@ int ym_default_chans = 7;
 #include "ym_linear_table.inc"
 #include "ym_atarist_table.inc"
 
-
 /** 3 channels output table.
  *  Using a table for non linear mixing.
  */
@@ -82,7 +81,7 @@ static void access_list_add(ym_t * const ym,
     /* No more free entries. */
     /* $$$ TODO: realloc buffer, reloc all lists ... */
     TRACE68(msg68_CRITICAL,
-            "ym-2148: access list *%s* -- *OVERFLOW*", access_list->name);
+            "ym-2149: access list *%s* -- *OVERFLOW*\n", access_list->name);
     return;
   }
   ym->waccess_nxt = free_access+1;
@@ -157,16 +156,17 @@ int ym_reset(ym_t * const ym, const cycle68_t ymcycle)
   return ret;
 }
 
+
 /******************************************************
  *                  Yamaha init                        *
  ******************************************************/
 
-/* -DYM_ENGINE=YM_ENGINE_BLEP choose BLEP as default engine */
+/* Select default engine */
 #ifndef YM_ENGINE
-# define YM_ENGINE YM_ENGINE_PULS
+# define YM_ENGINE YM_ENGINE_BLEP
 #endif
 
-/* -DYM_VOL_TABLE=YM_VOL_LINEAR choose linear volume table */
+/* Select default volume table */
 #ifndef YM_VOL_TABLE
 # define YM_VOL_TABLE YM_VOL_ATARIST
 #endif
@@ -302,7 +302,6 @@ int ym_run(ym_t * const ym, s32 * output, const cycle68_t ymcycles)
 }
 
 
-
 /* ,-----------------------------------------------------------------.
  * |                         Write YM register                       |
  * `-----------------------------------------------------------------'
@@ -347,6 +346,7 @@ void ym_writereg(ym_t * const ym,
   }
 }
 
+
 /* ,-----------------------------------------------------------------.
  * |                  Adjust YM-2149 cycle counters                  |
  * `-----------------------------------------------------------------'
@@ -359,6 +359,7 @@ void ym_adjust_cycle(ym_t * const ym, const cycle68_t ymcycles)
     access_adjust_cycle(&ym->env_regs, ymcycles);
   }
 }
+
 
 /* ,-----------------------------------------------------------------.
  * |                  Yamaha get activated voices                    |
@@ -379,6 +380,7 @@ int ym_active_channels(ym_t * const ym, const int clr, const int set)
   }
   return v;
 }
+
 
 /* ,-----------------------------------------------------------------.
  * |                        Engine selection                         |
@@ -462,6 +464,7 @@ int ym_clock(ym_t * const ym, int clock)
   return clock;
 }
 
+
 /* ,-----------------------------------------------------------------.
  * |                           Volume model                          |
  * `-----------------------------------------------------------------'
@@ -481,7 +484,7 @@ int ym_volume_model(ym_t * const ym, int model)
 {
   /* Set volume table (unique for all instance) */
   switch (model) {
-    
+
   case YM_VOL_QUERY:
     model = default_parms.volmodel;
     break;
@@ -526,7 +529,7 @@ int ym_sampling_rate(ym_t * const ym, int hz)
 
   case YM_VOL_DEFAULT:
     hz = default_parms.hz;
-    
+
   default:
     if (hz < SAMPLING_RATE_MIN) hz = SAMPLING_RATE_MIN;
     if (hz > SAMPLING_RATE_MAX) hz = SAMPLING_RATE_MAX;
@@ -661,11 +664,12 @@ int ym_setup(ym_t * const ym, ym_parms_t * const parms)
  */
 void ym_cleanup(ym_t * const ym)
 {
-  TRACE68(ym_cat,"ym-2149: cleanup\n");
+  TRACE68(ym_cat,"%s","ym-2149: cleanup\n");
   if (ym && ym->cb_cleanup) {
     ym->cb_cleanup(ym);
   }
 }
+
 
 /** Get required output buffer size.
  */

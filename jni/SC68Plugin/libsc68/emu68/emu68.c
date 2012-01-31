@@ -19,7 +19,7 @@
  *
  */
 
-/* $Id: emu68.c 126 2009-07-15 08:58:51Z benjihan $ */
+/* $Id: emu68.c 150 2011-08-25 06:15:47Z benjihan $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -132,6 +132,35 @@ emu68_handler_t emu68_get_handler(emu68_t * const emu68)
     ;
 }
 
+const char * emu68_exception_name(unsigned int vector)
+{
+  const char * ret = 0;
+
+  static const char * xtra_names[] = {
+    "hw-brkp", "hw-trace", "hw-halt"
+  };
+  static const char * xcpt_names[] = {
+    "reset", "reset_pc", "bus-error", "addr-error",
+    "illegal", "0-divide", "chk", "trapv", "privv",
+    "trace", "linea", "linef"
+  };
+  static const char * trap_names[] = {
+    "trap#0", "trap#1", "trap#2", "trap#3",
+    "trap#4", "trap#5", "trap#6", "trap#7",
+    "trap#8", "trap#9", "trap#A", "trap#B",
+    "trap#C", "trap#D", "trap#E", "trap#F",
+  };
+  if (vector >= 0x100) {
+    vector -= 0x100;
+    if (vector < sizeof(xtra_names)/sizeof(*xtra_names))
+      ret = xtra_names[vector];
+  } else if (vector < sizeof(xcpt_names)/sizeof(*xcpt_names)) {
+    ret = xcpt_names[vector];
+  } else if (vector >= TRAP_VECTOR(0) && vector <= TRAP_VECTOR(15)) {
+    ret = trap_names[vector-TRAP_VECTOR_0];
+  }
+  return ret;
+}
 
 /* ,-----------------------------------------------------------------.
  * |                      Onboard memory access                      |
@@ -316,6 +345,20 @@ static inline void step68(emu68_t * const emu68)
   (line_func[line])(emu68, reg9, opw);
 }
 
+/* $$$ evil duplicated code from mem68.c */
+static void chkframe(emu68_t * const emu68, addr68_t addr, const int flags)
+{
+  int oldchk;
+
+  assert ( ! (addr & 0x800000) );
+  addr &= MEMMSK68;
+  oldchk = emu68->chk[addr];
+  if ( ( oldchk & flags ) != flags ) {
+    emu68->framechk |= flags;
+    emu68->chk[addr] = oldchk|flags;
+  }
+}
+
 /* Run a single step emulation with all pogramm controls. */
 static inline int controlled_step68(emu68_t * const emu68)
 {
@@ -333,6 +376,7 @@ static inline int controlled_step68(emu68_t * const emu68)
       if (emu68->status != EMU68_NRM)
         return emu68->status;
     }
+    chkframe(emu68, REG68.pc, EMU68_X);
   }
 
   /* Execute 68K instruction. */
@@ -353,23 +397,33 @@ static void loop68(emu68_t * const emu68)
     ;
 }
 
+const char * emu68_status_name(enum emu68_status_e status)
+{
+  switch (status) {
+  case EMU68_ERR: return "error";
+  case EMU68_NRM: return "ok";
+  case EMU68_STP: return "halt";
+  case EMU68_BRK: return "break";
+  case EMU68_XCT: return "exception";
+  }
+  return "unknown";
+}
+
 /* Execute one instruction. */
 int emu68_step(emu68_t * const emu68)
 {
   int rc = EMU68_ERR;
-
   if (emu68) {
     switch (emu68->status) {
-
     case EMU68_NRM:
       emu68->framechk = 0;
     case EMU68_BRK:
       emu68->status = EMU68_NRM;
-      loop68(emu68);
+      /* loop68(emu68); */
+      controlled_step68(emu68);
     case EMU68_STP:
       rc = emu68->status;
       break;
-
     default:
       assert(!"unexpected value for emu68_t::status");
       break;
@@ -638,9 +692,7 @@ void emu68_cycle(emu68_t * const emu68, cycle68_t cycleperpass)
   io68_t *io;
 
   /* Clear ORed memory access flags ... */
-#ifdef EMU68DEBUG
   REG68.framechk = 0;
-#endif
 
   /* Adjust internal IO cycle counter */
   for (io=emu68->iohead; io; io=io->next) {
@@ -716,14 +768,14 @@ void emu68_bp_delall(emu68_t * const emu68)
 
 void emu68_bp_del(emu68_t * const emu68, int id)
 {
-  if (emu68 && (unsigned int)id<16u && emu68->breakpoints[id].count) {
-      if (emu68->chk) {
-        const addr68_t addr = emu68->breakpoints[id].addr & MEMMSK68;
-        emu68->chk[addr] &= ~(EMU68_B|EMU68_M);
-      }
-      emu68->breakpoints[id].addr  = 0;
-      emu68->breakpoints[id].count = 0;
-      emu68->breakpoints[id].reset = 0;
+  if (emu68 && (unsigned int)id<16u) {
+    if (emu68->chk && emu68->breakpoints[id].count ) {
+      const addr68_t addr = emu68->breakpoints[id].addr & MEMMSK68;
+      emu68->chk[addr] &= ~(EMU68_B|EMU68_M);
+    }
+    emu68->breakpoints[id].addr  = 0;
+    emu68->breakpoints[id].count = 0;
+    emu68->breakpoints[id].reset = 0;
   }
 }
 
@@ -737,9 +789,11 @@ int emu68_bp_set(emu68_t * const emu68, int id,
       for ( id=0; id<16 && emu68->breakpoints[id].count; ++id)
         ;
     if ( (unsigned int) id < 16u) {
-      emu68->breakpoints[id].addr  = addr;
+      emu68->breakpoints[id].addr  = addr &= MEMMSK68;
       emu68->breakpoints[id].count = count;
       emu68->breakpoints[id].reset = reset;
+      if (emu68->chk)
+        emu68->chk[addr] = (emu68->chk[addr] & ~EMU68_M) | EMU68_B | (id<<4);
     } else {
       id = -1;
     }
@@ -780,7 +834,9 @@ emu68_t * emu68_create(emu68_parms_t * const parms)
   if (!p->log2mem) {
     p->log2mem = def_parms.log2mem;
   }
-  if (p->log2mem<16||p->log2mem>24) {
+  if (p->log2mem < 16 || p->log2mem > 24) {
+    emu68_error_add(emu68,
+                    "Invalid requested amount of memory -- 2^%d", p->log2mem);
     goto error;
   }
 
@@ -788,11 +844,13 @@ emu68_t * emu68_create(emu68_parms_t * const parms)
     p->clock = def_parms.clock;
   }
   if (p->clock<500000u || p->clock>60000000u) {
+    emu68_error_add(emu68,
+                    "Invalid clock frequency -- %u", p->clock);
     goto error;
   }
 
-  memsize = 1<<p->log2mem;
-  membyte = sizeof(emu68_t) + (memsize<<!!p->debug);
+  memsize = 1 << p->log2mem;
+  membyte = sizeof(emu68_t) + (memsize << !!p->debug);
   emu68   = emu68_alloc(membyte);
   if (!emu68) {
     goto error;
@@ -804,13 +862,13 @@ emu68_t * emu68_create(emu68_parms_t * const parms)
   emu68->log2mem = p->log2mem;
   emu68->memmsk  = memsize-1;
   if (p->debug) {
-    emu68->chk = emu68->mem + memsize+4;
+    emu68->chk = emu68->mem + memsize+8;
   }
 
   emu68_mem_init(emu68);
   emu68_reset(emu68);
 
-  error:
+error:
   return emu68;
 }
 
@@ -898,7 +956,7 @@ void emu68_reset(emu68_t * const emu68)
 /* Library initialize. */
 int emu68_init(int * argc, char ** argv)
 {
-  def_parms.name     = 0;
+  def_parms.name    = 0;
   def_parms.log2mem = 19;            /* log2mem: 2^19 => 512 kB */
   def_parms.clock   = EMU68_ATARIST_CLOCK;
   def_parms.debug   = 0;
@@ -911,4 +969,3 @@ int emu68_init(int * argc, char ** argv)
 void emu68_shutdown(void)
 {
 }
-

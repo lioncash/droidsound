@@ -19,7 +19,7 @@
  *
  */
 
-/* $Id: ym_puls.c 127 2009-09-14 02:51:23Z benjihan $ */
+/* $Id: ym_puls.c 141 2011-08-07 23:30:20Z benjihan $ */
 
 /* Copyright (C) 1998-2009 Benjamin Gerard */
 
@@ -1075,7 +1075,7 @@ int run(ym_t * const ym, s32 * output, const cycle68_t ymcycles)
   do_envelop(ym,ymcycles);
   do_tone_and_mixer(ym,ymcycles);
 
-  ym->waccess = ym->static_waccess;
+  ym->waccess     = ym->static_waccess;
   ym->waccess_nxt = ym->waccess;
 
   filters[ym->emu.puls.ifilter].filter(ym);

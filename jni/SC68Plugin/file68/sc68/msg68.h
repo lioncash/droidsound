@@ -7,9 +7,7 @@
  *
  */
 
-/* $Id: msg68.h 126 2009-07-15 08:58:51Z benjihan $ */
-
-/* Copyright (C) 1998-2009 Benjamin Gerard */
+/* Copyright (C) 1998-2011 Benjamin Gerard */
 
 #ifndef _FILE68_MSG68_H_
 #define _FILE68_MSG68_H_
@@ -61,14 +59,22 @@ enum msg68_cat_e
 {
   msg68_NEVER    = -3, /**< Never printed message.    */
   msg68_ALWAYS   = -2, /**< Always printed message.   */
+#if 0
   msg68_CURRENT  = -1, /**< Current category message. */
-
+#endif
   msg68_CRITICAL = 0,  /**< Critical error message.   */
   msg68_ERROR    = 1,  /**< Error message.            */
   msg68_WARNING  = 2,  /**< Warning message.          */
   msg68_INFO     = 3,  /**< Informationnal message.   */
   msg68_DEBUG    = 4,  /**< Debug message.            */
   msg68_TRACE    = 5,  /**< Trace message.            */
+
+# ifndef DEBUG
+  msg68_DEFAULT  = msg68_NEVER
+# else
+  msg68_DEFAULT  = msg68_DEBUG
+# endif
+
 };
 
 /** @name  Category manipulation functions.
@@ -105,9 +111,11 @@ FILE68_API
  */
 int msg68_cat(const char * name, const char * desc, int filter);
 
+#if 0
 FILE68_API
 /** Get/Set current category. */
 int msg68_cat_current(int cat);
+#endif
 
 FILE68_API
 /** Free/Destroy a category. */
@@ -306,25 +314,19 @@ void msg68x_trace(void * cookie, const char * fmt, ...);
  *  @}
  */
 
-#ifdef NDEBUG
-# define  TRACE68 while (0) msg68_dummy
-# define VTRACE68 while (0) vmsg68_dummy
-static inline
-void msg68_dummy(int cat, const char * fmt, ...) {}
-static inline
-void vmsg68_dummy(int cat, const char * fmt, va_list list) {}
-#else
-# define  TRACE68 msg68
-# define VTRACE68 vmsg68
-#endif
-
-#ifndef msg68_DEFAULT
-# ifndef DEBUG
-#  define msg68_DEFAULT msg68_NEVER
+#ifndef TRACE68
+# ifdef NDEBUG
+#  if defined(__GNUC__) || defined(CPP_VA_MACRO)
+#   define TRACE68(cat,fmt,...)
+#  else
+#  define  TRACE68 while (0) msg68_dummy
+static void msg68_dummy(int cat, const char * fmt, ...) {}
+#  endif
+#  define VTRACE68(cat,fmt,list)
 # else
-#  define msg68_DEFAULT msg68_CURRENT
+#  define  TRACE68 msg68
+#  define VTRACE68 vmsg68
 # endif
 #endif
-
 
 #endif /* #ifndef _FILE68_MSG68_H_ */
