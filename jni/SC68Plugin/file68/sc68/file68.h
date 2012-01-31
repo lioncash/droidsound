@@ -35,17 +35,17 @@
 
 /**
  * SC68 file identification string definition.
- * @see file68_idstr
+ * @see file68_identifier()
  */
 #define SC68_IDSTR "SC68 Music-file / (c) (BeN)jamin Gerard / SasHipA-Dev  "
 
 /**
  * SC68 file identification string definition V2.
- * @see file68_idstr_v2
+ * @see file68_identifier()
  */
 #define SC68_IDSTR_V2 "SC68 M2"
 
-#define SC68_NOFILENAME "n/a"    /**< SC68 unknown filename or author.      */
+#define SC68_NOFILENAME "n/a"   /**< SC68 unknown filename or author.      */
 #define SC68_LOADADDR   0x10000 /**< Default load address in 68K memory.    */
 #define SC68_MAX_TRACK  99      /**< Maximum track per disk (2 digits max). */
 
@@ -113,7 +113,19 @@ typedef struct {
   int          loops;    /**< Default number of loop (0:infinite).    */
   int          track;    /**< Track remapping number (0:default).     */
 
-  unsigned int sfx:1;    /**< This track is a sound-fx not a music.   */
+  struct {
+    unsigned   sfx  : 1; /**< Track is a sound-fx not a music.        */
+    unsigned   pic  : 1; /**< Track is position independant code.     */
+    unsigned   time : 1; /**< Track has time info.                    */
+    unsigned   loop : 1; /**< Track has loop info.                    */
+
+    unsigned asid_trk : 8; /**< 0:not asid, >0: original track.       */
+    unsigned asid_tA  : 2; /**< timer used for YM channel-A.          */
+    unsigned asid_tB  : 2; /**< timer used for YM channel-B.          */
+    unsigned asid_tC  : 2; /**< timer used for YM channel-C.          */
+    unsigned asid_tX  : 2; /**< timer not used by aSID.               */
+
+  } has;                 /**< Track flags.                            */
 
   char        *replay;   /**< External replay name.                   */
   hwflags68_t  hwflags;  /**< Hardware and features.                  */
@@ -137,6 +149,7 @@ typedef struct {
 typedef struct {
   int          def_mus;     /**< Preferred default music (default is 0). */
   int          nb_mus;      /**< Number of music track in file.          */
+  int          nb_asid;     /**< Number of aSID track append.            */
   unsigned int time_ms;     /**< Total time for all tracks in ms.        */
   hwflags68_t  hwflags;     /**< All tracks flags ORed.                  */
   tagset68_t   tags;        /**< Meta tags for the disk (album)          */
@@ -487,6 +500,8 @@ FILE68_API
  * Get identifier string.
  * @param  version  0:default 1:v1 2:v2
  * @return a static string of the identifier
+ * @see SC68_IDSTR
+ * @see SC68_IDSTR_V2
  */
 const char * file68_identifier(int version);
 

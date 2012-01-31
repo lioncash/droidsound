@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2001-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-03 11:16:36 ben>
+ * Time-stamp: <2011-11-15 15:55:40 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -106,7 +106,8 @@ static option68_t opts[] = {
   { option68_STR,prefix,"data"    ,rsccat,"shared (system) resource path" },
   { option68_STR,prefix,"home"    ,rsccat,"private (user) resource path"  },
   { option68_STR,prefix,"music"   ,rsccat,"music database path"           },
-  { option68_STR,prefix,"rmusic"  ,rsccat,"online music base URI"         }
+  { option68_STR,prefix,"rmusic"  ,rsccat,"online music base URI"         },
+  { option68_STR,prefix,"asid"    ,rsccat,"create aSID tracks [no|safe|force]" }
 };
 
 int file68_init(int argc, char **argv)

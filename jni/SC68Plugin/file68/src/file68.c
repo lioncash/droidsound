@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-30 19:57:59 ben>
+ * Time-stamp: <2011-11-15 16:41:08 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -35,6 +35,7 @@
 #include "msg68.h"
 #include "string68.h"
 #include "rsc68.h"
+#include "option68.h"
 
 #include "istream68_def.h"
 #include "istream68_file.h"
@@ -77,7 +78,9 @@ const char file68_idstr_v1[56] = SC68_IDSTR;
 const char file68_idstr_v2[8]  = SC68_IDSTR_V2;
 const char file68_mimestr[]    = SC68_MIMETYPE;
 
-#define DEF_TRACK_MS (150*1000u)        /* 2"30' */
+#define MAX_TRACK_LP 4          /* maximum number of guessed loop allowed                */
+#define MIN_TRACK_MS (45*1000u) /* below this value, force a few loops                   */
+#define DEF_TRACK_MS (90*1000u) /* time we use as default if track contains no such info */
 
 #ifndef DEBUG_FILE68_O
 # define DEBUG_FILE68_O 0
@@ -303,7 +306,7 @@ int ensure_header(istream68_t * const is, char *id, int have, int need)
     int miss = need - have;
     int read = istream68_read(is, id+have, miss);
     if (read != miss) {
-      msg68_error("not an sc68 file");
+      /* msg68_error("not a sc68 file (%s)\n", read==-1?"read error":"eof"); */
       have = 0;
     } else {
       have = need;
@@ -325,7 +328,7 @@ static int read_header(istream68_t * const is)
   const int idv2_req = sizeof(file68_idstr_v2);
   const int sndh_req = 32;
   int have = 0;
-  const char * missing_id = "not an sc68 file (no magic)";
+  const char * missing_id = "not a sc68 file (no magic)";
 
   /* Read ID v2 string */
   if(have = ensure_header(is, id, have, idv2_req), !have) {
@@ -392,29 +395,27 @@ static const char * not_noname(const char * s)
  * MS  = FR*1000/HZ
  */
 
-static unsigned int frames_to_ms(unsigned int fr, unsigned int hz)
+static unsigned int fr_to_ms(unsigned int fr, unsigned int hz)
 {
   u64 ms;
-
   ms  = fr;
   ms *= 1000u;
   ms /= hz;
-
   return (unsigned int) ms;
 }
 
-static unsigned int ms_to_frames(unsigned int ms, unsigned int hz)
+static unsigned int ms_to_fr(unsigned int ms, unsigned int hz)
 {
   u64 fr;
-
   fr  = ms;
   fr *= hz;
   fr /= 1000u;
-
   return (unsigned int) fr;
 }
 
-
+/* Extract AKA from legacy sc68 artist nomenclature `ARTIST (AKA)'
+ * excepted for unknown (replay) ones.
+ */
 static int guess_artist_alias(disk68_t * mb, tagset68_t * tags)
 {
   int id;
@@ -426,9 +427,9 @@ static int guess_artist_alias(disk68_t * mb, tagset68_t * tags)
       char * s;
       for (s = e-1; s > artist && *s != '('; --s)
         ;
-      if (s > artist && s[-1] == ' ') {
-        *e = 0;
+      if (s > artist && s[-1] == ' ' && strncmp68(artist,"unknown",7)) {
         s[-1] = 0;
+        *e = 0;
         id = set_customtag(mb, tags, tagstr.aka, s+1);
         TRACE68(file68_cat,"file68 guessed AKA '%s' from '%s' tag-id:%d\n", s+1, artist, id);
       }
@@ -475,44 +476,51 @@ static int valid(disk68_t * mb)
   /* Init all music in this file */
   for (m = mb->mus, i = 0; m < mb->mus + mb->nb_mus; m++, i++) {
 
-    /* default load address */
-    if (!m->a0)
+    /* $$$ TEMP $$$ hack tao_tsd, to remove ym from hardware flags */
+    if (!strcmp68(m->replay,"tao_tsd")) {
+      m->hwflags.bit.ym     = 0;
+      m->hwflags.bit.ste    = 1;
+    }
+
+    /* Default load address */
+    if ( (m->has.pic = !m->a0) )
       m->a0 = SC68_LOADADDR;
 
-    /* default replay frequency is 50Hz */
+    /* Default replay frequency is 50Hz */
     if (!m->frq)
-      m->frq = 50;
+      m->frq = 50u;
 
     /* Compute ms from frames prior to frames from ms. */
-    if (m->first_fr)
-      m->first_ms = frames_to_ms(m->first_fr, m->frq);
-    else
-      m->first_fr = ms_to_frames(m->first_ms, m->frq);
+    if ( (m->has.time = m->first_fr > 0u) ) {
+      m->first_ms = fr_to_ms(m->first_fr, m->frq);
+    } else {
+      if ( !(m->has.time = m->first_ms > 0) )
+        m->first_ms = DEF_TRACK_MS;
+      m->first_fr = ms_to_fr(m->first_ms, m->frq);
+    }
 
-    if (m->loops_fr == ~0) {
+    if (m->has.loop) {
+      /* Compute ms from frames. */
+      m->loops_ms = fr_to_ms(m->loops_fr, m->frq);
+    } else {
       /* loop time not set, default to track time. */
       m->loops_fr = m->first_fr;
       m->loops_ms = m->first_ms;
-    } else {
-      /* Compute ms from frames. */
-      m->loops_ms = frames_to_ms(m->loops_fr, m->frq);
     }
 
-    if (!m->loops) {
-      /* loop not set, set it to have at least DEF_TRACK_MS total track time */
-      m->loops = (m->loops_ms && m->first_ms < DEF_TRACK_MS)
-        ? 1 + (DEF_TRACK_MS - m->first_ms + (m->loops_ms >> 1)) / m->loops_ms
-        : 1
-        ;
-      if (m->loops > 5)
-        m->loops = 5;
-      TRACE68(file68_cat, "file68: set track #%02d loop to -- *%d*\n",i+1,m->loops);
-    } else {
-      TRACE68(file68_cat, "file68: has track #%02d loop of -- *%d*\n",i+1,m->loops);
+    if (!m->loops_fr) {
+      /* Track does not loop, force number of loops to 1. */
+      m->loops = 1;
+    } else if (!m->loops) {
+      m->loops = 1;
+      if ( m->first_ms < MIN_TRACK_MS)
+        m->loops += (MIN_TRACK_MS - m->first_ms + (m->loops_ms>>1)) / m->loops_ms;
+      if (m->loops > MAX_TRACK_LP)
+        m->loops = MAX_TRACK_LP;
     }
 
     m->total_fr = m->first_fr + (m->loops - 1) * m->loops_fr;
-    m->total_ms = frames_to_ms(m->total_fr, m->frq);
+    m->total_ms = fr_to_ms(m->total_fr, m->frq);
 
     /* set start time in the disk. */
     m->start_ms = mb->time_ms;
@@ -567,6 +575,69 @@ static int valid(disk68_t * mb)
     if (i = get_customtag(&mb->mus[mb->def_mus].tags, tagstr.aka), i>=0)
       set_customtag(mb, &mb->tags, tagstr.aka, mb->mus[mb->def_mus].tags.array[i].val);
   }
+
+  /* aSIDidy */
+  if (1) {
+    option68_t * opt = option68_get("asid",1);
+    const char * str = opt ? opt->val.str : 0;
+    int j, asidify_mode;
+    if (!strcmp68(str,"no"))
+      asidify_mode = 0;                 /* disable */
+    else if (!strcmp68(str,"force"))
+      asidify_mode = 2;                 /* force   */
+    else
+      asidify_mode = 1;                 /* default to "safe" */
+
+    /* Init all music in this file */
+    for (i=j=0; i<mb->nb_mus && mb->nb_mus+j<SC68_MAX_TRACK ; i++) {
+      music68_t * s = mb->mus+i;
+
+      if (!s->hwflags.bit.ym)
+        continue;                  /* not a YM track, can't aSIDify */
+
+      switch (asidify_mode) {
+
+      case 1:
+        /* "safe" mode */
+        if (!s->hwflags.bit.timers   /* Don't know about timers: not safe */
+            || s->hwflags.bit.timera /* One or more timers in used: not safe */
+            || s->hwflags.bit.timerb
+            || s->hwflags.bit.timerc
+            || s->hwflags.bit.timerd)
+          break;
+
+      case 2:
+        /* "force" mode */
+
+        if (1)
+          m = s;
+        else {
+          m  = mb->mus + mb->nb_mus + j++;
+          *m = *s;
+          /* $$$ WE SHOULD CHECK FOR MALLOCATED DATA IN THE TAG SET */
+        }
+
+        m->has.asid_trk = i+1;
+        m->has.asid_tA = 'A'-'A';
+        m->has.asid_tB = 'C'-'A';
+        m->has.asid_tC = 'D'-'A';
+        m->has.asid_tX = 'B'-'A';
+        if (m != s) {
+          m->start_ms = mb->time_ms;
+          mb->time_ms += m->total_ms;
+        }
+        mb->nb_asid++;
+
+      case 0:
+      default:
+        break;
+      }
+    }
+    mb->nb_mus += j;
+    TRACE68(file68_cat,"file68: aSID tracks -- %d/%d\n", mb->nb_asid,mb->nb_mus );
+
+  }
+
   return 0;
 }
 
@@ -814,14 +885,14 @@ disk68_t * file68_load_url(const char * fname)
         music68_t * m = d->mus + i;
         m->loops    = info.data.music.loop;
         m->total_fr = m->first_fr + ( m->loops - 1 ) * m->loops_fr;
-        m->total_ms = frames_to_ms(m->total_fr, m->frq);
+        m->total_ms = fr_to_ms(m->total_fr, m->frq);
       }
     }
     if (info.data.music.time != -1) {
       unsigned int ms = info.data.music.time * 1000u;
       for (i=0; i<d->nb_mus; ++i) {
         music68_t * m = d->mus + i;
-        m->total_fr = ms_to_frames(ms, m->frq);
+        m->total_fr = ms_to_fr(ms, m->frq);
         m->total_ms = ms;
       }
     }
@@ -1199,7 +1270,6 @@ static disk68_t * alloc_disk(int datasz)
     mb->tags.tag.artist.key = tagstr.artist;
     mb->tags.tag.genre.key  = tagstr.format;
     for (cursix = mb->mus; cursix < mb->mus+SC68_MAX_TRACK; ++cursix) {
-      cursix->loops_fr = ~0;
       cursix->tags.tag.title.key  = tagstr.title;
       cursix->tags.tag.artist.key = tagstr.artist;
       cursix->tags.tag.genre.key  = tagstr.genre;
@@ -1346,8 +1416,8 @@ disk68_t * file68_load(istream68_t * is)
         break;
       }
       cursix = mb->mus + mb->nb_mus;
-      cursix->loops    = 0;             /* default loop        */
-      cursix->loops_fr = ~0;            /* loop length not set */
+      /* cursix->loops    = 0;             /\* default loop        *\/ */
+      /* cursix->loops_fr = ~0;            /\* loop length not set *\/ */
       tags = &cursix->tags;
       mb->nb_mus++;
     }
@@ -1425,6 +1495,7 @@ disk68_t * file68_load(istream68_t * is)
         goto error;
       }
       cursix->loops_fr = LPeek(b);
+      cursix->has.loop = 1;
     }
     /* SFX flag */
     else if (ISCHK(chk, CH68_SFX)) {
@@ -1432,7 +1503,7 @@ disk68_t * file68_load(istream68_t * is)
         errorstr = chk;
         goto error;
       }
-      cursix->sfx = 1;
+      cursix->has.sfx = 1;
     }
     /* Replay flags */
     else if (ISCHK(chk, CH68_TYP)) {
@@ -1819,15 +1890,14 @@ static const char * save_sc68(istream68_t * os, const disk68_t * mb, int len, in
     if (0
         || save_string (os, CH68_REPLAY, mus->replay)
         || save_nonzero(os, CH68_D0,     mus->d0)
-        || save_nonzero(os, CH68_AT,     (mus->a0 != SC68_LOADADDR) * mus->a0)
-        || save_nonzero(os, CH68_FRAME,  mus->first_fr)
+        || save_nonzero(os, CH68_AT,    !mus->has.pic     * mus->a0)
         || save_nonzero(os, CH68_FRQ,    (mus->frq != 50) * mus->frq)
-        || save_nonzero(os, CH68_LOOP,   (mus->loops > 1) * mus->loops)
-        || ( mus->loops_fr != ~0 &&
-             mus->loops_fr != mus->first_fr &&
+        || save_nonzero(os, CH68_FRAME,  mus->has.time    * mus->first_fr)
+        || save_nonzero(os, CH68_LOOP,   mus->has.loop * (mus->loops > 1) * mus->loops)
+        || ( mus->has.loop &&
              save_number(os, CH68_LOOPFR,  mus->loops_fr) )
         || save_number (os, CH68_TYP,    flags)
-        || ( mus->sfx &&
+        || ( mus->has.sfx &&
              save_chunk(os, CH68_SFX, 0, 0) )
       ) {
       errstr = "chunk write";

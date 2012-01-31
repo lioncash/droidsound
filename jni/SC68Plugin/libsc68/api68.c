@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-31 07:32:12 ben>
+ * Time-stamp: <2011-11-15 16:12:38 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -880,8 +880,6 @@ static void stop_track(sc68_t * sc68)
   sc68->mix.loop_count  = 0;
   sc68->mix.bufptr      = 0;
   sc68->mix.buflen      = 0;
-
-
 }
 
 static int reset_emulators(sc68_t * sc68, const hwflags68_t * const hw)
@@ -979,7 +977,7 @@ static int load_replay(sc68_t * sc68, const char * replay, int a0)
   return a0 + ((size + 1) & ~1);
 }
 
-static int run_music_init(sc68_t * sc68, music68_t * m, int a0)
+static int run_music_init(sc68_t * sc68, music68_t * m, int a0, int a6)
 {
   int status;
 
@@ -991,6 +989,14 @@ static int run_music_init(sc68_t * sc68, music68_t * m, int a0)
   sc68->emu68->reg.d[1] = !m->hwflags.bit.ste;
   sc68->emu68->reg.d[2] = m->datasz;
   sc68->emu68->reg.a[0] = a0;
+  sc68->emu68->reg.a[6] = a6;           /* original replay address  */
+  if (m->has.asid_trk)
+    sc68->emu68->reg.d[7] = 0
+      | ( ('A'+m->has.asid_tA) << 24 )
+      | ( ('A'+m->has.asid_tB) << 16 )
+      | ( ('A'+m->has.asid_tC) <<  8 )
+      | ( ('A'+m->has.asid_tX) <<  0 );
+    
   sc68->emu68->reg.a[7] = sc68->emu68->memmsk+1-16;
   sc68->emu68->reg.pc   = sc68->playaddr;
   sc68->emu68->reg.sr   = 0x2300;
@@ -1016,7 +1022,7 @@ static int change_track(sc68_t * sc68, int track)
 {
   disk68_t  * d;
   music68_t * m;
-  int         a0;
+  int         a0,a6;
 
   assert(sc68);
   assert(sc68->disk);
@@ -1034,6 +1040,12 @@ static int change_track(sc68_t * sc68, int track)
   sc68->playaddr = a0 = m->a0;
   sc68_debug(sc68," -> play address -- $%06x\n", sc68->playaddr);
 
+  if (m->has.asid_trk) {
+    if (a0 = load_replay(sc68, "asidifier", a0), a0 == SC68_ERROR)
+      return SC68_ERROR;
+  }
+  a6 = a0;
+
   /* Load external replay into 68K memory. */
   if (m->replay && (a0 = load_replay(sc68, m->replay, a0), a0 == SC68_ERROR))
     return SC68_ERROR;
@@ -1046,7 +1058,7 @@ static int change_track(sc68_t * sc68, int track)
   sc68_debug(sc68," -> music data -- [%06x-%06x]\n", a0, a0+m->datasz-1);
 
   /* Run music init code */
-  if ( run_music_init(sc68, m, a0) == SC68_ERROR )
+  if ( run_music_init(sc68, m, a0, a6) == SC68_ERROR )
     return SC68_ERROR;
 
   /* Ensure sampling rate */
@@ -1190,6 +1202,7 @@ static int apply_change_track(sc68_t * sc68)
   /* -1 : stop */
   if (track == -1) {
     sc68_debug(sc68,"libsc68: stop requested\n");
+    sc68->mix.buflen = 0; /* warning removal in stop_track() */
     stop_track(sc68);
     return SC68_END;
   }
@@ -1290,6 +1303,8 @@ int sc68_process(sc68_t * sc68, void * buf16st, int * _n)
               break;
             }
             sc68->mix.buflen = err;
+          } else {
+            mixer68_fill(sc68->mix.bufptr, sc68->mix.buflen = sc68->mix.bufreq, 0);
           }
 
           if (sc68->mus->hwflags.bit.ste)
@@ -1304,7 +1319,6 @@ int sc68_process(sc68_t * sc68, void * buf16st, int * _n)
         /* Advance time */
         calc_current_ms(sc68);
         sc68->mix.pass_count++;
-
       }
 
       assert(sc68->mix.buflen > 0);
@@ -1423,6 +1437,7 @@ int sc68_open(sc68_t * sc68, sc68_disk_t disk)
 void sc68_close(sc68_t * sc68)
 {
   if (sc68 && sc68->disk) {
+    sc68->mix.buflen = 0; /* warning removal in stop_track() */
     stop_track(sc68);
     if (sc68->tobe3)
       sc68_free(sc68->disk);

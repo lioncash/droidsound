@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2001-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-02 16:04:43 ben>
+ * Time-stamp: <2011-11-07 10:58:23 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -65,6 +65,25 @@ int strcmp68(const char *a, const char *b)
   }
   return av - bv;
 }
+
+/*  Compare two string without case (compare at most max chars) .
+ */
+int strncmp68(const char *a, const char *b, int max)
+{
+  int av, bv;
+  if (a == b || max <= 0)
+    return 0;
+  if (!a)
+    return -1;
+  if (!b)
+    return 1;
+  for (av = toupper68(*a), bv = toupper68(*b); --max && av && av == bv; a++, b++) {
+    av = toupper68(*a);
+    bv = toupper68(*b);
+  }
+  return av - bv;
+}
+
 
 /*  "a+b" with sizeof("a+b") <= l
  */
