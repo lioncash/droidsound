@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-15 12:32:36 ben>
+ * Time-stamp: <2011-10-18 02:06:29 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -1192,6 +1192,7 @@ disk68_t * file68_load(istream68_t * is)
   int chk_size;
   int opened = 0;
   music68_t *cursix;
+  tagset68_t * tags;
   char *b;
   const char *fname = istream68_filename(is);
   const char *errorstr = 0;
@@ -1276,9 +1277,10 @@ disk68_t * file68_load(istream68_t * is)
     goto error;
   }
 
-  for (b = mb->__data, cursix = 0; len >= 8; b += chk_size, len -= chk_size) {
+  for (b = mb->__data, cursix = 0, tags = &mb->tags;
+       len >= 8;
+       b += chk_size, len -= chk_size) {
     char chk[8];
-
     if (b[0] != 'S' || b[1] != 'C') {
       break;
     }
@@ -1293,51 +1295,38 @@ disk68_t * file68_load(istream68_t * is)
     if (ISCHK(chk, CH68_BASE)) {
       /* nothing to do. */
     }
-    /* Music general info */
+    /* Default track */
     else if (ISCHK(chk, CH68_DEFAULT)) {
       mb->def_mus = LPeek(b);
-    } else if (ISCHK(chk, CH68_FNAME)) {
-      mb->tags.tag.title.val = b;
     }
-    /* start music session */
+    /* Album or track title */
+    else if (ISCHK(chk, CH68_FNAME) || ISCHK(chk, CH68_MNAME)) {
+      tags->tag.title.val = b;
+    }
+    /* Start music session. */
     else if (ISCHK(chk, CH68_MUSIC)) {
-      /* More than 256 musix !!! : Prematured end */
-      if (mb->nb_mus >= 256) {
+      if (mb->nb_mus == SC68_MAX_TRACK) {
+        /* Can't have more than SC68_MAX_TRACK tracks */
         len = 0;
         break;
       }
       cursix = mb->mus + mb->nb_mus;
       cursix->loop = 1; /* default loop */
+      tags = &cursix->tags;
       mb->nb_mus++;
-    }
-    /* Music name */
-    else if (ISCHK(chk, CH68_MNAME)) {
-      if (cursix == 0) {
-        errorstr = chk;
-        goto error;
-      }
-      cursix->tags.tag.title.val = b;
     }
     /* Author name */
     else if (ISCHK(chk, CH68_ANAME)) {
-      if (cursix == 0) {
-        errorstr = chk;
-        goto error;
-      }
-      cursix->tags.tag.artist.val = b;
+      tags->tag.artist.val = b;
     }
     /* Composer name */
     else if (ISCHK(chk, CH68_CNAME)) {
-      if (cursix == 0) {
-        errorstr = chk;
-        goto error;
-      }
-      if (strcmp68(b,cursix->tags.tag.artist.val))
-        set_customtag(mb, &cursix->tags, tagstr.composer, b);
+      if (strcmp68(b,tags->tag.artist.val))
+        set_customtag(mb, tags, tagstr.composer, b);
     }
     /* External replay */
     else if (ISCHK(chk, CH68_REPLAY)) {
-      if (cursix == 0) {
+      if (!cursix) {
         errorstr = chk;
         goto error;
       }
@@ -1345,7 +1334,7 @@ disk68_t * file68_load(istream68_t * is)
     }
     /* 68000 D0 init value */
     else if (ISCHK(chk, CH68_D0)) {
-      if (cursix == 0) {
+      if (!cursix) {
         errorstr = chk;
         goto error;
       }
@@ -1353,7 +1342,7 @@ disk68_t * file68_load(istream68_t * is)
     }
     /* 68000 memory load address */
     else if (ISCHK(chk, CH68_AT)) {
-      if (cursix == 0) {
+      if (!cursix) {
         errorstr = chk;
         goto error;
       }
@@ -1361,7 +1350,7 @@ disk68_t * file68_load(istream68_t * is)
     }
     /* Playing time (ms) */
     else if (ISCHK(chk, CH68_TIME)) {
-      if (cursix == 0) {
+      if (!cursix) {
         errorstr = chk;
         goto error;
       }
@@ -1369,7 +1358,7 @@ disk68_t * file68_load(istream68_t * is)
     }
     /* Playing time (frames) */
     else if (ISCHK(chk, CH68_FRAME)) {
-      if (cursix == 0) {
+      if (!cursix) {
         errorstr = chk;
         goto error;
       }
@@ -1377,7 +1366,7 @@ disk68_t * file68_load(istream68_t * is)
     }
     /* Replay frequency */
     else if (ISCHK(chk, CH68_FRQ)) {
-      if (cursix == 0) {
+      if (!cursix) {
         errorstr = chk;
         goto error;
       }
@@ -1385,7 +1374,7 @@ disk68_t * file68_load(istream68_t * is)
     }
     /* Loop */
     else if (ISCHK(chk, CH68_LOOP)) {
-      if (cursix == 0) {
+      if (!cursix) {
         errorstr = chk;
         goto error;
       }
@@ -1394,7 +1383,7 @@ disk68_t * file68_load(istream68_t * is)
     /* replay flags */
     else if (ISCHK(chk, CH68_TYP)) {
       int f;
-      if (cursix == 0) {
+      if (!cursix) {
         errorstr = chk;
         goto error;
       }
@@ -1412,18 +1401,17 @@ disk68_t * file68_load(istream68_t * is)
     }
     /* meta data */
     else if (ISCHK(chk, CH68_TAG)) {
-      tagset68_t * tag = !cursix ? &mb->tags : &cursix->tags;
       const char * key, * val;
       key = b;
       val = b + strlen(b) + 1;
       TRACE68(file68_cat,"file68: got a tag '%s' '%s'\n", key, val);
-      if (set_customtag(mb, tag, key, val)) {
-        msg68_warning("file68: unable to set tag '%s' '%s'\n", key, val);
+      if (set_customtag(mb, tags, key, val) < 0) {
+        msg68_warning("file68: unable to set %s tag '%s' '%s'\n", cursix ? "track" : "disk", key, val);
       }
     }
     /* music data */
     else if (ISCHK(chk, CH68_MDATA)) {
-      if (cursix == 0) {
+      if (!cursix) {
         errorstr = chk;
         goto error;
       }
@@ -1460,7 +1448,7 @@ error:
     istream68_close(is);
   }
   free68(mb);
-  msg68_error("file68: load '%s' failed [%s]", fname, errorstr ? errorstr : "no reason");
+  msg68_error("file68: load '%s' failed [%s]\n", fname, errorstr ? errorstr : "no reason");
   return 0;
 }
 
