@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-06 14:16:40 ben>
+ * Time-stamp: <2011-10-22 17:55:03 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -31,6 +31,53 @@
 #include "mfp_io.h"
 #include "mfpemul.h"
 
+#ifdef DEBUG
+# include <sc68/msg68.h>
+
+static const char * const regnames[0x18] = {
+  "GPIP", /* 00 - General Purpose I/O Interrupt port     */
+  "AER",  /* 01 - Active Edge Register                   */
+  "DDR",  /* 02 - Data Direction Register                */
+  "IERA", /* 03 - IERA (Interrupt Enable Register A)     */
+  "IERB", /* 04 - IERB (Interrupt Enable Register B)     */
+  "IPRA", /* 05 - IPRA (Interrupt Pending Register A)    */
+  "IPRB", /* 06 - IPRB (Interrupt Pending Register B)    */
+  "ISRA", /* 07 - ISRA (Interrupt In Service Register A) */
+  "ISRB", /* 08 - ISRB (Interrupt In Service Register B) */
+  "IMRA", /* 09 - IMRA (Interrupt Mask Register A)       */
+  "IMRB", /* 0A - IMRB (Interrupt Mask Register B)       */
+  "VR",   /* 0B - VR (Vector Register)                   */
+  "TACR", /* 0C - TACR  (Timer A Control Register)       */
+  "TBCR", /* 0D - TBCR  (Timer B Control Register)       */
+  "TCDCR",/* 0E - TCDCR (Timer C/D Control Register)     */
+  "TADR", /* 0F - TADR  (Timer A Data Register)          */
+  "TBDR", /* 10 - TBDR  (Timer B Data Register)          */
+  "TCDR", /* 11 - TCDR  (Timer C Data Register)          */
+  "TDDR", /* 12 - TDDR  (Timer D Data Register)          */
+  "SCR",  /* 13 - SCR (Synchronous Character Register)   */
+  "UCR",  /* 14 - UCR,USART (Control Register)           */
+  "RSR",  /* 15 - RSR (Receiver Status Register)         */
+  "TSR",  /* 16 - TSR (Tranmitter Status Register)       */
+  "UDR",  /* 17 - UDR,USART (DataRegister)               */
+};
+
+static const char * regname(int reg)
+{
+  if (! (reg & 1) )
+    return "EVEN-LINE";
+  if (reg < 0 || reg > 0x30)
+    return "OUT-OF-RANGE";
+  return regnames[reg >> 1];
+}
+
+extern int mfp_cat;
+# define REPORTR(N)   TRACE68(mfp_cat, "mfp: R [%02x] -> $%02x (%s)\n", N, mfp->map[N], regname(N))
+# define REPORTW(N,V) TRACE68(mfp_cat, "mfp: W [%02x] <- $%02x (%s)\n", N, V, regname(N))
+#else
+# define REPORTR(N)
+# define REPORTW(N,V)
+#endif
+
 typedef struct {
   io68_t io;
   mfp_t  mfp;
@@ -42,10 +89,12 @@ typedef struct {
 
 /* 0  GPIP   General purpose I/O */
 static int68_t mfpr_01(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(0x01);
   return mfp->map[0x01];
 }
 /* 1  AER    Active edge register */
 static int68_t mfpr_03(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(0x03);
   return mfp->map[0x03];
 }
 /* 2  DDR    Data direction register */
@@ -163,9 +212,9 @@ static int68_t mfpr_3F(mfp_t * const mfp, const bogoc68_t bogoc) {
 
 
 static void mfpw_01(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x01]=v; }
+{ REPORTW(0x01,v); mfp->map[0x01]=v; }
 static void mfpw_03(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x03]=v; }
+{ REPORTW(0x03,v); mfp->map[0x03]=v; }
 static void mfpw_05(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
 { mfp->map[0x05]=v; }
 static void mfpw_07(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)

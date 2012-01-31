@@ -7,9 +7,7 @@
  *
  */
 
-/* $Id: mfpemul.h 126 2009-07-15 08:58:51Z benjihan $ */
-
-/* Copyright (C) 1998-2009 Benjamin Gerard */
+/* Copyright (C) 1998-2011 Benjamin Gerard */
 
 #ifndef _IO68_MFPEMUL_H_
 #define _IO68_MFPEMUL_H
@@ -17,7 +15,8 @@
 #include "io68_api.h"
 #include "emu68/struct68.h"
 
-/** @defgroup  io68_mfp_devel  MFP-68901 emulator
+/**
+ *  @defgroup  io68_mfp_devel  MFP-68901 emulator
  *  @ingroup   io68_devel
  *  @brief     MFP-68901 (Atari-ST timers) emulator.
  *

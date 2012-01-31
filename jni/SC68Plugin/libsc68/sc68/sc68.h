@@ -79,7 +79,7 @@
  *  }
  *
  *  // Set track and loop (optionnal).
- *  sc68_play(sc68, track, 1);
+ *  sc68_play(sc68, 1, 1);
  *
  *  // Loop until the end of disk. You can use SC68_LOOP to wait the end
  *  // of the track. Notice that SC68_ERROR set all bits and make the loop
@@ -213,6 +213,8 @@ typedef struct {
 typedef struct {
   int tracks;            /**< number of tracks [1..99].          */
   unsigned start_ms;     /**< Absolute start time in disk in ms. */
+  unsigned loop_ms;      /**< Length of track loop in ms.        */
+
   unsigned int addr;     /**< Laod address.                      */
   unsigned int rate;     /**< Replay rate.                       */
   char * replay;         /**< replay name.                       */

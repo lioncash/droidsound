@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-18 02:06:29 ben>
+ * Time-stamp: <2011-10-23 03:57:14 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -486,6 +486,14 @@ static int valid(disk68_t * mb)
       m->time_ms = frames_to_ms(m->frames, m->frq);
     else
       m->frames = ms_to_frames(m->time_ms, m->frq);
+
+    if (m->loop_fr == ~0) {
+      /* loop time not set, default to track time. */
+      m->loop_fr = m->frames;
+      m->loop_ms = m->time_ms;
+    } else
+      /* Compute ms from frames. */
+      m->loop_ms = frames_to_ms(m->loop_fr, m->frq);
 
     /* Set start time in the disk. */
     m->start_ms = mb->time_ms;
@@ -1165,6 +1173,7 @@ static disk68_t * alloc_disk(int datasz)
     mb->tags.tag.artist.key = tagstr.artist;
     mb->tags.tag.genre.key  = tagstr.format;
     for (cursix = mb->mus; cursix < mb->mus+SC68_MAX_TRACK; ++cursix) {
+      cursix->loop_fr = ~0;
       cursix->tags.tag.title.key  = tagstr.title;
       cursix->tags.tag.artist.key = tagstr.artist;
       cursix->tags.tag.genre.key  = tagstr.genre;
@@ -1311,7 +1320,8 @@ disk68_t * file68_load(istream68_t * is)
         break;
       }
       cursix = mb->mus + mb->nb_mus;
-      cursix->loop = 1; /* default loop */
+      cursix->loop = 1;     /* default loop */
+      cursix->loop_fr = ~0; /* loop length not set */
       tags = &cursix->tags;
       mb->nb_mus++;
     }
@@ -1380,7 +1390,23 @@ disk68_t * file68_load(istream68_t * is)
       }
       cursix->loop = LPeek(b);
     }
-    /* replay flags */
+    /* Loop length */
+    else if (ISCHK(chk, CH68_LOOPFR)) {
+      if (!cursix) {
+        errorstr = chk;
+        goto error;
+      }
+      cursix->loop_fr = LPeek(b);
+    }
+    /* SFX flag */
+    else if (ISCHK(chk, CH68_SFX)) {
+      if (!cursix) {
+        errorstr = chk;
+        goto error;
+      }
+      cursix->sfx = 1;
+    }
+    /* Replay flags */
     else if (ISCHK(chk, CH68_TYP)) {
       int f;
       if (!cursix) {
@@ -1770,7 +1796,12 @@ static const char * save_sc68(istream68_t * os, const disk68_t * mb, int len, in
         || save_nonzero(os, CH68_TIME,   (mus->time_ms+999u) / 1000u)
         || save_nonzero(os, CH68_FRQ,    (mus->frq == 50) ? 0 : mus->frq)
         || save_nonzero(os, CH68_LOOP,   (mus->loop > 1) ? mus->loop : 0)
+        || ( mus->loop_fr != ~0 &&
+             mus->loop_fr != mus->frames &&
+             save_number(os, CH68_LOOPFR,  mus->loop_fr) )
         || save_number (os, CH68_TYP,    flags)
+        || ( mus->sfx &&
+             save_chunk  ( os, CH68_SFX, 0, 0) )
       ) {
       errstr = "chunk write";
       goto error;

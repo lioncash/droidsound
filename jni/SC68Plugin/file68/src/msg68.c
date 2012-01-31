@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2001-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-07 08:17:07 ben>
+ * Time-stamp: <2011-10-22 18:00:58 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -46,11 +46,11 @@ static unsigned int msg68_bitmsk =
 #if defined(DEBUGMSG_MASK)
   DEBUGMSG_MASK
 #elif defined(DEBUG)
-  ~0
+  (1 << msg68_TRACE) - 1
 #elif defined(NDEBUG)
-  (1<<msg68_CRITICAL)|(1<<msg68_ERROR)|(1<<msg68_WARNING)
+  (1 << msg68_NOTICE) - 1
 #else
-  (1<<msg68_CRITICAL)|(1<<msg68_ERROR)|(1<<msg68_WARNING)|(1<<msg68_INFO)
+  (1 << msg68_DEBUG) -1
 #endif
   ;
 
@@ -64,6 +64,7 @@ struct struct_cat_bit {
   { msg68_CRITICAL, "critical", "critical error message" },
   { msg68_ERROR   , "error"   , "error message"          },
   { msg68_WARNING , "warning" , "warning message"        },
+  { msg68_NOTICE  , "notice"  , "notice message"         },
   { msg68_INFO    , "info"    , "informational message"  },
   { msg68_DEBUG   , "debug"   , "debug message"          },
   { msg68_TRACE   , "trace"   , "trace message"          }
@@ -84,29 +85,21 @@ void * msg68_set_cookie(void * userdata)
 }
 
 /* Print message (variable argument). */
-void msg68x_va(int bit, void * cookie, const char * fmt, va_list list)
+void msg68x_va(int cat, void * cookie, const char * fmt, va_list list)
 {
   if (output) {
-#if 0
-    const int category = (bit == msg68_CURRENT)
-      ? curcat
-      : bit
-      ;
-#else
-    const int category = bit;
-#endif
-
-    switch (category) {
+    switch (cat) {
+    default:
+      if (cat >= 0) {
+        const int bit = cat & (MAX_CATEGORIES-1);
+        const int msk = (1 << bit) | ( (bit > msg68_TRACE) << msg68_TRACE);
+        if ( ! (msg68_bitmsk & msk ) )
+          break;
+      } else break;
+    case msg68_ALWAYS:
+      output(cat, cookie, fmt, list);
     case msg68_NEVER:
       break;
-    default:
-      if ( ! ( msg68_bitmsk & ( 1 << category ) ) )
-        break;
-      if ( category > msg68_TRACE &&
-           ! ( msg68_bitmsk & ( 1 << msg68_TRACE ) ) )
-        break;
-    case msg68_ALWAYS:
-      output(category, cookie, fmt, list);
     }
   }
 }
@@ -180,6 +173,22 @@ void msg68x_info(void * userdata, const char * fmt, ...)
   va_end(list);
 }
 
+void msg68_notice(const char * fmt, ...)
+{
+  va_list list;
+  va_start(list, fmt);
+  msg68_va(msg68_NOTICE, fmt, list);
+  va_end(list);
+}
+
+void msg68x_notice(void * userdata, const char * fmt, ...)
+{
+  va_list list;
+  va_start(list, fmt);
+  msg68x_va(msg68_NOTICE, userdata, fmt, list);
+  va_end(list);
+}
+
 void msg68_warning(const char * fmt, ...)
 {
   va_list list;
@@ -226,23 +235,6 @@ void msg68x_critical(void * userdata, const char * fmt, ...)
   msg68x_va(msg68_CRITICAL, userdata, fmt, list);
   va_end(list);
 }
-
-#if 0
-void msg68_current(const char * fmt, ...)
-{
-  va_list list;
-  va_start(list, fmt);
-  msg68_va(msg68_CURRENT, fmt, list);
-  va_end(list);
-}
-
-void msg68x_current(void * userdata, const char * fmt, ...)
-{
-  va_list list; va_start(list, fmt);
-  msg68x_va(msg68_CURRENT, userdata, fmt, list);
-  va_end(list);
-}
-#endif
 
 void msg68_always(const char * fmt, ...)
 {
@@ -325,21 +317,6 @@ void msg68_cat_free(const int category)
     msg68_bitmsk |= 1 << category;
   }
 }
-
-/* Get/Set current category. */
-#if 0
-int msg68_cat_current(const int category)
-{
-  int old = curcat;
-
-  /* Allow always or never or any other existing category */
-  if (category == msg68_ALWAYS || category == msg68_NEVER ||
-      (is_valid_category(category) && !is_free_category(category))) {
-    curcat = category;
-  }
-  return old;
-}
-#endif
 
 /* Set all predefined categories mask according to given level. */
 int msg68_cat_level(const int category)

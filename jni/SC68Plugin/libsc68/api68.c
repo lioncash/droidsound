@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-17 02:20:36 ben>
+ * Time-stamp: <2011-10-22 22:07:22 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -103,7 +103,7 @@ struct _sc68_s {
   disk68_t     * disk;        /**< Current loaded disk.                  */
   music68_t    * mus;         /**< Current playing music.                */
   int            track;       /**< Current playing track.                */
-  int            track_to;    /**< Track to set (0:n/a).                 */
+  int            track_to;    /**< Track to set (0:n/a, -1:end req).     */
   int            loop_to;     /**< Loop to set (-1:default 0:infinite).  */
   int            force_loop;  /**< Loop to set if default (-1:music).    */
   int            track_here;  /**< Force first track here.               */
@@ -113,7 +113,6 @@ struct _sc68_s {
   /* $$$ MUST REMOVE CONFIG FROM INSTANCE ... */
 
   config68_t   * config;      /**< Config.                               */
-
 
   int            remote;      /**< Allow remote access.                  */
 
@@ -145,7 +144,6 @@ struct _sc68_s {
     int            stdlen;       /**< Default number of PCM per pass.    */
     unsigned int   cycleperpass; /**< Number of 68K cycles per pass.     */
     int            aga_blend;    /**< Amiga LR blend factor [0..65536].  */
-    unsigned int   sample_cnt;   /**< Number of mixed PCM.               */
     unsigned int   pass_cnt;     /**< Current pass.                      */
     unsigned int   pass_total;   /**< Total number of pass.              */
     unsigned int   loop_cnt;     /**< Loop counter.                      */
@@ -715,7 +713,7 @@ sc68_t * sc68_create(sc68_create_t * create)
     sc68->mix.rate = sc68_sampling_rate_def;
   }
   if (!sc68->time.def_ms) {
-    sc68->time.def_ms = 180000;
+    sc68->time.def_ms = TIMEMS_DEF;
   }
 
   /* Create 68k emulator and pals. */
@@ -858,66 +856,51 @@ static unsigned int ms_to_fr(unsigned int ms, unsigned int hz)
   return (unsigned int ) fr;
 }
 
-/** Start current music of current disk.
- */
-static int apply_change_track(sc68_t * sc68)
+static void stop_track(sc68_t * sc68)
 {
-  u32         a0;
-  u8        * memptr;
-  disk68_t  * d;
-  music68_t * m;
-  int         track, status;
+  assert(sc68);
+  assert(sc68->disk);
 
-  if (!sc68 || !sc68->disk) {
-    return SC68_ERROR;
-  }
-  if (track = sc68->track_to, !track) {
-    return SC68_OK;
+  if (sc68->mix.buflen) {
+    msg68_warning("libsc68: discard data -- *%d pcm*\n", sc68->mix.buflen);
   }
 
-  sc68->track_to = 0;
-  sc68->mix.loop_cnt = 0;
-  /* -1 : stop */
-  if (track == -1) {
-    sc68_debug(sc68,"libsc68: stop requested\n");
-    sc68->mus             = 0;
-    sc68->track           = 0;
-    sc68->time.total     += sc68->time.elapsed_ms / 1000u;
-    sc68->time.total_ms  += sc68->time.elapsed_ms % 1000u;
-    sc68->time.total     += sc68->time.total_ms / 1000u;
-    sc68->time.total_ms  %= 1000u;
-    sc68->time.elapsed_ms = 0;
-    sc68->time.length_ms  = 0;
-    memset(&sc68->info,0,sizeof(sc68->info));
-    return SC68_END | SC68_CHANGE;
-  }
-  sc68_debug(sc68,"libsc68: change track requested -- *%02d*\n", track);
+  sc68->mus             = 0;
+  sc68->track           = 0;
+  sc68->seek_to         = -1;
+  sc68->track_to        = 0;
 
-  d = sc68->disk;
-  if (track < 1 || track > d->nb_mus) {
-    sc68_error_add(sc68, "libsc68: track out of range -- *%02d* not in [01-%02d]",
-                   track, d->nb_mus);
-    return SC68_ERROR;
-  }
-  m = d->mus + track - 1;
+  sc68->time.total     += sc68->time.elapsed_ms / 1000u;
+  sc68->time.total_ms  += sc68->time.elapsed_ms % 1000u;
+  sc68->time.total     += sc68->time.total_ms / 1000u;
+  sc68->time.total_ms  %= 1000u;
+  sc68->time.elapsed_ms = 0;
+  sc68->time.length_ms  = 0;
 
-  sc68_debug(sc68," -> track #%02d -- %s - %s - %s\n",
-             track,
-             d->tags.tag.title.val,
-             m->tags.tag.title.val,
-             m->tags.tag.artist.val);
+  sc68->mix.pass_cnt    = 0;
+  sc68->mix.loop_cnt    = 0;
+  sc68->mix.bufptr      = 0;
+  sc68->mix.buflen      = 0;
 
-  /* ReInit 68K & IO */
+
+}
+
+static int reset_emulators(sc68_t * sc68, const hwflags68_t * const hw)
+{
+  assert(sc68);
+  assert(sc68->emu68);
+  assert(hw);
+
   emu68_ioplug_unplug_all(sc68->emu68);
   emu68_mem_reset(sc68->emu68);
 
-  if (m->hwflags.bit.amiga) {
+  if (hw->bit.amiga) {
     sc68_debug(sc68," -> Add Paula hardware\n");
     emu68_ioplug(sc68->emu68, sc68->paulaio);
     sc68_debug(sc68," -> Set PAULA as interruptible\n");
     emu68_set_interrupt_io(sc68->emu68, sc68->paulaio);
   }
-  if (m->hwflags.bit.ym) {
+  if (hw->bit.ym) {
     sc68_debug(sc68," -> Add SHIFTER hardware\n");
     emu68_ioplug(sc68->emu68, sc68->shifterio);
     sc68_debug(sc68," -> Add YM hardware\n");
@@ -927,23 +910,27 @@ static int apply_change_track(sc68_t * sc68)
     sc68_debug(sc68," -> Set MFP as interruption\n");
     emu68_set_interrupt_io(sc68->emu68, sc68->mfpio);
   }
-  if (m->hwflags.bit.ste) {
+  if (hw->bit.ste) {
     sc68_debug(sc68," -> Add MW (STE) hardware\n");
     emu68_ioplug(sc68->emu68, sc68->mwio);
   }
   emu68_reset(sc68->emu68);
-  emu68_memset(sc68->emu68,0,0,0);
+  emu68_memset(sc68->emu68,0,0,0); /* Really ? Quiet an heavy operation */
+
 
   /* Init exceptions */
+  if (1) {
+    u8 * memptr;
+    memptr        = emu68_memptr(sc68->emu68,0,1<<15);
+    memptr[0]     = 0x4e; /* RTE in case of uninitilize interrupt vectors */
+    memptr[1]     = 0x73; /* RTE ... */
+    memptr[0x41a] = 0x00; /* Zound Dragger: should be fixed in music */
+    memptr[0x41b] = 0x10; /* Zound Dragger: ... */
+  }
 
-  memptr = emu68_memptr(sc68->emu68,0,1<<15);
-  memptr[0] = 0x4e;          /* RTE */
-  memptr[1] = 0x73;          /* RTE */
-  memptr[0x41a] = 0;         /* Zound Dragger */
-  memptr[0x41b] = 0x10;      /* Zound Dragger */
-
-  /* Install TOS trap emulator */
-  if (!m->hwflags.bit.amiga) {
+  /* Install TOS trap emulator unless AMIGA */
+  if (!hw->bit.amiga) {
+    int status;
     sc68_debug(sc68," -> Load TOS trap emulator @$%06x-$%06x\n",
                TRAP_ADDR,TRAP_ADDR+sizeof(trap_func)-1);
     emu68_memput(sc68->emu68,TRAP_ADDR,trap_func, sizeof(trap_func));
@@ -963,43 +950,107 @@ static int apply_change_track(sc68_t * sc68)
       return SC68_ERROR;
     }
   }
+  return SC68_OK;
+}
 
-  /* Address in 68K memory : default SC68_LOADADDR */
-  /* sc68->playaddr = a0 = (!m->a0) ? SC68_LOADADDR : m->a0; */
+static int load_replay(sc68_t * sc68, const char * replay, int a0)
+{
+  int err, size;
+  istream68_t * is;
+  char rname[256];
+  assert(sc68);
+  assert(replay);
+
+  sc68_debug(sc68, " -> external replay -- %s\n", replay);
+  strcpy(rname,"RSC68://replay/");    /* $$$ to be change a sc68://replay/... */
+  strcat68(rname, replay, sizeof(rname)-1);
+  rname[sizeof(rname)-1] = 0;
+  is = url68_stream_create(rname, 1);
+  err = istream68_open(is);
+  err = err || (size = istream68_length(is), size < 0);
+  err = err || stream_read_68k(sc68, a0, is, size);
+  istream68_destroy(is);
+  if (err) {
+    sc68_error_add(sc68,
+                   "libsc68: failed to load external replay -- %s",
+                   rname);
+    return SC68_ERROR;
+  }
+  sc68_debug(sc68," -> external replay -- [%06x-%06x]\n", a0, a0+size-1);
+  return a0 + ((size + 1) & ~1);
+}
+
+static int run_music_init(sc68_t * sc68, music68_t * m, int a0)
+{
+  int status;
+
+  assert(sc68);
+  assert(m);
+
+  /* Set 68K registers. */
+  sc68->emu68->reg.d[0] = m->d0;
+  sc68->emu68->reg.d[1] = !m->hwflags.bit.ste;
+  sc68->emu68->reg.d[2] = m->datasz;
+  sc68->emu68->reg.a[0] = a0;
+  sc68->emu68->reg.a[7] = sc68->emu68->memmsk+1-16;
+  sc68->emu68->reg.pc   = sc68->playaddr;
+  sc68->emu68->reg.sr   = 0x2300;
+  sc68->emu68->cycle    = 0;
+
+  /* Run music init code. */
+  sc68_debug(sc68," -> Running music init code ...\n");
+  emu68_pushl(sc68->emu68, sc68->playaddr+8);
+  status = emu68_finish(sc68->emu68, INIT_MAX_INST);
+  if ( status != EMU68_NRM ) {
+    sc68_debug(sc68,
+               " -> music init -- ERROR -- status %d (%s)"
+               " [@%06x %02x]\n",
+               status, emu68_status_name(status), sc68->irq.pc, sc68->irq.vector);
+    sc68_error_add(sc68, "libsc68: abnormal 68K status %d (%s) in init code",
+                   status, emu68_status_name(status));
+    return SC68_ERROR;
+  }
+  return SC68_OK;
+}
+
+static int change_track(sc68_t * sc68, int track)
+{
+  disk68_t  * d;
+  music68_t * m;
+  int         a0;
+
+  assert(sc68);
+  assert(sc68->disk);
+  assert(track > 0 && track <= sc68->disk->nb_mus);
+
+  stop_track(sc68);
+
+  d = sc68->disk;
+  m = d->mus + track - 1;
+
+  /* ReInit 68K & IO */
+  reset_emulators(sc68, &m->hwflags);
+
+  /* Set music replay address in 68K memory. */
   sc68->playaddr = a0 = m->a0;
   sc68_debug(sc68," -> play address -- $%06x\n", sc68->playaddr);
 
-  /* Check external replay */
-  if (m->replay) {
-    int err;
-    int size = 0;
-    istream68_t * is;
-    char rname[256];
+  /* Load external replay into 68K memory. */
+  if (m->replay && (a0 = load_replay(sc68, m->replay, a0), a0 == SC68_ERROR))
+    return SC68_ERROR;
 
-    sc68_debug(sc68, " -> external replay -- %s\n", m->replay);
-    strcpy(rname,"RSC68://replay/");
-    strcat68(rname, m->replay, sizeof(rname)-1);
-    rname[sizeof(rname)-1] = 0;
-
-    is = url68_stream_create(rname, 1);
-    err = istream68_open(is);
-    err = err || (size = istream68_length(is), size < 0);
-    err = err || stream_read_68k(sc68, a0, is, size);
-    istream68_destroy(is);
-    if (err) {
-      return SC68_ERROR;
-    }
-    sc68_debug(sc68," -> external replay -- [%06x-%06x]\n", a0, a0+size);
-    a0 = a0 + ((size + 1) & -2);
-  }
-
-  /* Copy Data into 68K memory */
+  /* Copy music data into 68K memory */
   if (emu68_memput(sc68->emu68, a0, (u8 *)m->data, m->datasz)) {
     sc68_error_add(sc68,"libsc68: %s",emu68_error_get(sc68->emu68));
     return SC68_ERROR;
   }
-  sc68_debug(sc68," -> music data -- [%06x-%06x)\n", a0, a0+m->datasz);
+  sc68_debug(sc68," -> music data -- [%06x-%06x]\n", a0, a0+m->datasz-1);
 
+  /* Run music init code */
+  if ( run_music_init(sc68, m, a0) == SC68_ERROR )
+    return SC68_ERROR;
+
+  /* Ensure sampling rate */
   if (sc68->mix.rate <= 0)
     sc68->mix.rate = sc68_sampling_rate_def;
   if (sc68->mix.rate < SAMPLING_RATE_MIN ||
@@ -1008,19 +1059,8 @@ static int apply_change_track(sc68_t * sc68)
     return SC68_ERROR;
   }
 
-  if (sc68->mix.buflen) {
-    msg68_critical("libsc68: remaining data -- *%d pcm*\n", sc68->mix.buflen);
-    assert(sc68->mix.buflen == 0);
-  }
-
-  sc68->mix.bufptr      = 0;
-  sc68->mix.buflen      = 0;
-  sc68->mix.sample_cnt  = 0;
-  sc68->mix.pass_cnt    = 0;
-  sc68->time.elapsed_ms = 0;
   sc68->mix.loop_total  =
-    calc_loop_total(sc68->force_loop,sc68->loop_to,m->loop);
-
+    calc_loop_total(sc68->force_loop, sc68->loop_to, m->loop);
   sc68_debug(sc68," -> loop            : %u\n", sc68->mix.loop_total);
 
   if (!m->frames) {
@@ -1112,47 +1152,51 @@ static int apply_change_track(sc68_t * sc68)
   }
   sc68_debug(sc68," -> buffer length -- %u pcm\n", sc68->mix.bufreq);
 
-  /* Set 68K register value for INIT */
-  sc68->emu68->reg.d[0] = m->d0;
-  sc68->emu68->reg.d[1] = !m->hwflags.bit.ste;
-  sc68->emu68->reg.d[2] = m->datasz;
-  sc68->emu68->reg.a[0] = a0;
-  sc68->emu68->reg.a[7] = sc68->emu68->memmsk+1-16;
-  sc68->emu68->reg.pc   = sc68->playaddr;
-  sc68->emu68->reg.sr   = 0x2300;
-  sc68->emu68->cycle    = 0;
-
-  /* Run music init code. */
-  sc68_debug(sc68," -> Running music init code ...\n");
-  emu68_pushl(sc68->emu68, sc68->playaddr+8);
-  status = emu68_finish(sc68->emu68, INIT_MAX_INST);
-
-  /* Set 68K PC register to music play address */
-  sc68->emu68->reg.pc = sc68->playaddr + 8;
-  sc68->emu68->reg.sr = 0x2300;
-  sc68->emu68->cycle  = 0;
-  sc68->mus           = m;
-  sc68->track         = track;
-
   /* Setup internal info struct */
   if (sc68_music_info(sc68, &sc68->info, track, 0))
     return SC68_ERROR;
-  sc68_debug(sc68, "New track: %s %s - %s - %s\n",
+  sc68->mus           = m;
+  sc68->track         = track;
+
+  sc68_debug(sc68, "libsc68: track ready -- %s %s - %s - %s\n",
              sc68->info.trk.time,
              sc68->info.artist,
              sc68->info.album,
              sc68->info.title);
 
-  if ( status != EMU68_NRM ) {
-    sc68_debug(sc68,
-               " -> music init -- ERROR -- status %d (%s)"
-               " [@%06x %02x]\n",
-               status, emu68_status_name(status), sc68->irq.pc, sc68->irq.vector);
-    sc68_error_add(sc68, "libsc68: abnormal 68K status %d (%s) in init code",
-                   status, emu68_status_name(status));
+  return SC68_OK;
+}
+
+
+/** Start current music of current disk.
+ */
+static int apply_change_track(sc68_t * sc68)
+{
+  int track;
+
+  assert(sc68);
+  assert(sc68->disk);
+
+  if (track = sc68->track_to, !track)
+    return SC68_OK;
+  sc68->track_to = 0;
+
+  /* -1 : stop */
+  if (track == -1) {
+    sc68_debug(sc68,"libsc68: stop requested\n");
+    stop_track(sc68);
+    return SC68_END;
+  }
+
+  sc68_debug(sc68,"libsc68: change track requested -- *%02d*\n", track);
+  if (track < 1 || track > sc68->disk->nb_mus) {
+    sc68_error_add(sc68, "libsc68: track out of range -- *%02d*", track);
     return SC68_ERROR;
   }
-  sc68_debug(sc68," -> music init -- OK\n");
+
+  if (change_track(sc68, track) != SC68_OK)
+    return SC68_ERROR;
+
   return SC68_CHANGE;
 }
 
@@ -1168,188 +1212,107 @@ static unsigned int calc_current_ms(sc68_t * sc68)
 
 int sc68_process(sc68_t * sc68, void * buf16st, int * _n)
 {
-  int ret = SC68_IDLE;
-  int n = _n ? *_n : 0;
+  int ret;
 
-  if (!sc68 || n < 0)
-    return SC68_ERROR;
+  if (!sc68) {
+    ret = SC68_ERROR;
+  } else if (!_n) {
+    /* Flush internal PCM buffer and apply change track request. */
+    ret = SC68_IDLE | apply_change_track(sc68);
+  } else if (!buf16st) {
+    ret = SC68_ERROR;
+  } else {
+    int n = *_n;
+    ret = (n < 0) ? SC68_ERROR : SC68_IDLE;
 
-  if (!sc68->mus)
-    ret = apply_change_track(sc68);
+    while (n > 0) {
+      int len;
 
-  if (!sc68->mus)
-    return SC68_ERROR;
+      /* No more pcm in internal buffer ... */
+      if (!sc68->mix.buflen) {
+        int status;
+        ret |= apply_change_track(sc68);
+        if (ret & (SC68_END|SC68_CHANGE)) /* exit on error|end|change */
+          break;
+        ret &= ~SC68_IDLE;              /* No more idle */
 
-  if (!n)
-    return ret;
-
-  if (!buf16st)
-    return SC68_ERROR;
-
-  while (n > 0) {
-    int code;
-    code = apply_change_track(sc68);
-
-    if (code == SC68_ERROR)
-      return code;
-    ret |= code;
-    if (code & SC68_END)
-      break;
-
-    if (sc68->mix.buflen <= 0) {
-      int status;
-      /* Not idle */
-      ret &= ~SC68_IDLE;
-
-      emu68_pushl(sc68->emu68, sc68->playaddr+8);
-      status = emu68_finish(sc68->emu68, PLAY_MAX_INST);
-      if (status == EMU68_NRM) {
-        status = emu68_interrupt(sc68->emu68, sc68->mix.cycleperpass);
-      }
-      if (status != EMU68_NRM) {
-        sc68_error_add(sc68, "libsc68: abnormal 68K status %d (%s) in play pass %u",
-                       status, emu68_status_name(status), sc68->mix.pass_cnt);
-        return SC68_ERROR;
-      }
-
-      /* Reset pcm pointer. */
-      sc68->mix.bufptr = sc68->mix.buffer;
-      sc68->mix.buflen = sc68->mix.bufreq;
-
-      if (sc68->mus->hwflags.bit.amiga) {
-        /* Amiga - Paula */
-        paula_mix(sc68->paula,(s32*)sc68->mix.bufptr,sc68->mix.buflen);
-        mixer68_blend_LR(sc68->mix.bufptr, sc68->mix.bufptr, sc68->mix.buflen,
-                         sc68->mix.aga_blend, 0, 0);
-      } else {
-        if (sc68->mus->hwflags.bit.ym) {
-          int err =
-            ymio_run(sc68->ymio, (s32*)sc68->mix.bufptr,
-                     sc68->mix.cycleperpass);
-          if (err < 0) {
-            ret = SC68_ERROR;
-            sc68->mix.buflen = 0;
-            break;
-          }
-          sc68->mix.buflen = err;
+        /* Run 68K emulator */
+        emu68_pushl(sc68->emu68, sc68->playaddr+8);
+        status = emu68_finish(sc68->emu68, PLAY_MAX_INST);
+        if (status == EMU68_NRM)
+          status = emu68_interrupt(sc68->emu68, sc68->mix.cycleperpass);
+        if (status != EMU68_NRM) {
+          sc68_error_add(sc68, "libsc68: abnormal 68K status %d (%s) in play pass %u",
+                         status, emu68_status_name(status), sc68->mix.pass_cnt);
+          ret = SC68_ERROR;
+          break;
         }
 
-/*         switch ( ymio_emulator(sc68->ymio) -> type ) { */
-/*         case  YM_EMUL_DUMP: */
-/*           /\* Special case for register dump: no transform *\/ */
-/*           if (sc68->mus->hwflags.bit.ste) { */
-/*             /\* STE - MicroWire *\/ */
-/*             mw_mix(sc68->mw, 0, sc68->mix.buflen); */
-/*           } */
-/*           break; */
-/*         default: */
+        /* Reset pcm pointer. */
+        sc68->mix.bufptr = sc68->mix.buffer;
+        sc68->mix.buflen = sc68->mix.bufreq;
 
-          if (sc68->mus->hwflags.bit.ste) {
-            /* STE - MicroWire */
+        /* Fill pcm buufer depending on architecture */
+        if (sc68->mus->hwflags.bit.amiga) {
+          /* Amiga - Paula */
+          paula_mix(sc68->paula,(s32*)sc68->mix.bufptr,sc68->mix.buflen);
+          mixer68_blend_LR(sc68->mix.bufptr, sc68->mix.bufptr, sc68->mix.buflen,
+                           sc68->mix.aga_blend, 0, 0);
+        } else {
+          if (sc68->mus->hwflags.bit.ym) {
+            int err =
+              ymio_run(sc68->ymio, (s32*)sc68->mix.bufptr,
+                       sc68->mix.cycleperpass);
+            if (err < 0) {
+              ret = SC68_ERROR;
+              sc68->mix.buflen = 0;
+              break;
+            }
+            sc68->mix.buflen = err;
+          }
+
+          if (sc68->mus->hwflags.bit.ste)
+            /* STE / MicroWire */
             mw_mix(sc68->mw, (s32 *)sc68->mix.bufptr, sc68->mix.buflen);
-          } else {
-            /* No STE, process channel duplication. */
+          else
+            /* Else simply process with left channel duplication. */
             mixer68_dup_L_to_R(sc68->mix.bufptr, sc68->mix.bufptr,
                                sc68->mix.buflen, 0);
+        }
+
+        /* Advance time */
+        calc_current_ms(sc68);
+        ++sc68->mix.pass_cnt;
+
+        /* Reach end of track */
+        if (sc68->mix.pass_total && sc68->mix.pass_cnt >= sc68->mix.pass_total) {
+          int next_track;
+          sc68->mix.pass_cnt = 0;
+          ret |= SC68_LOOP;
+          ++sc68->mix.loop_cnt;
+          if (sc68->mix.loop_total &&
+              sc68->mix.loop_cnt >= sc68->mix.loop_total) {
+            /* Reach end of loop, set next track */
+            next_track     = sc68->track+1;
+            sc68->track_to = (next_track > sc68->disk->nb_mus) ? -1 : next_track;
+            sc68->seek_to  = -1;
           }
-
-/*         } */
-      }
-
-      /* Advance time */
-      calc_current_ms(sc68);
-      ++sc68->mix.pass_cnt;
-      sc68->mix.sample_cnt += sc68->mix.buflen;
-
-      /* Reach end of track */
-      if (sc68->mix.pass_total && sc68->mix.pass_cnt >= sc68->mix.pass_total) {
-        int next_track;
-        sc68->mix.pass_cnt = 0;
-        ret |= SC68_LOOP;
-        ++sc68->mix.loop_cnt;
-        if (sc68->mix.loop_total &&
-            sc68->mix.loop_cnt >= sc68->mix.loop_total) {
-          next_track = sc68->track+1;
-          sc68->track_to = (next_track > sc68->disk->nb_mus) ? -1 : next_track;
-          sc68->seek_to = -1;
         }
       }
+
+      assert(sc68->mix.buflen > 0);
+
+      /* Copy to destination buffer. */
+      len = sc68->mix.buflen <= n ? sc68->mix.buflen : n;
+      mixer68_copy((u32 *)buf16st,sc68->mix.bufptr,len);
+      buf16st = (u32 *)buf16st + len;
+      sc68->mix.bufptr += len;
+      sc68->mix.buflen -= len;
+      n                -= len;
     }
 
-    /* Copy to destination buffer. */
-    if (sc68->mix.buflen > 0) {
-
-      int seek_to = sc68->seek_to;
-      int stp = 0;
-
-      /* Do speed up */
-      if (seek_to != -1) {
-        unsigned int ms = sc68->time.elapsed_ms;
-        if (ms >= (unsigned int)seek_to) {
-          sc68->seek_to = -1;
-        } else {
-          const int minstp = 0x010;
-          const int maxstp = sc68->mix.max_stp;
-          int newstp;
-
-          if (maxstp < minstp) {
-            /* no max stp : just discard this buffer */
-            sc68->mix.buflen = 0;
-            continue;
-          }
-
-          stp = sc68->mix.stp;  /* Current stp */
-
-          /* Got number of ms to seek */
-          ms = seek_to - ms;
-          newstp = (ms >> 4);
-          if (stp < newstp) {
-            stp += 2;
-          } if (stp > newstp) {
-            stp -= 2;
-          }
-          if (stp < minstp) {
-            stp = minstp;
-          } else if (stp > maxstp) {
-            stp = maxstp;
-          }
-
-        }
-      }
-
-      sc68->mix.stp = stp;
-      stp += 0x100;
-
-      if (stp == 0x100) {
-        /* Speed copy */
-        int len = sc68->mix.buflen <= n ? sc68->mix.buflen : n;
-        mixer68_copy((u32 *)buf16st,sc68->mix.bufptr,len);
-        buf16st = (u32 *)buf16st + len;
-        sc68->mix.bufptr += len;
-        sc68->mix.buflen -= len;
-        n -= len;
-      } else {
-        /* Slow copy */
-        u32 *b = (u32 *)buf16st, *bufptr = sc68->mix.bufptr;
-        int len = (sc68->mix.buflen <= n ? sc68->mix.buflen : n) << 8;
-        int j = 0;
-        do {
-          *b++ = bufptr[j>>8];
-          j += stp;
-        } while (--n && j < len );
-        buf16st = b;
-        j >>= 8;
-        sc68->mix.bufptr += j;
-        sc68->mix.buflen -= j;
-        if (sc68->mix.buflen < 0) {
-          sc68->mix.buflen = 0;
-        }
-      }
-    }
+    *_n -= n;
   }
-
-  *_n -= n;
-
   return ret;
 }
 
@@ -1452,21 +1415,13 @@ int sc68_open(sc68_t * sc68, sc68_disk_t disk)
 
 void sc68_close(sc68_t * sc68)
 {
-  if (!sc68 || !sc68->disk) {
-    return;
+  if (sc68 && sc68->disk) {
+    stop_track(sc68);
+    if (sc68->tobe3)
+      sc68_free(sc68->disk);
+    sc68->tobe3     = 0;
+    sc68->disk      = 0;
   }
-
-  if (sc68->tobe3) {
-    sc68_free(sc68->disk);
-  } else {
-    sc68_debug(sc68, "libsc68: externally loaded disk not to be freed\n");
-  }
-  sc68->tobe3     = 0;
-  sc68->disk      = 0;
-  sc68->mus       = 0;
-  sc68->track     = 0;
-  sc68->track_to  = 0;
-  sc68->seek_to   = -1;
 }
 
 int sc68_tracks(sc68_t * sc68)
@@ -1637,6 +1592,7 @@ int sc68_music_info(sc68_t * sc68, sc68_music_info_t * info, int track, sc68_dis
 
   info->tracks      = d->nb_mus;
   info->start_ms    = m->start_ms;
+  info->loop_ms     = m->loop_ms;
   info->replay      = m->replay ? m->replay : "built-in";
   info->rate        = m->frq;
   info->addr        = m->a0;

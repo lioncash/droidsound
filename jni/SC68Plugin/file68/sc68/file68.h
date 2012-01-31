@@ -104,10 +104,13 @@ typedef struct {
   unsigned int a0;       /**< A0 Loading address. @see SC68_LOADADDR. */
   unsigned int frq;      /**< Frequency in Hz (default:50).           */
   unsigned int start_ms; /**< Start time in ms from disk 1st track.   */
-  unsigned int time_ms;  /**< Duration in ms.                         */
-  unsigned int frames;   /**< Duration in frame.                      */
+  unsigned int time_ms;  /**< First loop duration in ms.              */
+  unsigned int loop_ms;  /**< Loop duration in ms (0:no loop).        */
+  unsigned int frames;   /**< First loop duration in frames.          */
+  unsigned int loop_fr;  /**< Loop duration in frames (0:no loop).    */
   int          loop;     /**< Default number of loop (0:infinite).    */
   int          track;    /**< Track remapping number (0:default).     */
+  unsigned int sfx:1;    /**< This track is a sound-fx not a music.   */
   char        *replay;   /**< External replay name.                   */
   hwflags68_t  hwflags;  /**< Hardware and features.                  */
   tagset68_t   tags;     /**< Meta data.                              */

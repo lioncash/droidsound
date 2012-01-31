@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2001-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-15 16:11:53 ben>
+ * Time-stamp: <2011-10-20 13:15:29 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -139,16 +139,22 @@ static int ifdwrite(istream68_t * istream, const void * data, int n)
     ;
 }
 
+#if defined(HAVE_FDATASYNC)
+# define MY_FSYNC(fd) fdatasync(fd)
+#elif defined(HAVE_FSYNC)
+# define MY_FSYNC(fd) fsync(fd)
+#else
+# define MY_FSYNC(fd) 0
+#endif
+
 static int ifdflush(istream68_t * istream)
 {
   istream68_fd_t * isf = (istream68_fd_t *)istream;
   return isf->fd == -1
     ? -1
-    : fsync(isf->fd)
+    : MY_FSYNC(isf->fd)
     ;
 }
-
-
 
 /* We could have store the length value at opening, but this way it handles
  * dynamic changes of file size.
