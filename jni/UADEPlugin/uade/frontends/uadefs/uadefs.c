@@ -739,8 +739,7 @@ static int uadefs_readlink(const char *fpath, char *buf, size_t size)
 }
 
 
-static void gen_uade_name(char *name, size_t maxname, mode_t mode,
-			  const char *dirname, const char *filename)
+static void gen_uade_name(char *name, size_t maxname, mode_t mode, const char *dirname, const char *filename)
 {
 	char fullname[PATH_MAX];
 
@@ -990,8 +989,7 @@ static int uadefs_open(const char *fpath, struct fuse_file_info *fi)
 	return 0;
 }
 
-static int uadefs_read(const char *fpath, char *buf, size_t size, off_t off,
-		       struct fuse_file_info *fi)
+static int uadefs_read(const char *fpath, char *buf, size_t size, off_t off, struct fuse_file_info *fi)
 {
 	int fd;
 	size_t res;
@@ -1038,8 +1036,7 @@ static int uadefs_read(const char *fpath, char *buf, size_t size, off_t off,
 	return totalread;
 }
 
-static int uadefs_write(const char *fpath, const char *buf, size_t size,
-			off_t offset, struct fuse_file_info *fi)
+static int uadefs_write(const char *fpath, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
 	(void) fpath;
 	(void) buf;
@@ -1095,8 +1092,7 @@ static int uadefs_fsync(const char *fpath, int isdatasync,
 
 #ifdef HAVE_SETXATTR
 /* xattr operations are optional and can safely be left unimplemented */
-static int uadefs_setxattr(const char *fpath, const char *name, const char *value,
-			size_t size, int flags)
+static int uadefs_setxattr(const char *fpath, const char *name, const char *value, size_t size, int flags)
 {
 	char *path = uadefs_get_path(NULL, fpath);
 	int res;
@@ -1293,8 +1289,7 @@ static void init_uade(void)
 {
     char uadeconfname[4096];
 
-    (void) uade_load_initial_config(uadeconfname, sizeof uadeconfname,
-				    &uadestate.config, NULL);
+    uade_load_initial_config(&uadestate, uadeconfname, sizeof uadeconfname, NULL);
 
     load_content_db();
 }

@@ -189,13 +189,14 @@ int main(int argc, char *argv[])
   int uadeconf_loaded, songconf_loaded;
   char songconfname[PATH_MAX] = "";
   char uadeconfname[PATH_MAX];
-  struct uade_config uc_eff, uc_cmdline, uc_main;
+  struct uade_config uc_cmdline;
   char songoptions[256] = "";
   int have_song_options = 0;
   int plistdir;
   int scanmode = 0;
 
   struct uade_state state = {};
+  char *basedir;
 
   enum {
     OPT_FIRST = 0x1FFF,
@@ -445,24 +446,28 @@ int main(int argc, char *argv[])
     }
   }
 
-  uadeconf_loaded = uade_load_initial_config(uadeconfname, sizeof uadeconfname, &uc_main, &uc_cmdline);
+  basedir = NULL;
+  if (uc_cmdline.basedir_set) {
+	  basedir = uc_cmdline.basedir.name;
+  }
+  
+  uadeconf_loaded = uade_load_initial_config(&state, uadeconfname, sizeof uadeconfname, basedir);
 
   /* Merge loaded configurations and command line options */
-  uc_eff = uc_main;
-  uade_merge_configs(&uc_eff, &uc_cmdline);
+  uade_merge_configs(&state.config, &uc_cmdline);
 
   if (uadeconf_loaded == 0) {
-    debug(uc_eff.verbose, "Not able to load uade.conf from ~/.uade2/ or %s/.\n", uc_eff.basedir.name);
+    debug(state.config.verbose, "Not able to load uade.conf from ~/.uade2/ or %s/.\n", state.config.basedir.name);
   } else {
-    debug(uc_eff.verbose, "Loaded configuration: %s\n", uadeconfname);
+    debug(state.config.verbose, "Loaded configuration: %s\n", uadeconfname);
   }
 
-  songconf_loaded = uade_load_initial_song_conf(songconfname, sizeof songconfname, &uc_main, &uc_cmdline, &state);
+  songconf_loaded = uade_load_initial_song_conf(songconfname, sizeof songconfname, &state.permconfig, &uc_cmdline, &state);
 
   if (songconf_loaded == 0) {
-    debug(uc_eff.verbose, "Not able to load song.conf from ~/.uade2/ or %s/.\n", uc_eff.basedir.name);
+    debug(state.config.verbose, "Not able to load song.conf from ~/.uade2/ or %s/.\n", state.config.basedir.name);
   } else {
-    debug(uc_eff.verbose, "Loaded song.conf: %s\n", songconfname);
+    debug(state.config.verbose, "Loaded song.conf: %s\n", songconfname);
   }
 
   /* Read play list from file */
@@ -472,7 +477,7 @@ int main(int argc, char *argv[])
 	continue;
       if (tmpstr[strlen(tmpstr) - 1] == '\n')
 	tmpstr[strlen(tmpstr) - 1] = 0;
-      playlist_add(&uade_playlist, tmpstr, uc_eff.recursive_mode, uc_eff.cygwin_drive_workaround);
+      playlist_add(&uade_playlist, tmpstr, state.config.recursive_mode, state.config.cygwin_drive_workaround);
     }
     fclose(listfile);
     listfile = NULL;
@@ -487,7 +492,7 @@ int main(int argc, char *argv[])
   }
 
   if (scanmode) {
-    scan_playlist(&uc_eff);
+    scan_playlist(&state.config);
     exit(0);
   }
 
@@ -496,9 +501,9 @@ int main(int argc, char *argv[])
     exit(0);
   }
 
-  load_content_db(&uc_eff, &state);
+  load_content_db(&state.config, &state);
 
-  if (uc_eff.random_play)
+  if (state.config.random_play)
     playlist_randomize(&uade_playlist);
 
   if (have_modules == 0) {
@@ -508,22 +513,22 @@ int main(int argc, char *argv[])
 
   /* we want to control terminal differently in debug mode */
   if (debug_mode)
-    uc_eff.action_keys = 0;
+    state.config.action_keys = 0;
 
-  if (uc_eff.action_keys)
+  if (state.config.action_keys)
     setup_terminal();
 
   do {
-    DIR *bd = opendir(uc_eff.basedir.name);
+    DIR *bd = opendir(state.config.basedir.name);
     if (bd == NULL)
-      dieerror("Could not access dir %s", uc_eff.basedir.name);
+      dieerror("Could not access dir %s", state.config.basedir.name);
 
     closedir(bd);
 
-    snprintf(configname, sizeof configname, "%s/uaerc", uc_eff.basedir.name);
+    snprintf(configname, sizeof configname, "%s/uaerc", state.config.basedir.name);
 
     if (scorename[0] == 0)
-      snprintf(scorename, sizeof scorename, "%s/score", uc_eff.basedir.name);
+      snprintf(scorename, sizeof scorename, "%s/score", state.config.basedir.name);
 
     if (uadename[0] == 0)
       strlcpy(uadename, UADE_CONFIG_UADE_CORE, sizeof uadename);
@@ -543,7 +548,7 @@ int main(int argc, char *argv[])
 
   uade_spawn(&state, uadename, configname);
 
-  if (!audio_init(&uc_eff))
+  if (!audio_init(&state.config))
     goto cleanup;
 
   plistdir = UADE_PLAY_CURRENT;
@@ -565,7 +570,7 @@ int main(int argc, char *argv[])
 
     plistdir = UADE_PLAY_NEXT;
 
-    state.config = uc_main;
+    state.config = state.permconfig;
     state.song = NULL;
     state.ep = NULL;
 
@@ -667,7 +672,7 @@ int main(int argc, char *argv[])
       break;
   }
 
-  debug(uc_cmdline.verbose || uc_main.verbose, "Killing child (%d).\n", uadepid);
+  debug(uc_cmdline.verbose || state.permconfig.verbose, "Killing child (%d).\n", uadepid);
   cleanup(&state);
   return 0;
 
