@@ -20,7 +20,6 @@
 
 #include "gme/gme.h"
 
-//#include "log.h"
 static jstring NewString(JNIEnv *env, const char *str)
 {
 	static jchar temp[256];
@@ -29,7 +28,6 @@ static jstring NewString(JNIEnv *env, const char *str)
 		unsigned char c = (unsigned char)*str++;
 		*ptr++ = (c < 0x7f && c >= 0x20) || c >= 0xa0 ? c : '?';
 	}
-	//*ptr++ = 0;
 	jstring j = env->NewString(temp, ptr - temp);
 	return j;
 }
