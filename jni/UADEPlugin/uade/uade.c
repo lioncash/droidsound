@@ -497,7 +497,6 @@ void uade_handle_r_state(void)
 
     ret = uade_receive_message(um, sizeof(space), &uadeipc);
     if (ret == 0) {
-      __android_log_print(ANDROID_LOG_VERBOSE, "UADE", "uadecore: No more input. Exiting succesfully.\n");
       pthread_exit(NULL);
     } else if (ret < 0) {
       __android_log_print(ANDROID_LOG_VERBOSE, "UADE", "uadecore: Error on input. Exiting with error.\n");
