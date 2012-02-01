@@ -14,7 +14,6 @@ extern "C" {
 #include <uade/uadeipc.h>
 #include <uade/uadecontrol.h>
 #include <uade/uadeconf.h>
-#include <uade/uadestate.h>
 #include <uade/songdb.h>
 
 int uade_main (int argc, char **argv);
