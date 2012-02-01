@@ -26,16 +26,12 @@
 #include <getopt.h>
 
 #include <uade/uade.h>
-#include "ossupport.h"
-#include "uadeconfig.h"
-#include "sysincludes.h"
 #include "support.h"
 #include "uade123.h"
 #include "playlist.h"
 #include "playloop.h"
 #include "audio.h"
 #include "terminal.h"
-#include "amigafilter.h"
 
 int uade_debug_trigger;
 int uade_info_mode;
@@ -784,8 +780,8 @@ void print_action_keys(void)
   tprintf(" [0-9]         Change subsong.\n");
   tprintf(" '<'           Previous song.\n");
   tprintf(" '.'           Skip 10 seconds forward.\n");
-  tprintf(" SPACE, 'b'    Next subsong.\n");
-  tprintf(" 'c'           Pause.\n");
+  tprintf(" 'b'           Next subsong.\n");
+  tprintf(" SPACE, 'c'    Pause.\n");
   tprintf(" 'f'           Toggle filter (takes filter control away from eagleplayer).\n");
   tprintf(" 'g'           Toggle gain effect.\n");
   tprintf(" 'h'           Print this list.\n");

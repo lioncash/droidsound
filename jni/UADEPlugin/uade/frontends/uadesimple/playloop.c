@@ -14,10 +14,7 @@
 #include <ctype.h>
 #include <assert.h>
 
-#include <uadecontrol.h>
-#include <uadeconstants.h>
-#include <songinfo.h>
-#include <sysincludes.h>
+#include <uade/uade.h>
 
 #include "playloop.h"
 #include "uadesimple.h"

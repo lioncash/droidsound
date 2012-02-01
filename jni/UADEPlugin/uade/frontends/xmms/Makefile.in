@@ -8,7 +8,7 @@ DEBUGFLAGS={DEBUGFLAGS}
 XMMSFLAGS={XMMSFLAGS}
 XMMSLIBS={XMMSLIBS}
 SHAREDLIBRARYFLAGS={SHAREDLIBRARYFLAGS}
-CFLAGS = -Wall -O2 $(SHAREDLIBRARYFLAGS) $(DEBUGFLAGS) $(XMMSFLAGS) $(ARCHFLAGS) -I../common -I../../include -I../include
+CFLAGS = -Wall -O2 $(SHAREDLIBRARYFLAGS) $(DEBUGFLAGS) $(XMMSFLAGS) $(ARCHFLAGS) -I../common -I../include
 CLIBS = $(XMMSLIBS) -lm
 
 all:	libuade2.so
@@ -23,7 +23,7 @@ libuade2.so:	$(MODULES)
 
 install:	libuade2.so
 	mkdir -p "$(XMMSPLUGINDIR)" "$(BINDIR)"
-	install libuade2.so "$(XMMSPLUGINDIR)"
+	install -m 644 libuade2.so "$(XMMSPLUGINDIR)"
 	install uadexmmsadd "$(BINDIR)"/
 
 fileinfo.o:	fileinfo.c fileinfo.h

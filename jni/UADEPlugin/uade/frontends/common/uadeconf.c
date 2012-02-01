@@ -23,9 +23,9 @@
 #include <uade/uadeconstants.h>
 #include <uade/songdb.h>
 #include <uade/uadeutils.h>
-#include "ossupport.h"
-#include "uadeconfig.h"
-#include "amigafilter.h"
+#include <uade/ossupport.h>
+#include <uade/uadeoptions.h>
+#include <uade/amigafilter.h>
 #include "support.h"
 
 static int uade_set_silence_timeout(struct uade_config *uc, const char *value);

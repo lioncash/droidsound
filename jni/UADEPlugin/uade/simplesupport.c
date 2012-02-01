@@ -14,7 +14,7 @@
 #include <dirent.h>
 
 #include <uadectl.h>
-#include <unixsupport.h>
+#include <uade/unixsupport.h>
 // #include <strlrep.h>
 #include <android/log.h>
 

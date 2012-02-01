@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <assert.h>
 #include <android/log.h>
-#include "unixatomic.h"
-#include "sysincludes.h"
+#include <uade/unixatomic.h>
+#include <uade/sysincludes.h>
 
 int atomic_close(int fd)
 {

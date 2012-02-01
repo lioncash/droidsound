@@ -14,7 +14,7 @@
 #include <ctype.h>
 #include <assert.h>
 
-#include "sysincludes.h"
+#include <uade/sysincludes.h>
 
 #include "playloop.h"
 #include "uade123.h"
@@ -68,7 +68,7 @@ int play_loop(struct uade_state *state)
   int jump_sub = 0;
   int have_subsong_info = 0;
 
-  const int framesize = UADE_BYTES_PER_SAMPLE * UADE_CHANNELS;
+  const int framesize = UADE_BYTES_PER_SAMPLE;
   const int bytes_per_second = UADE_BYTES_PER_FRAME * state->config.frequency;
 
   enum uade_control_state controlstate = UADE_S_STATE;
@@ -128,11 +128,11 @@ int play_loop(struct uade_state *state)
 	    skip_bytes = bytes_per_second * 10;
 	  }
 	  break;
-	case ' ':
 	case 'b':
 	  subsong_end = 1;
 	  record_playtime = 0;
 	  break;
+    case ' ':
 	case 'c':
 	  pause_terminal();
 	  break;

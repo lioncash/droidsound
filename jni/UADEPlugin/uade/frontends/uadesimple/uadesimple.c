@@ -22,17 +22,10 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "uadecontrol.h"
-#include "ossupport.h"
-#include "uadeconfig.h"
-#include "uadeconf.h"
-#include "sysincludes.h"
-#include "songdb.h"
-#include "uadestate.h"
+#include <uade/uade.h>
 #include "uadesimple.h"
 #include "playloop.h"
 #include "audio.h"
-#include "amigafilter.h"
 
 int uade_song_end_trigger;
 
@@ -55,9 +48,7 @@ int main(int argc, char *argv[])
 
     memset(&state, 0, sizeof state);
 
-    uadeconf_loaded = uade_load_initial_config(uadeconfname,
-					       sizeof uadeconfname,
-					       &state.config, NULL);
+    uadeconf_loaded = uade_load_initial_config(&state, uadeconfname, sizeof uadeconfname, NULL);
 
     if (uadeconf_loaded == 0) {
 	debug(state.config.verbose,

@@ -19,9 +19,9 @@ uadefs:	$(MODULES)
 uadefs.o:	uadefs.c
 
 install:	uadefs
-	mkdir -p "$(BINDIR)" "$(MANDIR)"
+	mkdir -p -m 755 "$(BINDIR)" "$(MANDIR)"
 	install uadefs "$(BINDIR)"/
-	install uadefs.1 "$(MANDIR)"/
+	install -m 644 uadefs.1 "$(MANDIR)"/
 
 clean:	
 	rm -f uadefs *.o

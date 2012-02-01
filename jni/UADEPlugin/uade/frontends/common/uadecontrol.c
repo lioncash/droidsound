@@ -20,8 +20,8 @@
 #include <uade/uadecontrol.h>
 #include <uade/uadeconstants.h>
 #include <uade/songdb.h>
-#include "ossupport.h"
-#include "sysincludes.h"
+#include <uade/ossupport.h>
+#include <uade/sysincludes.h>
 
 
 static void subsong_control(int subsong, int command, struct uade_ipc *ipc);

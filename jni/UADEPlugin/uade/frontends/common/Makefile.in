@@ -1,6 +1,6 @@
 AR = {AR}
 CC = {CC}
-CFLAGS = -Wall -O2 -I../include -I../../include -I../common {DEBUGFLAGS} {ARCHFLAGS}
+CFLAGS = -Wall -O2 -I../include -I../common {DEBUGFLAGS} {ARCHFLAGS}
 CLIBS = {ARCHLIBS} -lm
 
 all:	libuade.a

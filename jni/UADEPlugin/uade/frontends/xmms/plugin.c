@@ -17,9 +17,6 @@
 #include <unistd.h>
 
 #include <uade/uade.h>
-#include "uadeconfig.h"
-#include "ossupport.h"
-#include "sysincludes.h"
 #include "plugin.h"
 #include "subsongseek.h"
 #include "fileinfo.h"

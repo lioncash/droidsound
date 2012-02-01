@@ -13,6 +13,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#include <uade/amigafilter.h>
 #include "options.h"
 #include "include/uadememory.h"
 #include "custom.h"
@@ -21,7 +22,6 @@
 #include "events.h"
 #include "cia.h"
 #include "audio.h"
-#include "amigafilter.h"
 #include "uadectl.h"
 #include "compilersupport.h"
 

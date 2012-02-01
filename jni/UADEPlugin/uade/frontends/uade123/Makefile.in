@@ -2,7 +2,7 @@ BINDIR = {PACKAGEPREFIX}{BINDIR}
 UADE123NAME = {UADE123NAME}
 
 CC = {CC}
-CFLAGS = -Wall -O2 -I../include -I../../include -I../common {AOFLAGS} {DEBUGFLAGS} {ARCHFLAGS}
+CFLAGS = -Wall -O2 -I../include -I../common {AOFLAGS} {DEBUGFLAGS} {ARCHFLAGS}
 CLIBS = {AOLIBS} {ARCHLIBS} -lm
 
 all:	uade123
@@ -39,5 +39,5 @@ playloop.o:	playloop.c playloop.h uade123.h ../include/uade/uadecontrol.h ../inc
 terminal.o:	terminal.c terminal.h
 	$(CC) $(CFLAGS) -c $<
 
-uade123.o:	uade123.c uade123.h ../../include/amigafilter.h ../include/uade/amifilemagic.h ../include/uade/uadecontrol.h $(PLAYERHEADERS)
+uade123.o:	uade123.c uade123.h ../include/uade/amigafilter.h ../include/uade/amifilemagic.h ../include/uade/uadecontrol.h $(PLAYERHEADERS)
 	$(CC) $(CFLAGS) -c $<

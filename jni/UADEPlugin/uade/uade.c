@@ -14,6 +14,10 @@
 #include <android/log.h>
 #include <pthread.h>
 
+#include <uade/ossupport.h>
+#include <uade/sysincludes.h>
+#include <uade/uadeconstants.h>
+
 #include "sysconfig.h"
 #include "sysdeps.h"
 
@@ -32,10 +36,6 @@
 
 #include "uadectl.h"
 #include "amigamsg.h"
-#include "ossupport.h"
-#include "sysincludes.h"
-#include <uade/uadeconstants.h>
-
 
 enum print_help {
   OPTION_HELP = 1,

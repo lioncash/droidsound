@@ -14,9 +14,9 @@
 #include <uade/uadeconf.h>
 #include <uade/uadeconstants.h>
 #include "md5.h"
-#include "unixatomic.h"
-#include "ossupport.h"
-#include "uadeconfig.h"
+#include <uade/unixatomic.h>
+#include <uade/ossupport.h>
+#include <uade/uadeoptions.h>
 #include "support.h"
 
 #define NORM_ID "n="

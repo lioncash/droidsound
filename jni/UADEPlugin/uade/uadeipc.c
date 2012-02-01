@@ -15,9 +15,9 @@
 #include <string.h>
 #include <android/log.h>
 
+#include <uade/ossupport.h>
+#include <uade/sysincludes.h>
 #include <uade/uadeipc.h>
-#include "ossupport.h"
-#include "sysincludes.h"
 
 
 static int valid_message(struct uade_msg *uc);

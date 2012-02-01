@@ -29,8 +29,8 @@
 #include <audacious/util.h>
 
 #include <uade/songinfo.h>
+#include <uade/ossupport.h>
 
-#include "ossupport.h"
 #include "fileinfo.h"
 #include "plugin.h"
 

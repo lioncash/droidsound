@@ -7,7 +7,7 @@ DEBUGFLAGS={DEBUGFLAGS}
 AUDACIOUSFLAGS={AUDACIOUSFLAGS}
 AUDACIOUSLIBS={AUDACIOUSLIBS}
 SHAREDLIBRARYFLAGS={SHAREDLIBRARYFLAGS}
-CFLAGS = -Wall -O2 $(SHAREDLIBRARYFLAGS) $(AUDACIOUSFLAGS) $(ARCHFLAGS) $(DEBUGFLAGS) -I../common -I../../include
+CFLAGS = -Wall -O2 $(SHAREDLIBRARYFLAGS) $(AUDACIOUSFLAGS) $(ARCHFLAGS) $(DEBUGFLAGS) -I../common -I../include
 CLIBS = $(XMLIBS) -lm
 
 all:	libuade2.so
@@ -29,7 +29,7 @@ subsongseek.o:	subsongseek.c subsongseek.h plugin.h
 
 install:	
 	mkdir -p "$(AUDACIOUSPLUGINDIR)"
-	install libuade2.so "$(AUDACIOUSPLUGINDIR)"
+	install -m 644 libuade2.so "$(AUDACIOUSPLUGINDIR)"
 
 clean:	
 	rm -f *.so *.o

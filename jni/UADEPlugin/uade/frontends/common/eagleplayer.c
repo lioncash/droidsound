@@ -27,8 +27,8 @@
 #include <uade/uadeconf.h>
 #include <uade/songdb.h>
 #include <uade/uadestate.h>
-#include "ossupport.h"
-#include "unixatomic.h"
+#include <uade/ossupport.h>
+#include <uade/unixatomic.h>
 #include "support.h"
 
 
