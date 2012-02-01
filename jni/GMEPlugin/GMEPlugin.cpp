@@ -32,6 +32,7 @@ static jstring NewString(JNIEnv *env, const char *str)
 	return j;
 }
 
+
 struct GMEInfo {
 	 Music_Emu *emu;
 	 int currentSong;
@@ -40,6 +41,7 @@ struct GMEInfo {
 	 char mainTitle[256];
 	 bool started;
 };
+
 
 jlong setUp(Music_Emu *emu)
 {
@@ -59,7 +61,7 @@ jlong setUp(Music_Emu *emu)
 		if(!strlen(track0->song)) {
 			bool nameOk = false;
 			// If name is all upper case it is most likely a rom name
-			for(int i=0; i<strlen(track0->game); i++) {
+			for(int i = 0; i < strlen(track0->game); i++) {
 				char c = track0->game[i];
 				if(isalpha(c) && !isupper(c)) {
 					nameOk = true;
@@ -95,6 +97,7 @@ jlong setUp(Music_Emu *emu)
 	return 0;
 }
 
+
 JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1loadFile(JNIEnv *env, jobject obj, jstring fname)
 {
 	jboolean iscopy;
@@ -113,14 +116,14 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1loadFile(JN
 	return rc;
 }
 
+
 JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1load(JNIEnv *env, jobject obj, jbyteArray bArray, int size)
 {
 	jbyte *ptr = env->GetByteArrayElements(bArray, NULL);
 	Music_Emu *emu = NULL;
 	jlong rc = 0;
 
-	__android_log_print(ANDROID_LOG_VERBOSE, "GMEPlugin", "open %p %d", ptr, size);
-
+	__android_log_print(ANDROID_LOG_VERBOSE, "GMEPlugin", "Open %p %d", ptr, size);
 
 	gme_err_t err = gme_open_data(ptr, size, &emu, 44100);
 

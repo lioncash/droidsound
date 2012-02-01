@@ -157,10 +157,10 @@ static int run_client()
 			else
 			if(0) // plugin.freq == 22050)
 			{
-				for (int i = 0; i < um->size/2; i+=4)
+				for (int i = 0; i < um->size/2; i += 4)
 				{
-					soundPtr[i/2] = (ntohs(sm[i]) + ntohs(sm[i+2])) / 2;
-					soundPtr[i/2+1] = (ntohs(sm[i+1]) + ntohs(sm[i+3])) / 2;
+					soundPtr[i / 2] = (ntohs(sm[i]) + ntohs(sm[i + 2])) / 2;
+					soundPtr[i / 2 + 1] = (ntohs(sm[i + 1]) + ntohs(sm[i + 3])) / 2;
 				}
 
 				soundPtr += (playbytes/4);
@@ -267,10 +267,11 @@ void exit() {
 	__android_log_print(ANDROID_LOG_VERBOSE, "UADEPlugin", "Exit with %d", rc);
 	thread = 0;
 
-	if(soundBuffer)
-		free(soundBuffer);
+	if(soundBuffer) {
+        free(soundBuffer);
+    }
+    
 	soundBuffer = 0;
-
 }
 
 
@@ -283,6 +284,7 @@ JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_UADEPlugin_N_1exit(JNIEnv
 int init()
 {
         char temp[256];
+        
         if(eaglestore == 0) {
                 memset(&state, 0, sizeof state);
                 __android_log_print(ANDROID_LOG_VERBOSE, "UADEPlugin", "baseDir os '%s'", baseDir);
@@ -296,7 +298,6 @@ int init()
 		uade_set_peer(&uadeipc, 1, "client", "server");
 		state.ipc = uadeipc;
 		eaglestore = 1;
-
 	}
 
 	if(thread == 0) {
@@ -309,8 +310,9 @@ int init()
 		}
 	}
 
-	if(!soundBuffer)
+	if(!soundBuffer) {
 		soundBuffer = (short*)malloc(44100 * 8);
+    }
 
 	return 0;
 }
@@ -319,6 +321,7 @@ JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_UADEPlugin_N_1init(JNIEnv
 {
 	jboolean iscopy;
 	const char *s = env->GetStringUTFChars(basedir, &iscopy);
+    
 	strcpy(baseDir, s);
 	env->ReleaseStringUTFChars(basedir, s);
 
@@ -490,8 +493,9 @@ JNIEXPORT void Java_com_ssb_droidsound_plugins_UADEPlugin_N_1unload(JNIEnv *env,
 {
 	Player *player = (Player*)song;
 
-	if(ctrlstate == UADE_R_STATE)
+	if(ctrlstate == UADE_R_STATE) {
 		wait_token();
+    }
 
 	__android_log_print(ANDROID_LOG_VERBOSE, "UADE", "close2\n");
 	if(uade_send_short_message(UADE_COMMAND_REBOOT, &uadeipc)) {

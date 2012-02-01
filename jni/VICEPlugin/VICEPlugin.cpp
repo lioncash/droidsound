@@ -21,8 +21,8 @@ extern "C" {
 
 /* In our overridden maincpu.c */
 extern void psid_play(short *buf, int size);
-
 }
+
 
 static jstring NewString(JNIEnv *env, unsigned char *str)
 {
@@ -32,7 +32,7 @@ static jstring NewString(JNIEnv *env, unsigned char *str)
 		unsigned char c = *str++;
 		*ptr++ = (c < 0x7f && c >= 0x20) || c >= 0xa0 ? c : '?';
 	}
-	//*ptr++ = 0;
+
 	jstring j = env->NewString(temp, ptr - temp);
 	return j;
 }
@@ -41,6 +41,7 @@ static bool videomode_is_ntsc;
 static bool videomode_is_forced;
 static int sid;
 static bool sid_is_forced;
+
 
 static void c64_song_init()
 {
@@ -60,6 +61,7 @@ static void c64_song_init()
                 resources_set_int("SidModel", sid);
         }
 }
+
 
 JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_VICEPlugin_N_1setOption(JNIEnv *env, jclass cl, jint what, jint val)
 {
@@ -89,6 +91,7 @@ int console_mode = 1;
 int vsid_mode = 1;
 int video_disabled_mode = 1;
 
+
 JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_VICEPlugin_N_1loadFile(JNIEnv *env, jclass cl, jstring name)
 {
 	__android_log_print(ANDROID_LOG_VERBOSE, "VICEPlugin", "in load()");
@@ -105,6 +108,7 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_VICEPlugin_N_1loadFile
         return 0;
 }
 
+
 JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_VICEPlugin_N_1unload(JNIEnv *env, jclass cl)
 {
 	/* Selecting this tune unloads some psid-related structures.
@@ -112,6 +116,7 @@ JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_VICEPlugin_N_1unload(JNIE
 	 * that are statically allocated in VICE codebase. */
 	psid_set_tune(-1);
 }
+
 
 JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VICEPlugin_N_1getSoundData(JNIEnv *env, jclass cl, jshortArray sArray, jint size)
 {
@@ -121,12 +126,14 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VICEPlugin_N_1getSoundDat
 	return size;
 }
 
+
 JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_VICEPlugin_N_1setTune(JNIEnv *env, jclass cl, jint tune)
 {
 	psid_set_tune(tune);
         c64_song_init();
 	return true;
 }
+
 
 JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_VICEPlugin_N_1setDataDir(JNIEnv *env, jclass cl, jstring path)
 {
