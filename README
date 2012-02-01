@@ -1,4 +1,4 @@
-This is alankila's fork of Swimsuitboys's DroidSound from sasq64.
+This is alankila & lioncash's fork of Swimsuitboys's DroidSound from sasq64.
 
-I am rewriting the application to become a minimalistic chip player without many of
-the capabilities of the original application.
+The application has been written for Android 4.x support, GUI has been
+redesigned, and plugins are more up-to-date.
