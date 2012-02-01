@@ -7,6 +7,7 @@
 #include <uade/eagleplayer.h>
 #include <uade/effects.h>
 #include <uade/uadeipc.h>
+#include <uade/songdb.h>
 
 struct uade_state {
 	/* Per song members */
@@ -20,6 +21,7 @@ struct uade_state {
 	struct eagleplayerstore *playerstore;
 	struct uade_ipc ipc;
 	pid_t pid;
+    struct uade_songdb songdb;
 };
 
 #endif

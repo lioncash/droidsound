@@ -627,7 +627,7 @@ static void load_content_db(void)
 	if (name[0]) {
 		if (stat(name, &st) == 0) {
 			if (mtime < st.st_mtime) {
-				ret = uade_read_content_db(name);
+				ret = uade_read_content_db(name, &uadestate);
 				if (stat(name, &st) == 0)
 					mtime = st.st_mtime;
 				if (ret)
@@ -637,13 +637,13 @@ static void load_content_db(void)
 			FILE *f = fopen(name, "w");
 			if (f)
 				fclose(f);
-			uade_read_content_db(name);
+			ret = uade_read_content_db(name, &uadestate);
 		}
 	}
 
 	snprintf(name, sizeof name, "%s/contentdb.conf", uadestate.config.basedir.name);
 	if (stat(name, &st) == 0 && mtime < st.st_mtime) {
-		uade_read_content_db(name);
+		ret = uade_read_content_db(name, &uadestate);
 		if (stat(name, &st) == 0)
 			mtime = st.st_mtime;
 	}

@@ -114,8 +114,7 @@ void uade_config_set_defaults(struct uade_config *uc)
 	uc->use_timeouts = 1;
 }
 
-double uade_convert_to_double(const char *value, double def, double low,
-			      double high, const char *type)
+double uade_convert_to_double(const char *value, double def, double low, double high, const char *type)
 {
 	char *endptr, *newvalue;
 	char newseparator;
@@ -242,8 +241,7 @@ static int handle_attributes(struct uade_config *uc, struct uade_song *us,
 	return 0;
 }
 
-int uade_set_song_attributes(struct uade_state *state,
-			     char *playername, size_t playernamelen)
+int uade_set_song_attributes(struct uade_state *state, char *playername, size_t playernamelen)
 {
 	struct uade_song *us = state->song;
 	struct uade_config *uc = &state->config;
@@ -291,8 +289,7 @@ int uade_load_config(struct uade_config *uc, const char *filename)
 	return 1;
 }
 
-int uade_load_initial_config(char *uadeconfname, size_t maxlen,
-			     struct uade_config *uc, struct uade_config *ucbase)
+int uade_load_initial_config(char *uadeconfname, size_t maxlen, struct uade_config *uc, struct uade_config *ucbase)
 {
 	int loaded;
 	char *home;
@@ -331,7 +328,8 @@ int uade_load_initial_config(char *uadeconfname, size_t maxlen,
 
 int uade_load_initial_song_conf(char *songconfname, size_t maxlen,
 				struct uade_config *uc,
-				struct uade_config *ucbase)
+				struct uade_config *ucbase,
+				struct uade_state *state)
 {
 	int loaded = 0;
 	char *home;
@@ -341,9 +339,8 @@ int uade_load_initial_song_conf(char *songconfname, size_t maxlen,
 
 	/* Used for testing */
 	if (ucbase != NULL && ucbase->basedir_set) {
-		snprintf(songconfname, maxlen, "%s/song.conf",
-			 ucbase->basedir.name);
-		loaded = uade_read_song_conf(songconfname);
+		snprintf(songconfname, maxlen, "%s/song.conf", ucbase->basedir.name);
+		loaded = uade_read_song_conf(songconfname, state);
 	}
 
 	/* Avoid unwanted home directory creation for test mode */
@@ -355,14 +352,13 @@ int uade_load_initial_song_conf(char *songconfname, size_t maxlen,
 	/* Try to load from home dir */
 	if (loaded == 0 && home != NULL) {
 		snprintf(songconfname, maxlen, "%s/.uade2/song.conf", home);
-		loaded = uade_read_song_conf(songconfname);
+		loaded = uade_read_song_conf(songconfname, state);
 	}
 
 	/* No? Try install path */
 	if (loaded == 0) {
-		snprintf(songconfname, maxlen, "%s/song.conf",
-			 uc->basedir.name);
-		loaded = uade_read_song_conf(songconfname);
+		snprintf(songconfname, maxlen, "%s/song.conf", uc->basedir.name);
+		loaded = uade_read_song_conf(songconfname, state);
 	}
 
 	return loaded;

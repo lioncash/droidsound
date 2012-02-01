@@ -154,7 +154,7 @@ static void load_content_db(void)
 	if (contentname[0]) {
 		if (stat(contentname, &st) == 0) {
 			if (content_mtime < st.st_mtime) {
-				ret = uade_read_content_db(contentname);
+				ret = uade_read_content_db(contentname, &state);
 				if (stat(contentname, &st) == 0)
 					content_mtime = st.st_mtime;
 				if (ret)
@@ -164,13 +164,13 @@ static void load_content_db(void)
 			FILE *f = fopen(contentname, "w");
 			if (f)
 				fclose(f);
-			uade_read_content_db(contentname);
+			uade_read_content_db(contentname, &state);
 		}
 	}
 
 	snprintf(name, sizeof name, "%s/contentdb.conf", config_backup.basedir.name);
 	if (stat(name, &st) == 0 && content_mtime < st.st_mtime) {
-		uade_read_content_db(name);
+		uade_read_content_db(contentname, &state);
 		if (stat(name, &st) == 0)
 			content_mtime = st.st_mtime;
 	}
@@ -185,7 +185,7 @@ static void uade_cleanup(void)
   if (contentname[0]) {
     struct stat st;
     if (stat(contentname, &st) == 0 && content_mtime >= st.st_mtime)
-      uade_save_content_db(contentname);
+      uade_save_content_db(contentname, &state);
   }
 }
 
@@ -281,8 +281,7 @@ static void uade_init(void)
 
   load_content_db();
 
-  uade_load_initial_song_conf(songconfname, sizeof songconfname,
-			      &config_backup, NULL);
+  uade_load_initial_song_conf(songconfname, sizeof songconfname, &config_backup, NULL, &state);
 
   home = uade_open_create_home();
 
@@ -769,7 +768,7 @@ static void uade_play_file(char *filename)
     time_t curtime = time(NULL);
     if (curtime >= (content_mtime + 3600)) {
       struct stat st;
-      uade_save_content_db(contentname);
+      uade_save_content_db(contentname, &state);
       if (stat(contentname, &st) == 0)
 	content_mtime = st.st_mtime;
     }
@@ -819,7 +818,7 @@ static void uade_stop(void)
     if (record_playtime) {
       int play_time = (state.song->out_bytes * 1000) / (UADE_BYTES_PER_FRAME * state.config.frequency);
       if (state.song->md5[0] != 0)
-	uade_add_playtime(state.song->md5, play_time);
+	uade_add_playtime(&state, state.song->md5, play_time);
 
       state.song->playtime = play_time;
       state.song->cur_subsong = state.song->max_subsong;
