@@ -16,8 +16,8 @@ $(FE)/songdb.c \
 $(FE)/support.c \
 $(FE)/uadeconf.c \
 $(FE)/uadecontrol.c \
-uade/unixatomic.c \
-$(FE)/vplist.c 
+$(FE)/vplist.c \
+uade/unixatomic.c
 
 
 LOCAL_SRC_FILES += \
