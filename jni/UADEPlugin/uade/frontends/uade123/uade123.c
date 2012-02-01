@@ -25,16 +25,11 @@
 #include <unistd.h>
 #include <getopt.h>
 
-#include "uadecontrol.h"
-#include "uadeipc.h"
+#include <uade/uade.h>
 #include "ossupport.h"
 #include "uadeconfig.h"
-#include "eagleplayer.h"
-#include "uadeconf.h"
 #include "sysincludes.h"
-#include "songdb.h"
 #include "support.h"
-#include "uadestate.h"
 #include "uade123.h"
 #include "playlist.h"
 #include "playloop.h"

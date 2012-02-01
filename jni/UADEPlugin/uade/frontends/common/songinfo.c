@@ -10,10 +10,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "songinfo.h"
-#include "uadeutils.h"
+#include <uade/songinfo.h>
+#include <uade/uadeutils.h>
+#include <uade/amifilemagic.h>
 #include "ossupport.h"
-#include "amifilemagic.h"
 #include "support.h"
 
 

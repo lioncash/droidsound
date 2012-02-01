@@ -1,7 +1,7 @@
 #ifndef _UADE_FRONTEND_CONFIG_H_
 #define _UADE_FRONTEND_CONFIG_H_
 
-#include <uadestate.h>
+#include <uade/uadestate.h>
 
 void uade_config_set_defaults(struct uade_config *uc);
 double uade_convert_to_double(const char *value, double def,

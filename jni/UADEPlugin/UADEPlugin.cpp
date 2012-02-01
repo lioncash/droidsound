@@ -10,11 +10,11 @@
 #include "com_ssb_droidsound_plugins_UADEPlugin.h"
 
 extern "C" {
-#include "eagleplayer.h"
-#include "uadeipc.h"
-#include "uadecontrol.h"
-#include "uadeconf.h"
-#include "songdb.h"
+#include <uade/eagleplayer.h>
+#include <uade/uadeipc.h>
+#include <uade/uadecontrol.h>
+#include <uade/uadeconf.h>
+#include <uade/songdb.h>
 
 int uade_main (int argc, char **argv);
 void uae_quit(void);

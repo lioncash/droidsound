@@ -4,9 +4,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <eagleplayer.h>
-#include <effects.h>
-#include <uadeipc.h>
+#include <uade/eagleplayer.h>
+#include <uade/effects.h>
+#include <uade/uadeipc.h>
 
 struct uade_state {
 	/* Per song members */

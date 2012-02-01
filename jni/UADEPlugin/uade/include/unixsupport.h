@@ -7,7 +7,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include "uadeipc.h"
+#include <uade/uadeipc.h>
 
 
 #define die(fmt, args...) do { __android_log_print(ANDROID_LOG_VERBOSE, "UADE", "uade: " fmt, ## args); exit(1); } while(0)

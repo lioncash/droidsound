@@ -50,6 +50,7 @@ uade/uademain.c
 LOCAL_C_INCLUDES := \
 $(LOCAL_PATH)/uade \
 $(LOCAL_PATH)/uade/include \
+$(LOCAL_PATH)/uade/frontends/include \
 $(LOCAL_PATH)/$(FE)
 
 LOCAL_LDLIBS := -llog

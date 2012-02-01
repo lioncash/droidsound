@@ -4,7 +4,7 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include "uadeipc.h"
+#include <uade/uadeipc.h>
 
 struct uade_song {
   char playername[PATH_MAX];       /* filename of eagleplayer */

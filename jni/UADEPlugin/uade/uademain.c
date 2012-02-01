@@ -26,7 +26,7 @@
 
 #include "uadectl.h"
 #include "ossupport.h"
-#include "uadeconstants.h"
+#include <uade/uadeconstants.h>
 
 struct uae_prefs currprefs, changed_prefs;
 

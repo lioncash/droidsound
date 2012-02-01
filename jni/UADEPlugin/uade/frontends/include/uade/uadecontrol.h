@@ -3,7 +3,7 @@
 
 #include <sys/types.h>
 
-#include <uadestate.h>
+#include <uade/uadestate.h>
 
 enum {
 	UADECORE_INIT_OK = 0,

@@ -5,9 +5,7 @@ CLIBS = {AOLIBS} {ARCHLIBS} -lm
 
 all:	uadesimple
 
-include ../common/Makefile.common
-
-MODULES = uadesimple.o playloop.o audio.o $(COMMONMODULES)
+MODULES = uadesimple.o playloop.o audio.o ../common/libuade.a
 
 uadesimple:	$(MODULES)
 	$(CC) $(CFLAGS) -o $@ $(MODULES) $(CLIBS)

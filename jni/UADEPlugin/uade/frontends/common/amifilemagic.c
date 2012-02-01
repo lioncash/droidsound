@@ -24,8 +24,8 @@
 #include <string.h>
 #include <stdint.h>
 #include <android/log.h>
-#include <uadeutils.h>
-#include <amifilemagic.h>
+#include <uade/uadeutils.h>
+#include <uade/amifilemagic.h>
 
 #define FILEMAGIC_DEBUG 0
 

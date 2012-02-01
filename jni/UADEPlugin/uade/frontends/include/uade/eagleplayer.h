@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <limits.h>
 
-#include "uadeconfstructure.h"
+#include <uade/uadeconfstructure.h>
 
 /* We maintain alphabetical order even if that forces us to renumber bits
    when a new option is added */

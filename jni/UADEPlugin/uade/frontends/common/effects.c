@@ -13,7 +13,7 @@
 #include <android/log.h>
 #include <compilersupport.h>
 
-#include "effects.h"
+#include <uade/effects.h>
 
 /*** old headphone effect ***/
 #define UADE_EFFECT_HEADPHONES_DELAY_LENGTH 22

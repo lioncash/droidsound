@@ -47,10 +47,7 @@
 #include <assert.h>
 #include <time.h>
 
-#include "uadeconf.h"
-#include "uadestate.h"
-#include "eagleplayer.h"
-#include "songdb.h"
+#include <uade/uade.h>
 #include "uadeconfig.h"
 #include "ossupport.h"
 

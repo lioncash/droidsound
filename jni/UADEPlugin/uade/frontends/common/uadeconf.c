@@ -18,13 +18,14 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <android/log.h>
+
+#include <uade/uadeconf.h>
+#include <uade/uadeconstants.h>
+#include <uade/songdb.h>
+#include <uade/uadeutils.h>
 #include "ossupport.h"
-#include "uadeconf.h"
 #include "uadeconfig.h"
 #include "amigafilter.h"
-#include "uadeconstants.h"
-#include "songdb.h"
-#include "uadeutils.h"
 #include "support.h"
 
 static int uade_set_silence_timeout(struct uade_config *uc, const char *value);

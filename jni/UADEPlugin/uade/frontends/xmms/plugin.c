@@ -16,21 +16,13 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "uadeipc.h"
-#include "eagleplayer.h"
+#include <uade/uade.h>
 #include "uadeconfig.h"
-#include "uadecontrol.h"
-#include "uadeconstants.h"
 #include "ossupport.h"
-#include "uadeconf.h"
-#include "effects.h"
 #include "sysincludes.h"
-#include "songdb.h"
 #include "plugin.h"
 #include "subsongseek.h"
 #include "fileinfo.h"
-#include "songinfo.h"
-#include "uadestate.h"
 
 
 #define PLUGIN_DEBUG 0
