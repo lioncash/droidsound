@@ -90,6 +90,16 @@ public class GMEPlugin extends DroidSoundPlugin {
 		N_unload(currentSong);
 		currentSong = 0;
 	}
+	
+	@Override
+	public boolean seekTo(int seconds) {
+		return N_seekTo(currentSong, seconds);
+	}
+	
+	@Override
+	public boolean canSeek() {
+		return true;
+	}
 
 	@Override
 	public String getVersion() {
@@ -100,11 +110,6 @@ public class GMEPlugin extends DroidSoundPlugin {
 	@Override
 	public int getSoundData(short[] dest) {
 		return N_getSoundData(currentSong, dest, dest.length);
-	}
-
-	@Override
-	public boolean seekTo(int seconds) {
-		return N_seekTo(currentSong, seconds);
 	}
 
 	@Override

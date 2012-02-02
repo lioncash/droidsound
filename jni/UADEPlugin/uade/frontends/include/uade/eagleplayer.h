@@ -108,7 +108,7 @@ struct uade_song {
 struct epconfattr {
 	char *s;                    /* config file directive/variable name */
 	int e;                      /* ES_* flags for eagleplayers and songs */
-        int o;                      /* UC_* flag for uade.conf option */
+    int o;                      /* UC_* flag for uade.conf option */
 	char *c;                    /* constant for an UC_* flag */
 	enum uade_attribute_type t; /* if variable, its special type */
 };
