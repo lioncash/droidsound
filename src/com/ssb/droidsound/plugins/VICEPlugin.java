@@ -201,13 +201,13 @@ public class VICEPlugin extends DroidSoundPlugin {
 		final String sids[] = { "UNKNOWN", "6581", "8580", "6581 & 8580" };
 		final String videoModes[] = { "UNKNOWN", "PAL", "NTSC", "PAL & NTSC" };
 		return new String[] {
-			"Format",
+			"Format:",
 			songInfo.format,
-			"Copyright",
+			"Copyright:",
 			songInfo.copyright,
-			"SID Model",
+			"SID Model:",
 			sids[songInfo.sidModel],
-			"Video Mode",
+			"Video Mode:",
 			videoModes[songInfo.videoMode],
 		};
 	}

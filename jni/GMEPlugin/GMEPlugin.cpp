@@ -17,6 +17,7 @@
 #define INFO_SUBTUNES 6
 #define INFO_STARTTUNE 7
 #define INFO_SUBTUNE_TITLE 8
+#define INFO_COMMENT 11
 
 #include "gme/gme.h"
 
@@ -218,6 +219,8 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1getString
 		return NewString(env, info->lastTrack->system);
 	case INFO_GAME:
 		return NewString(env, info->lastTrack->game);
+    case INFO_COMMENT:
+        return NewString(env, info->lastTrack->comment);
 	}
 	return 0;
 }

@@ -27,6 +27,8 @@ extern "C" {
 #define com_ssb_droidsound_plugins_GMEPlugin_INFO_SUBTUNE_TITLE 8L
 #undef com_ssb_droidsound_plugins_GMEPlugin_SIZEOF_INFO
 #define com_ssb_droidsound_plugins_GMEPlugin_SIZEOF_INFO 9L
+#undef com_ssb_droidsound_plugins_GMEPlugin_INFO_COMMENT
+#define com_ssb_droidsound_plugins_GMEPlugin_INFO_COMMENT 11L
 /*
  * Class:     com_ssb_droidsound_plugins_GMEPlugin
  * Method:    N_load

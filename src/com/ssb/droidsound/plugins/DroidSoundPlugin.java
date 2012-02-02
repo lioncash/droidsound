@@ -38,6 +38,7 @@ public abstract class DroidSoundPlugin {
 	public static final int INFO_SUBTUNE_TITLE = 8;
 	public static final int INFO_SUBTUNE_AUTHOR = 9;
 	public static final int INFO_SUBTUNE_NO = 10;
+	public static final int INFO_COMMENT = 11;
 
 	public static final int OPT_FILTER = 1;
 	public static final int OPT_RESAMPLING = 2;
