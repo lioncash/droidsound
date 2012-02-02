@@ -133,6 +133,14 @@ public class GMEPlugin extends DroidSoundPlugin {
 			info.format = "NES";
 			return info;
 		}
+		
+		//TODO: Make this get the composer and title
+		magic = new String(module, 0, 4, ISO88591);
+		if (magic.equals("NSFE")) {
+			MusicInfo info = new MusicInfo();
+			info.format = "NES";
+			return info;
+		}
 
 		magic = new String(module, 0, 27, ISO88591);
 		if (magic.equals("SNES-SPC700 Sound File Data")) {
