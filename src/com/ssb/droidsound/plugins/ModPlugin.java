@@ -84,7 +84,7 @@ public class ModPlugin extends DroidSoundPlugin {
 			info = new String[1];
 		}
 
-		info[0] = "Format: " + fmt + "(" + channels + " ch)";
+		info[0] = "Format: " + fmt + " (" + channels + " ch)";
 		return info;
 	}
 
