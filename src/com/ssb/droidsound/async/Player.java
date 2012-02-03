@@ -182,7 +182,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 		intent.putExtra("plugin.detailedInfo", plugin.getDetailedInfo());
 		intent.putExtra("subsong.length", subsongLengthMs.get() / 1000);
 		intent.putExtra("file.id", song.getId());
-		intent.putExtra("file.subsongs", subsongs);
+		intent.putExtra("file.subsongs", subsongs.get());
 		intent.putExtra("file.defaultSubsong", defaultSubsong);
 		intent.putExtra("file.title", song.getTitle());
 		intent.putExtra("file.composer", song.getComposer());

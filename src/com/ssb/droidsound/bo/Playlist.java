@@ -12,6 +12,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.net.Uri;
+
 /**
  * Represents snapshots of database entries.
  * ID is not provided because it is not reliable (could change from scan to scan).
@@ -77,7 +79,7 @@ public class Playlist {
 
 	private static JSONObject serialize(FilesEntry songFile) throws JSONException {
 		JSONObject obj = new JSONObject();
-		obj.put("url", songFile.getUrl());
+		obj.put("url", String.valueOf(songFile.getUrl()));
 		obj.put("format", songFile.getFormat());
 		obj.put("title", songFile.getTitle());
 		obj.put("composer", songFile.getComposer());
@@ -89,8 +91,8 @@ public class Playlist {
 	private static FilesEntry deserialize(JSONObject obj) throws JSONException {
 		if (obj.has("version") && obj.getInt("version") == VERSION) {
 			return new FilesEntry(
-					obj.getInt("subtune"),
-					obj.getString("url"),
+					0,
+					Uri.parse(obj.getString("url")),
 					(obj.has("format") ? obj.getString("format") : null),
 					(obj.has("title") ? obj.getString("title") : null),
 					(obj.has("composer") ? obj.getString("composer") : null),

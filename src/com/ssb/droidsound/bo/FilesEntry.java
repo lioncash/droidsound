@@ -3,6 +3,8 @@ package com.ssb.droidsound.bo;
 import java.util.HashMap;
 import java.util.Map;
 
+import android.net.Uri;
+
 /**
  * This container represents a playable file at specific subsong
  * setting.
@@ -23,13 +25,13 @@ public class FilesEntry {
 
 	private final long id;
 
-	private final String url;
+	private final Uri url;
 	private final String format;
 	private final String title;
 	private final String composer;
 	private final int date;
 
-	public FilesEntry(long id, String url, String format, String title, String composer, int date) {
+	public FilesEntry(long id, Uri url, String format, String title, String composer, int date) {
 		this.id = id;
 		this.url = url;
 		this.format = format;
@@ -48,9 +50,23 @@ public class FilesEntry {
 	 * list of possible substitutions is not very large and so on, maybe
 	 * we can live with this.
 	 */
-	public String getSecondaryFileName() {
-		String name = url;
+	public Uri getSecondaryUrl() {
+		if ("zip".equals(url.getScheme())) {
+			String second = getSecondaryName(url.getQueryParameter("path"));
+			if (second == null) {
+				return null;
+			}
+			return Uri.parse("file://" + url.getEncodedPath() + "?path=" + Uri.encode(second));
+		} else {
+			String second = getSecondaryName(url.getPath());
+			if (second == null) {
+				return null;
+			}
+			return Uri.parse("file://" + Uri.encode(second, "/"));
+		}
+	}
 
+	private String getSecondaryName(String name) {
 		{
 			int lastDot = name.lastIndexOf('.');
 			String ext = name.substring(lastDot + 1);
@@ -65,7 +81,7 @@ public class FilesEntry {
 		}
 
 		{
-			int lastSlash = name.indexOf('/');
+			int lastSlash = name.lastIndexOf('/');
 			int firstDot = name.indexOf('.', lastSlash + 1);
 			if (firstDot != -1) {
 				String ext = name.substring(lastSlash + 1, firstDot);
@@ -75,10 +91,11 @@ public class FilesEntry {
 					if (! ext.equals(extUpper)) {
 						alt = alt.toLowerCase();
 					}
-					return name.substring(lastSlash + 1) + alt + name.substring(firstDot);
+					return name.substring(0, lastSlash + 1) + alt + name.substring(firstDot);
 				}
 			}
 		}
+
 		return null;
 	}
 
@@ -86,7 +103,7 @@ public class FilesEntry {
 		return id;
 	}
 
-	public String getUrl() {
+	public Uri getUrl() {
 		return url;
 	}
 

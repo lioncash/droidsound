@@ -107,7 +107,7 @@ public class UADEPlugin extends DroidSoundPlugin {
 			fo1.close();
 			if (f2 != null) {
 				FileOutputStream fo2 = new FileOutputStream(new File(tmpDir, f2));
-				fo2.write(data1);
+				fo2.write(data2);
 				fo2.close();
 			}
 		}

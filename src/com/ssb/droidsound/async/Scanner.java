@@ -178,11 +178,14 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 		ContentValues values = new ContentValues();
 		Playlist pl = new Playlist(rowId, f);
 
+		int i = 0;
 		for (FilesEntry sf : pl.getSongs()) {
 			values.put("parent_id", rowId);
+			/* filename has no meaning but is unique index with parent_id */
+			values.put("filename", String.valueOf(++ i));
 			values.put("title", sf.getTitle());
 			values.put("type", SongDatabase.TYPE_FILE);
-			values.put("url", sf.getUrl());
+			values.put("url", String.valueOf(sf.getUrl()));
 			values.put("title", sf.getTitle());
 			values.put("composer", sf.getComposer());
 			values.put("date", sf.getDate());

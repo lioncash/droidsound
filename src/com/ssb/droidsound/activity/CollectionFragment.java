@@ -108,12 +108,11 @@ public class CollectionFragment extends Fragment {
 		}
 
 		case MENU_GROUP_DELETE: {
-			String url = sf.getUrl();
-			if (! url.startsWith("file://")) {
-				Log.w(TAG, "Somehow, I was asked to delete non-file URL: %s", url);
+			if (! "file".equals(sf.getUrl().getScheme())) {
+				Log.w(TAG, "Somehow, I was asked to delete non-file URL: %s", sf.getUrl());
 				return false;
 			}
-			final File f = new File(url.substring(7));
+			final File f = new File(sf.getUrl().getPath());
 			Log.i(TAG, "Confirm deletion of: %s", f.getPath());
 			AlertDialog.Builder alert = new AlertDialog.Builder(getActivity());
 			alert.setTitle(item.getTitle());

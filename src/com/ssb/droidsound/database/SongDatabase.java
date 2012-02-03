@@ -1,9 +1,11 @@
 package com.ssb.droidsound.database;
 
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -176,31 +178,16 @@ public class SongDatabase {
 		File name2 = null;
 		byte[] data2 = null;
 
-		Uri url = Uri.parse(song.getUrl());
-		Uri secondUrl;
-		{
-			String s = song.getSecondaryFileName();
-			secondUrl = s != null ? Uri.parse(s) : null;
-		}
-		if ("file".equals(url.getScheme())) {
-			name1 = new File(url.getPath());
-			if (secondUrl != null) {
-				name2 = new File(secondUrl.getPath());
-			}
+		Uri url = song.getUrl();
+		Uri secondUrl = song.getSecondaryUrl();
+		Log.i(TAG, "Attempt to open file url: %s, secondUrl: %s", url, secondUrl);
 
-			InputStream is1 = new FileInputStream(name1);
-			data1 = StreamUtil.readFully(is1, name1.length());
-			is1.close();
-			if (name2 != null) {
-				InputStream is2 = new FileInputStream(name2);
-				data2 = StreamUtil.readFully(is2, name2.length());
-				is2.close();
-			}
-		} else if ("zip".equals(url.getScheme())) {
+		if ("zip".equals(url.getScheme())) {
 			File zipFilePath = new File(url.getPath());
-			name1 = new File(url.getQueryParameter("path"));
+			name1 = new File(url.getQueryParameter("path").replaceFirst("^/", ""));
+			Log.i(TAG, "Zip %s, Entry %s", zipFilePath.getPath(), name1.getPath());
 			if (secondUrl != null) {
-				name2 = new File(url.getQueryParameter("path"));
+				name2 = new File(secondUrl.getQueryParameter("path"));
 			}
 
 			ZipFile zr = ZipReader.openZip(zipFilePath);
@@ -211,17 +198,48 @@ public class SongDatabase {
 
 			/* If the name looks like there might be a secondary file, we extract that from zip also */
 			if (name2 != null) {
-				ZipEntry ze2 = zr.getEntry(name2.getPath());
+				Log.i(TAG, "Reading secondary file: %s", name2);
+				ZipEntry ze2 = zr.getEntry(name2.getPath().replaceFirst("^/", ""));
 				if (ze2 != null) {
 					InputStream is2 = zr.getInputStream(ze2);
-					data2 = StreamUtil.readFully(is1, ze2.getSize());
+					data2 = StreamUtil.readFully(is2, ze2.getSize());
 					is2.close();
+				} else {
+					Log.i(TAG, "No secondary file found. Attempting to continue.");
 				}
 			}
 
 			zr.close();
+
+		} else if ("file".equals(url.getScheme()) || "http".equals(url.getScheme()) || "https".equals(url.getScheme())) {
+			Log.i(TAG, "Entry %s", url);
+			name1 = new File(url.getPath());
+			if (secondUrl != null) {
+				name2 = new File(secondUrl.getQueryParameter("path"));
+			}
+
+			URL netURL = new URL(String.valueOf(url));
+			URLConnection conn = netURL.openConnection();
+			conn.setUseCaches(true);
+			data1 = StreamUtil.readFully(conn.getInputStream(), conn.getContentLength());
+			conn.getInputStream().close();
+
+			if (name2 != null) {
+				Log.i(TAG, "Reading secondary file: %s", name2);
+				netURL = new URL(String.valueOf(secondUrl));
+				try {
+					conn = netURL.openConnection();
+					conn.setUseCaches(true);
+					data2 = StreamUtil.readFully(conn.getInputStream(), conn.getContentLength());
+					conn.getInputStream().close();
+				}
+				catch (FileNotFoundException fe) {
+					Log.i(TAG, "No secondary file found. Attempting to continue.");
+				}
+			}
+
 		} else {
-			throw new RuntimeException("Unsupported URL scheme: " + url);
+			throw new IOException("Unsupported URL scheme: " + url);
 		}
 
 		List<SongFileData> list = new ArrayList<SongFileData>();
@@ -288,7 +306,7 @@ public class SongDatabase {
 
 		return new FilesEntry(
 				childId,
-				url,
+				Uri.parse(url),
 				format,
 				title,
 				composer,

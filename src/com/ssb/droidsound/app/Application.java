@@ -64,7 +64,10 @@ public class Application extends android.app.Application {
 	}
 
 	public static File getTmpDirectory() {
-		return app.getDir("tmp", Context.MODE_PRIVATE);
+		/* UADE can't cope with internal /data/data placed cache directory.
+		 * This is because it insists on scanning the files.
+		 */
+		return app.getExternalCacheDir();
 	}
 
 	public static SharedPreferences getAppPreferences() {

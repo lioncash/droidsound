@@ -139,7 +139,7 @@ class CollectionViewAdapter extends CursorAdapter {
 				FilesEntry sf = Application.getSongDatabase().getSongFile(childId);
 				if (parentType != SongDatabase.TYPE_PLAYLIST
 						&& type == SongDatabase.TYPE_FILE
-						&& sf.getUrl().startsWith("file://")) {
+						&& "file".equals(sf.getUrl().getScheme())) {
 					menu.add(CollectionFragment.MENU_GROUP_DELETE, intChildId, Menu.NONE, R.string.delete);
 				}
 				if (type == SongDatabase.TYPE_ZIP) {
@@ -173,11 +173,15 @@ class CollectionViewAdapter extends CursorAdapter {
 					Cursor c = getCursor();
 					for (int i = 0; i < c.getCount(); i ++) {
 						c.moveToPosition(i);
+						if (c.getInt(SongDatabase.COL_TYPE) != SongDatabase.TYPE_FILE) {
+							continue;
+						}
+
 						long id = c.getLong(SongDatabase.COL_ID);
 						FilesEntry sibling = Application.getSongDatabase().getSongFile(id);
 						fileList.add(sibling);
 						if (id == childId) {
-							idx = i;
+							idx = fileList.size() - 1;
 						}
 					}
 
