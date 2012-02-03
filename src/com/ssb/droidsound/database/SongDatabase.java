@@ -12,6 +12,7 @@ import java.util.zip.ZipFile;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.provider.BaseColumns;
 
@@ -24,6 +25,15 @@ import com.ssb.droidsound.utils.Log;
 import com.ssb.droidsound.utils.StreamUtil;
 import com.ssb.droidsound.utils.ZipReader;
 
+/**
+ * This class represents the known collection of songs.
+ * <p>
+ * Each file we know about is inserted into a table called files
+ * with parent_id pointing to the parent entry. Metadata of each file
+ * is collected, most notably the URL required to open the file.
+ *
+ * @author alankila
+ */
 public class SongDatabase {
 	public enum Sort {
 		TITLE, COMPOSER, FILENAME;
@@ -38,9 +48,10 @@ public class SongDatabase {
 	public static final int COL_FILENAME = 2;
 	public static final int COL_TYPE = 3;
 	public static final int COL_FORMAT = 4;
-	public static final int COL_TITLE = 5;
-	public static final int COL_COMPOSER = 6;
-	public static final int COL_DATE = 7;
+	public static final int COL_URL = 5;
+	public static final int COL_TITLE = 6;
+	public static final int COL_COMPOSER = 7;
+	public static final int COL_DATE = 8;
 	public static final int TYPE_ZIP = 1;
 	public static final int TYPE_DIRECTORY = 2;
 	public static final int TYPE_PLAYLIST = 3;
@@ -48,9 +59,9 @@ public class SongDatabase {
 	public static final int TYPE_MUS_FOLDER = 5;
 	public static final int TYPE_SONGLENGTH = 6;
 
-	private static final int DB_VERSION = 1;
+	private static final int DB_VERSION = 3;
 	private static final String TAG = SongDatabase.class.getSimpleName();
-	private static final String[] COLUMNS = new String[] { "_id", "parent_id", "filename", "type", "format", "title", "composer", "date" };
+	private static final String[] COLUMNS = new String[] { "_id", "parent_id", "filename", "type", "format", "url", "title", "composer", "date" };
 
 	private final SQLiteDatabase db;
 
@@ -61,7 +72,7 @@ public class SongDatabase {
 		db = SQLiteDatabase.openOrCreateDatabase(f, null);
 		db.enableWriteAheadLogging();
 
-		if (db.needUpgrade(DB_VERSION)) {
+		if (db.getVersion() != DB_VERSION) {
 			Log.i(TAG, "Deleting old schema (if any)...");
 			db.execSQL("DROP TABLE IF EXISTS songlength;");
 			db.execSQL("DROP TABLE IF EXISTS files;");
@@ -73,6 +84,7 @@ public class SongDatabase {
 					+ "parent_id INTEGER REFERENCES files ON DELETE CASCADE,"
 					+ "filename TEXT NOT NULL,"
 					+ "type INTEGER NOT NULL,"
+					+ "url TEXT,"
 					+ "format TEXT,"
 					+ "modify_time INTEGER,"
 					+ "title TEXT,"
@@ -154,14 +166,44 @@ public class SongDatabase {
 	}
 
 	public List<SongFileData> getSongFileData(FilesEntry song) throws IOException {
-		final File name1 = song.getFilePath();
+		/* This system decodes the input and gets the file from the URL.
+		 * We currently support file:// and zip:// URLs. The zip URLs are our own invention.
+		 */
+
+		final File name1;
 		final byte[] data1;
 
-		final File name2 = song.getSecondaryFileName();
+		File name2 = null;
 		byte[] data2 = null;
 
-		if (song.getZipFilePath() != null) {
-			ZipFile zr = ZipReader.openZip(song.getZipFilePath());
+		Uri url = Uri.parse(song.getUrl());
+		Uri secondUrl;
+		{
+			String s = song.getSecondaryFileName();
+			secondUrl = s != null ? Uri.parse(s) : null;
+		}
+		if ("file".equals(url.getScheme())) {
+			name1 = new File(url.getPath());
+			if (secondUrl != null) {
+				name2 = new File(secondUrl.getPath());
+			}
+
+			InputStream is1 = new FileInputStream(name1);
+			data1 = StreamUtil.readFully(is1, name1.length());
+			is1.close();
+			if (name2 != null) {
+				InputStream is2 = new FileInputStream(name2);
+				data2 = StreamUtil.readFully(is2, name2.length());
+				is2.close();
+			}
+		} else if ("zip".equals(url.getScheme())) {
+			File zipFilePath = new File(url.getPath());
+			name1 = new File(url.getQueryParameter("path"));
+			if (secondUrl != null) {
+				name2 = new File(url.getQueryParameter("path"));
+			}
+
+			ZipFile zr = ZipReader.openZip(zipFilePath);
 			ZipEntry ze = zr.getEntry(name1.getPath());
 			InputStream is1 = zr.getInputStream(ze);
 			data1 = StreamUtil.readFully(is1, ze.getSize());
@@ -179,14 +221,7 @@ public class SongDatabase {
 
 			zr.close();
 		} else {
-			InputStream is1 = new FileInputStream(name1);
-			data1 = StreamUtil.readFully(is1, name1.length());
-			is1.close();
-			if (name2 != null) {
-				InputStream is2 = new FileInputStream(name2);
-				data2 = StreamUtil.readFully(is2, name2.length());
-				is2.close();
-			}
+			throw new RuntimeException("Unsupported URL scheme: " + url);
 		}
 
 		List<SongFileData> list = new ArrayList<SongFileData>();
@@ -242,66 +277,18 @@ public class SongDatabase {
 	 * @return songfile
 	 */
 	public FilesEntry getSongFile(final long childId) {
-		List<String> list = new ArrayList<String>();
 		Cursor c = getFileById(childId);
 		c.moveToFirst();
-
 		String format = c.getString(COL_FORMAT);
+		String url = c.getString(COL_URL);
 		String title = c.getString(COL_TITLE);
 		String composer = c.getString(COL_COMPOSER);
 		int date = c.getInt(COL_DATE);
-
-		int zipIdx = -1;
-		int playlistIdx = -1;
-		while (true) {
-			if (c.getInt(COL_TYPE) == TYPE_PLAYLIST) {
-				playlistIdx = list.size();
-			}
-			if (c.getInt(COL_TYPE) == TYPE_ZIP) {
-				zipIdx = list.size();
-			}
-			list.add(c.getString(COL_FILENAME));
-			if (c.isNull(COL_PARENT_ID)) {
-				break;
-			}
-
-			Long parentId = c.getLong(COL_PARENT_ID);
-			c.close();
-			c = getFileById(parentId);
-			c.moveToFirst();
-		}
 		c.close();
-
-		File zipFilePath = null;
-		File path = null;
-
-		/* Ugly hack alert: selected file within playlist? */
-		if (playlistIdx != -1 && list.size() > 1) {
-			/* unpack filename (ugly alert) */
-			String[] paths = list.get(0).split("\u0000");
-			path = new File(paths[0]);
-			if (paths.length == 2) {
-				zipFilePath = new File(paths[1]);
-			}
-		} else if (zipIdx != -1) {
-			zipFilePath = Application.getModsDirectory();
-			for (int i = list.size() - 1; i >= zipIdx; i --) {
-				zipFilePath = new File(zipFilePath, list.get(i));
-			}
-			for (int i = zipIdx - 1; i >= 0; i --) {
-				path = new File(path, list.get(i));
-			}
-		} else {
-			path = Application.getModsDirectory();
-			for (int i = list.size() - 1; i >= 0; i --) {
-				path = new File(path, list.get(i));
-			}
-		}
 
 		return new FilesEntry(
 				childId,
-				path,
-				zipFilePath != null ? zipFilePath : null,
+				url,
 				format,
 				title,
 				composer,

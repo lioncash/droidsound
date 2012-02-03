@@ -20,6 +20,7 @@ import org.json.JSONObject;
  */
 public class Playlist {
 	private static final Charset UTF8 = Charset.forName("UTF-8");
+	private static final int VERSION = 1;
 
 	private final long id;
 	private final File file;
@@ -48,7 +49,10 @@ public class Playlist {
 				JSONArray json = new JSONArray(new String(data, UTF8));
 				for (int i = 0; i < json.length(); i ++) {
 					JSONObject obj = json.getJSONObject(i);
-					songs.add(deserialize(obj));
+					FilesEntry sf = deserialize(obj);
+					if (sf != null) {
+						songs.add(sf);
+					}
 				}
 			}
 		} catch (Exception e) {
@@ -72,27 +76,29 @@ public class Playlist {
 	}
 
 	private static JSONObject serialize(FilesEntry songFile) throws JSONException {
-		File zipFilePath = songFile.getZipFilePath();
 		JSONObject obj = new JSONObject();
-		obj.put("filePath", songFile.getFilePath().getPath());
-		obj.put("zipFilePath", zipFilePath != null ? zipFilePath.getPath() : null);
+		obj.put("url", songFile.getUrl());
 		obj.put("format", songFile.getFormat());
 		obj.put("title", songFile.getTitle());
 		obj.put("composer", songFile.getComposer());
 		obj.put("date", songFile.getDate());
+		obj.put("version", VERSION);
 		return obj;
 	}
 
 	private static FilesEntry deserialize(JSONObject obj) throws JSONException {
-		return new FilesEntry(
-				obj.getInt("subtune"),
-				new File(obj.getString("filePath")),
-				obj.has("zipFilePath") ? new File(obj.getString("zipFilePath")) : null,
-				obj.has("format") ? obj.getString("format") : null,
-				obj.has("title") ? obj.getString("title") : null,
-				obj.has("composer") ? obj.getString("composer") : null,
-				obj.getInt("date")
-		);
+		if (obj.has("version") && obj.getInt("version") == VERSION) {
+			return new FilesEntry(
+					obj.getInt("subtune"),
+					obj.getString("url"),
+					(obj.has("format") ? obj.getString("format") : null),
+					(obj.has("title") ? obj.getString("title") : null),
+					(obj.has("composer") ? obj.getString("composer") : null),
+					obj.getInt("date")
+			);
+		} else {
+			return null;
+		}
 	}
 
 	public long getId() {

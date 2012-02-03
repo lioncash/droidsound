@@ -1,6 +1,5 @@
 package com.ssb.droidsound.bo;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,42 +18,67 @@ public class FilesEntry {
 		MAIN_TO_AUX.put("RJP", "SMP");
 		MAIN_TO_AUX.put("JPN", "SMP");
 		MAIN_TO_AUX.put("DUM", "INS");
+		MAIN_TO_AUX.put("MUS", "STR");
 	}
 
 	private final long id;
-	private final File filePath;
-	private final File zipFilePath;
 
+	private final String url;
 	private final String format;
 	private final String title;
 	private final String composer;
 	private final int date;
 
-	public FilesEntry(long id, File fileName, File zipFilePath, String format, String title, String composer, int date) {
+	public FilesEntry(long id, String url, String format, String title, String composer, int date) {
 		this.id = id;
-		this.filePath = fileName;
-		this.zipFilePath = zipFilePath;
+		this.url = url;
 		this.format = format;
 		this.title = title;
 		this.composer = composer;
 		this.date = date;
 	}
 
-	public File getSecondaryFileName() {
-		String name = filePath.getName();
+	/**
+	 * This function is tasked with identifying the song file's type from the
+	 * url, and replacing the songfile's suffix with a known alternate
+	 * suffix.
+	 * <p>
+	 * This is a layering violation because in theory only the plugin
+	 * responsible for the file can make this decision, but given that the
+	 * list of possible substitutions is not very large and so on, maybe
+	 * we can live with this.
+	 */
+	public String getSecondaryFileName() {
+		String name = url;
 
-		int lastDot = name.lastIndexOf('.');
-		String ext = name.substring(lastDot + 1).toUpperCase();
-		if (MAIN_TO_AUX.containsKey(ext)) {
-			return new File(filePath.getParentFile(), name.substring(lastDot + 1) + MAIN_TO_AUX.get(ext));
+		{
+			int lastDot = name.lastIndexOf('.');
+			String ext = name.substring(lastDot + 1);
+			String extUpper = ext.toUpperCase();
+			if (MAIN_TO_AUX.containsKey(extUpper)) {
+				String alt = MAIN_TO_AUX.get(extUpper);
+				if (! ext.equals(extUpper)) {
+					alt = alt.toLowerCase();
+				}
+				return name.substring(lastDot + 1) + alt;
+			}
 		}
 
-		int firstDot = name.indexOf('.');
-		String pref = name.substring(0, firstDot).toUpperCase();
-		if (MAIN_TO_AUX.containsKey(pref)) {
-			return new File(filePath.getParentFile(), MAIN_TO_AUX.get(pref) + name.substring(firstDot));
+		{
+			int lastSlash = name.indexOf('/');
+			int firstDot = name.indexOf('.', lastSlash + 1);
+			if (firstDot != -1) {
+				String ext = name.substring(lastSlash + 1, firstDot);
+				String extUpper = ext.toUpperCase();
+				if (MAIN_TO_AUX.containsKey(extUpper)) {
+					String alt = MAIN_TO_AUX.get(extUpper);
+					if (! ext.equals(extUpper)) {
+						alt = alt.toLowerCase();
+					}
+					return name.substring(lastSlash + 1) + alt + name.substring(firstDot);
+				}
+			}
 		}
-
 		return null;
 	}
 
@@ -62,12 +86,8 @@ public class FilesEntry {
 		return id;
 	}
 
-	public File getFilePath() {
-		return filePath;
-	}
-
-	public File getZipFilePath() {
-		return zipFilePath;
+	public String getUrl() {
+		return url;
 	}
 
 	public String getFormat() {
@@ -88,14 +108,14 @@ public class FilesEntry {
 
 	@Override
 	public int hashCode() {
-		return filePath.hashCode();
+		return url.hashCode();
 	}
 
 	@Override
 	public boolean equals(Object other) {
 		if (other instanceof FilesEntry) {
-			return filePath.equals(((FilesEntry) other).filePath);
+			return url.equals(((FilesEntry) other).url);
 		}
-		return super.equals(other);
+		return false;
 	}
 }

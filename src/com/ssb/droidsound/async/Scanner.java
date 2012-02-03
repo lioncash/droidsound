@@ -26,6 +26,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.provider.BaseColumns;
 
@@ -124,34 +125,43 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 		return filesHelper.insert(values);
 	}
 
+	private static String makeZipUrl(File zipFile, File songFile) {
+		return "zip://" + Uri.encode(zipFile.getAbsolutePath(), "/")
+				+ "?path=" + Uri.encode(songFile.getAbsolutePath());
+	}
+
+	private static String makeFileUrl(File songFile) {
+		return "file://" + Uri.encode(songFile.getAbsolutePath(), "/");
+	}
+
 	/**
 	 * Insert a file node to a parent.
 	 *
-	 * @param name
+	 * @param songFile
 	 * @param data
 	 * @param modifyTime
 	 * @param parentId
 	 */
-	private void insertFile(File name, byte[] data, long modifyTime, Long parentId) {
-		DroidSoundPlugin.MusicInfo info = DroidSoundPlugin.identify(name.getName(), data);
+	private void insertFile(File zipFile, File songFile, byte[] data, long modifyTime, Long parentId) {
+		/* We need a positive identification for accepting a file. */
+		DroidSoundPlugin.MusicInfo info = DroidSoundPlugin.identify(songFile.getName(), data);
+		if (info == null) {
+			return;
+		}
+
+		String url = zipFile != null ? makeZipUrl(zipFile, songFile) : makeFileUrl(songFile);
+
 		ContentValues values = new ContentValues();
 		values.put("parent_id", parentId);
-		values.put("filename", name.getName());
+		values.put("filename", songFile.getName());
 		values.put("modify_time", modifyTime);
 		values.put("type", SongDatabase.TYPE_FILE);
-		values.put("title", name.getName());
-		values.put("composer", name.getParentFile().getName());
-		if (info != null) {
-			if (info.title != null) {
-				values.put("title", info.title);
-			}
-			if (info.composer != null) {
-				values.put("composer", info.composer);
-			}
-			values.put("date", info.date);
-			values.put("format", info.format);
-			filesHelper.insert(values);
-		}
+		values.put("url", url);
+		values.put("title", info.title != null ? info.title : songFile.getName());
+		values.put("composer", info.composer != null ? info.composer : songFile.getParentFile().getName());
+		values.put("date", info.date);
+		values.put("format", info.format);
+		filesHelper.insert(values);
 	}
 
 	/**
@@ -170,15 +180,9 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 
 		for (FilesEntry sf : pl.getSongs()) {
 			values.put("parent_id", rowId);
-			/* okay, we'll encode zip path and file path into this field. Sorry. */
-			String path = sf.getFilePath().getPath();
-			File zipFilePath = sf.getZipFilePath();
-			if (zipFilePath != null) {
-				path += "\u0000" + zipFilePath.getPath();
-			}
-			values.put("filename", path);
 			values.put("title", sf.getTitle());
 			values.put("type", SongDatabase.TYPE_FILE);
+			values.put("url", sf.getUrl());
 			values.put("title", sf.getTitle());
 			values.put("composer", sf.getComposer());
 			values.put("date", sf.getDate());
@@ -186,7 +190,6 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 			filesHelper.insert(values);
 		}
 	}
-
 
 	/**
 	 * Zip scanner
@@ -231,7 +234,7 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 					pathParentId = parentId;
 					pathFilename = path;
 				} else {
-					/** Parent of the path (if any) */
+					/* Parent of the path (if any) */
 					String parent = path.substring(0, slash2);
 					pathFilename = path.substring(slash2 + 1);
 					pathParentId = pathMap.get(parent);
@@ -250,9 +253,7 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 					long rowId = filesHelper.insert(cv);
 					scanSonglengthsTxt(rowId, zis);
 				} else {
-					/* We could store zipentry's modifytime here, but I doubt it makes a difference. */
-					//Log.i(TAG, "New file: %s", ze.getName());
-					insertFile(new File(path, name), StreamUtil.readFully(zis, ze.getSize()), 0, pathParentId);
+					insertFile(zipFile, new File(path, name), StreamUtil.readFully(zis, ze.getSize()), 0, pathParentId);
 				}
 			}
 
@@ -351,6 +352,7 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 					values.put("filename", f.getName());
 					values.put("modify_time", f.lastModified());
 					values.put("type", SongDatabase.TYPE_ZIP);
+					values.put("url", "file://" + Uri.encode(f.getAbsolutePath(), "/"));
 					values.put("title", f.getName().substring(0, f.getName().length() - 4));
 					zipsToScan.put(f, values);
 				} else if (fnUpper.endsWith(".PLIST")) {
@@ -359,6 +361,7 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 					values.put("filename", f.getName());
 					values.put("modify_time", f.lastModified());
 					values.put("type", SongDatabase.TYPE_PLAYLIST);
+					values.put("url", f.getAbsolutePath());
 					values.put("title", f.getName().substring(0, f.getName().length() - 6));
 
 					long rowId = filesHelper.insert(values);
@@ -367,7 +370,7 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 					songLengthsToDo.add(f);
 				} else {
 					FileInputStream fi = new FileInputStream(f);
-					insertFile(f, StreamUtil.readFully(fi, f.length()), f.lastModified(), parentId);
+					insertFile(null, f, StreamUtil.readFully(fi, f.length()), f.lastModified(), parentId);
 					fi.close();
 				}
 			} else if (f.isDirectory()) {
@@ -458,6 +461,7 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 			db.delete("files", null, null);
 			sendUpdate(50);
 			db.delete("songlength", null, null);
+			sendUpdate(100);
 		}
 		scanFiles(modsDir, null);
 	}

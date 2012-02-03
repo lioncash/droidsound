@@ -139,7 +139,7 @@ class CollectionViewAdapter extends CursorAdapter {
 				FilesEntry sf = Application.getSongDatabase().getSongFile(childId);
 				if (parentType != SongDatabase.TYPE_PLAYLIST
 						&& type == SongDatabase.TYPE_FILE
-						&& sf.getZipFilePath() == null) {
+						&& sf.getUrl().startsWith("file://")) {
 					menu.add(CollectionFragment.MENU_GROUP_DELETE, intChildId, Menu.NONE, R.string.delete);
 				}
 				if (type == SongDatabase.TYPE_ZIP) {
