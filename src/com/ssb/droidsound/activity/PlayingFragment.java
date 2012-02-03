@@ -113,9 +113,9 @@ public class PlayingFragment extends Fragment {
 				}
 			}
 			if (b.getInt("file.subsongs") > 0) {
-				int cur = b.getInt("plugin.currentSubsongs");
+				int cur = b.getInt("plugin.currentSubsong");
 				int max = b.getInt("file.subsongs");
-				myAdapter.add(new Entry(getString("file_subsongs"), String.format("%d/%d", cur, max)));
+				myAdapter.add(new Entry(getString("file_subsongs"), String.format("%d/%d", cur+1, max)));
 			}
 
 			myAdapter.add(new Entry(getString("plugin_name"), b.getString("plugin.name")));

@@ -50,9 +50,9 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 	private final AtomicInteger subsongLengthMs = new AtomicInteger();
 	private final AtomicInteger defaultSubsong = new AtomicInteger();
 	private final AtomicInteger subsongs = new AtomicInteger();
-	private final AtomicReference<State> syncStateRequest = new AtomicReference<State>(State.PLAY);
-	private final AtomicInteger syncSeekRequest = new AtomicInteger(-1);
-	private final AtomicInteger syncSubsongRequest = new AtomicInteger(-1);
+	private final AtomicReference<State> stateRequest = new AtomicReference<State>(State.PLAY);
+	private final AtomicInteger seekRequest = new AtomicInteger(-1);
+	private final AtomicInteger subsongRequest = new AtomicInteger(-1);
 	private final AtomicInteger currentSubsong = new AtomicInteger();
 
 	/**
@@ -108,7 +108,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 	 */
 	public void setSeekRequest(int msec) {
 		Log.i(TAG, "Requesting new seek position %d ms", msec);
-		syncSeekRequest.set(msec);
+		seekRequest.set(msec);
 	}
 
 	/**
@@ -117,7 +117,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 	 * @return current player thread state
 	 */
 	public State getStateRequest() {
-		return syncStateRequest.get();
+		return stateRequest.get();
 	}
 	/**
 	 * Change playback state of a running thread.
@@ -126,19 +126,19 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 	 * @param newState
 	 */
 	public void setStateRequest(State newState) {
-		syncStateRequest.set(newState);
+		stateRequest.set(newState);
 	}
 
 	public int getCurrentSubsong() {
 		return currentSubsong.get();
 	}
 
-	public int getMaxSubsong() {
-		return subsongs.get();
-	}
-
 	public int getDefaultSubsong() {
 		return defaultSubsong.get();
+	}
+
+	public int getMaxSubsong() {
+		return subsongs.get();
 	}
 
 	/**
@@ -149,7 +149,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 	 * @param song
 	 */
 	public void setSubSongRequest(int song) {
-		syncSubsongRequest.set(song);
+		subsongRequest.set(song);
 	}
 
 	private void sendAdvancing(int time) {
@@ -160,7 +160,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 
 	private void sendUnloading() {
 		Intent unloading = new Intent(ACTION_UNLOADING_SONG);
-		unloading.putExtra("state", syncStateRequest.get());
+		unloading.putExtra("state", stateRequest.get());
 		Application.broadcast(unloading);
 	}
 
@@ -177,13 +177,13 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 
 		Intent intent = new Intent(ACTION_LOADING_SONG);
 		intent.putExtra("plugin.name", plugin.getVersion());
-		intent.putExtra("plugin.currentSubsong", currentSubsong);
+		intent.putExtra("plugin.currentSubsong", currentSubsong.get());
 		intent.putExtra("plugin.seekable", plugin.canSeek());
 		intent.putExtra("plugin.detailedInfo", plugin.getDetailedInfo());
 		intent.putExtra("subsong.length", subsongLengthMs.get() / 1000);
 		intent.putExtra("file.id", song.getId());
 		intent.putExtra("file.subsongs", subsongs.get());
-		intent.putExtra("file.defaultSubsong", defaultSubsong);
+		intent.putExtra("file.defaultSubsong", defaultSubsong.get());
 		intent.putExtra("file.title", song.getTitle());
 		intent.putExtra("file.composer", song.getComposer());
 		intent.putExtra("file.date", song.getDate());
@@ -253,9 +253,9 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 
 		int playbackFrame = 0;
 		PLAYLOOP: while (true) {
-			switch (syncStateRequest.get()) {
+			switch (stateRequest.get()) {
 			case PLAY: {
-				final int loopSubsongRequest = syncSubsongRequest.getAndSet(-1);
+				final int loopSubsongRequest = subsongRequest.getAndSet(-1);
 				if (loopSubsongRequest != -1) {
 					if (plugin.setTune(loopSubsongRequest)) {
 						playbackFrame = 0;
@@ -263,7 +263,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 					}
 				}
 
-				final int loopSeekRequest = syncSeekRequest.getAndSet(-1);
+				final int loopSeekRequest = seekRequest.getAndSet(-1);
 				if (loopSeekRequest != -1) {
 					if (plugin.canSeek()) {
 						plugin.seekTo(loopSeekRequest);
