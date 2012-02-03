@@ -18,7 +18,7 @@ public class VisualizationView extends SurfaceView {
 	protected static final String TAG = VisualizationView.class.getSimpleName();
 
 	private final double minFreq = 110; /* A */
-	private final float[] fft = new float[BINS * 3];
+	private final double[] fft = new double[BINS * 3];
 	private Color[] colors;
 
 	private Queue<OverlappingFFT.Data> queue;
@@ -70,16 +70,20 @@ public class VisualizationView extends SurfaceView {
 		int height = getHeight();
 
 		for (int i = 1; i < fft.length - 1; i += 3) {
-			float dbPrev = fft[i-1];
-			float dbNorm = fft[i];
-			float dbNext = fft[i+1];
+			double dbPrev = fft[i-1];
+			double dbNorm = fft[i];
+			double dbNext = fft[i+1];
 
-			float hump = 2f * dbNorm - dbPrev - dbNext;
-			float saturation = Math.max(0, Math.min(1, hump * 4f));
-			fftPaint.setColor(colors[(i / 3) % 12].toRGB((1f + saturation) * 0.5f, saturation));
+			double hump = 2 * dbNorm / (dbPrev + dbNext + 1e-10);
+			float saturation = (float) Math.max(0, Math.min(1, hump - 1));
+			fftPaint.setColor(colors[(i / 3) % 12].toRGB((1 + saturation) * 0.5f, saturation));
 
 			float x = (i + 0.5f) / (fft.length) * width;
-			canvas.drawLine(x, height, x, height * (1f - (dbNorm + dbPrev + dbNext) / 3), fftPaint);
+
+			double dbIn = Math.max(Math.max(dbPrev, dbNorm), dbNext);
+			double dB = Math.log(dbIn) / Math.log(10) * 10 / 60 + 0.8;
+
+			canvas.drawLine(x, height, x, height * (1f - (float) dB), fftPaint);
 		}
 	}
 
@@ -128,6 +132,7 @@ public class VisualizationView extends SurfaceView {
 			final double endIdx = endFreq / 22050 * (buf.length >> 1);
 
 			double lenSqMax = getInterpolated(buf, startIdx);
+			lenSqMax = Math.max(lenSqMax, getInterpolated(buf, endIdx));
 			int x = (int) startIdx + 1;
 			int xEnd = (int) endIdx + 1;
 			while (x < xEnd) {
@@ -136,10 +141,8 @@ public class VisualizationView extends SurfaceView {
 				x += 1;
 			}
 
-			double dB = Math.log(lenSqMax / (1 << 20)) / Math.log(10) * 10;
-
 			/* 60 dB correlates with 1 << 20 above (in 3 dB units because of no sqrt). */
-			fft[i] = ((float) dB / 60f) + 0.8f;
+			fft[i] = lenSqMax / (1 << 20);
 		}
 	}
 }
