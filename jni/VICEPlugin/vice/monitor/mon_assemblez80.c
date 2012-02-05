@@ -147,7 +147,7 @@ static int mon_assemble_instr(const char *opcode_name, unsigned int operand)
     }
 
     len = (monitor_cpu_for_memspace[mem]->asm_addr_mode_get_size)
-          ((unsigned int)(operand_mode), prefix[j], 0);
+          ((unsigned int)(operand_mode), prefix[j], 0, 0);
 
     if (prefix[j] == 0x00) {
         mon_set_mem_val(mem, loc, opcode);
@@ -181,4 +181,3 @@ void mon_assemblez80_init(monitor_cpu_type_t *monitor_cpu_type)
 {
     monitor_cpu_type->mon_assemble_instr = mon_assemble_instr;
 }
-
