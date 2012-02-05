@@ -82,11 +82,11 @@ static void load_content_db(struct uade_config *uc, struct uade_state *state)
     /* Try home directory first */
     if (stat(md5name, &st) == 0) {
       if (uade_read_content_db(md5name, state))
-	return;
+    return;
     } else {
       FILE *f = fopen(md5name, "w");
       if (f)
-	fclose(f);
+    fclose(f);
       uade_read_content_db(md5name, state);
     }
   }
@@ -140,7 +140,7 @@ static void scan_playlist(struct uade_config *uc)
 
 
 static void set_song_options(int *songconf_loaded, char *songoptions,
-			     char *songconfname, size_t maxname)
+                 char *songconfname, size_t maxname)
 {
   char homesongconfname[PATH_MAX];
   struct playlist_iterator pli;
@@ -268,7 +268,7 @@ int main(int argc, char *argv[])
     case '@':
       listfile = fopen(optarg, "r");
       if (listfile == NULL)
-	die("Can not open list file: %s\n", optarg);
+    die("Can not open list file: %s\n", optarg);
       break;
 
     case '1':
@@ -315,7 +315,7 @@ int main(int argc, char *argv[])
     case 'j':
       uade_jump_pos = strtod(optarg, &endptr);
       if (*endptr != 0 || uade_jump_pos < 0.0)
-	die("Invalid jump position: %s\n", optarg);
+    die("Invalid jump position: %s\n", optarg);
       break;
 
     case 'k':
@@ -343,7 +343,7 @@ int main(int argc, char *argv[])
     case 's':
       subsong = strtol(optarg, &endptr, 10);
       if (*endptr != 0 || subsong < 0 || subsong > 255)
-	die("Invalid subsong string: %s\n", optarg);
+    die("Invalid subsong string: %s\n", optarg);
       break;
 
     case 'S':
@@ -444,7 +444,7 @@ int main(int argc, char *argv[])
 
   basedir = NULL;
   if (uc_cmdline.basedir_set) {
-	  basedir = uc_cmdline.basedir.name;
+      basedir = uc_cmdline.basedir.name;
   }
   
   uadeconf_loaded = uade_load_initial_config(&state, uadeconfname, sizeof uadeconfname, basedir);
@@ -470,9 +470,9 @@ int main(int argc, char *argv[])
   if (listfile != NULL) {
     while (xfgets(tmpstr, sizeof(tmpstr), listfile) != NULL) {
       if (tmpstr[0] == '#')
-	continue;
+    continue;
       if (tmpstr[strlen(tmpstr) - 1] == '\n')
-	tmpstr[strlen(tmpstr) - 1] = 0;
+    tmpstr[strlen(tmpstr) - 1] = 0;
       playlist_add(&uade_playlist, tmpstr, state.config.recursive_mode, state.config.cygwin_drive_workaround);
     }
     fclose(listfile);
@@ -577,17 +577,17 @@ int main(int argc, char *argv[])
       debug(state.config.verbose, "\n");
 
       if (!uade_is_our_file(modulename, 0, &state)) {
-	__android_log_print(ANDROID_LOG_VERBOSE, "UADE", "Unknown format: %s\n", modulename);
-	continue;
+    __android_log_print(ANDROID_LOG_VERBOSE, "UADE", "Unknown format: %s\n", modulename);
+    continue;
       }
 
       debug(state.config.verbose, "Player candidate: %s\n", state.ep->playername);
 
       if (strcmp(state.ep->playername, "custom") == 0) {
-	strlcpy(playername, modulename, sizeof playername);
-	modulename[0] = 0;
+    strlcpy(playername, modulename, sizeof playername);
+    modulename[0] = 0;
       } else {
-	snprintf(playername, sizeof playername, "%s/players/%s", uc_cmdline.basedir.name, state.ep->playername);
+    snprintf(playername, sizeof playername, "%s/players/%s", uc_cmdline.basedir.name, state.ep->playername);
       }
     }
 
@@ -616,7 +616,7 @@ int main(int argc, char *argv[])
 
     if (uade_set_song_attributes(&state, playername, sizeof playername)) {
       debug(state.config.verbose, "Song rejected based on attributes: %s\n",
-	    state.song->module_filename);
+        state.song->module_filename);
       uade_unalloc_song(&state);
       continue;
     }
@@ -647,9 +647,9 @@ int main(int argc, char *argv[])
       goto cleanup;
 
     case UADECORE_CANT_PLAY:
-	debug(state.config.verbose, "Uadecore refuses to play the song.\n");
-	uade_unalloc_song(&state);
-	continue; /* jump to the beginning of playlist loop */
+    debug(state.config.verbose, "Uadecore refuses to play the song.\n");
+    uade_unalloc_song(&state);
+    continue; /* jump to the beginning of playlist loop */
 
     default:
       die("Unknown error from uade_song_initialization()\n");
