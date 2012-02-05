@@ -104,7 +104,7 @@ static int load_playerstore(struct uade_state *state)
 		state->playerstore = read_eagleplayer_conf(formatsfile);
 		if (state->playerstore == NULL) {
 			if (warnings) {
-				__android_log_print(ANDROID_LOG_VERBOSE, "UADE",	"Tried to load eagleplayer.conf from %s, but failed\n",	formatsfile);
+				__android_log_print(ANDROID_LOG_VERBOSE, "UADE", "Tried to load eagleplayer.conf from %s, but failed\n",	formatsfile);
 			}
 			warnings = 0;
 			return 0;
@@ -201,7 +201,7 @@ static struct eagleplayer *analyze_file_format(int *content,
 			}
 		} else {
 			if (state->config.verbose)
-				__android_log_print(ANDROID_LOG_VERBOSE, "UADE",	"%s not in eagleplayer.conf\n", ext);
+				__android_log_print(ANDROID_LOG_VERBOSE, "UADE", "%s not in eagleplayer.conf\n", ext);
 		}
 	}
 
