@@ -225,6 +225,7 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1getString
 	return 0;
 }
 
+
 JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1getIntInfo(JNIEnv *env, jobject obj, jlong song, jint what)
 {
 	GMEInfo *info = (GMEInfo*)song;

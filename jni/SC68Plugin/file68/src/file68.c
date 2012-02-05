@@ -1020,8 +1020,14 @@ static int sndh_info(disk68_t * mb, int len)
         if (i < len-2 && j < SC68_MAX_TRACK)
           mb->mus[j].first_ms = 1000u *
             ( ( ( (unsigned char) b[i]) << 8 ) | (unsigned char) b[i+1] );
+	TRACE68(file68_cat,
+		"file68: sndh -- TIME #%02 -- 0x%02X%02X (%c%c) -- %u ms\n",
+		j+1, (unsigned char)b[i], (unsigned char)b[i+1],
+		isgraph(b[i])?b[i]:'.',	isgraph(b[i+1])?b[i+1]:'.',
+		mb->mus[j].first_ms);
         i += 2;
       }
+
     } else if ( !memcmp(b+i,"##",2) && ( (ctypes & 0xC00) == 0xC00 ) ) {
       mb->nb_mus = ( b[i+2] - '0' ) * 10 + ( b[i+3] - '0' );
       t = i; i += 4;
