@@ -29,18 +29,19 @@ int force_loop;
 int loop_count;
 
 bool playing = false;
+
 int channels = 1;
 int samplerate = 44100;
 int kbps = 320;
+
+long length;
+int subtunes;
 
 char title[128];
 char artist[128];
 char album[128];
 char copyright[128];
 char format[128];
-
-long length;
-int subtunes;
 
 /**** END DECLARATIONS ****/
 
