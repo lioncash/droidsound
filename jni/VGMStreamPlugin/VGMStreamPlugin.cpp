@@ -1,3 +1,13 @@
+/**********************************************
+ *
+ *  General TODO's in this file.
+ *
+ *  -Figure out why the hell the songs keep cutting out
+ *   after playing for roughly 1:25.
+ *
+ **********************************************/
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
