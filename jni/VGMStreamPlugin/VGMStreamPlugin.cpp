@@ -67,12 +67,14 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
     vgmStream = init_vgmstream(s);
     
     env->ReleaseStringUTFChars(fname, s);
+    
     //If stream could not be opened, exit.
     if(!vgmStream)
     {
         return -1;
     }
     
+    //If no channels are present/recognized
     if (vgmStream->channels <= 0)
     {
         close_vgmstream(vgmStream);
@@ -118,11 +120,6 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
 
 JNIEXPORT void Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1unload(JNIEnv *env, jobject obj, jlong song)
 {
- /* length = 0;
-  * total_samples = 0;
-  * current_sample = 0;
-  */
-    
     // Cleanup
     close_vgmstream(vgmStream);
     vgmStream = NULL;
@@ -139,17 +136,18 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSou
         // Audio write function
         // Have we finished decoding ?
         current_sample += size / (channels);
-        if( current_sample >= total_samples ) 
+        
+        if(current_sample >= total_samples) 
         {
             playing = false;
             return 0;
         }
-        //Original:
+        
+        //Original: Just in case the current one gives us problems.
         //render_vgmstream((sample *)ptr, size / (channels << 1), vgmStream);
         render_vgmstream((sample *)ptr, size / channels, vgmStream);
         return size;
     }
-            
 
     return 0;
 }
@@ -169,17 +167,20 @@ JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1se
 
 JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getStringInfo(JNIEnv *env, jobject obj, jlong song, jint what)
 {
+    /* To be implemented */
     return NULL;
 }
 
 
 JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1setOption(JNIEnv *env, jclass cl, jint what, jint val)
 {
+    /* To be implemented */
 }
 
 
 JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getIntInfo(JNIEnv *env, jobject obj, jlong song, jint what)
 {
+    /* To be implemented */
     return 0;
 }
 
