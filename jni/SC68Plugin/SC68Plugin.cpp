@@ -137,7 +137,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1load(JNIEn
 }
 
 
-JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getSoundData(JNIEnv *env, jobject obj, jlong song, jshortArray bArray, jint size)
+JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getSoundData(JNIEnv *env, jobject obj, jlong song, jshortArray sArray, jint size)
 {
 	PlayData *pd = (PlayData*)song;
 	const char *err = "";
@@ -154,7 +154,7 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getSoundDat
 		}
 	}
 
-	jshort *ptr = (jshort*)env->GetShortArrayElements(bArray, NULL);
+	jshort *ptr = (jshort*)env->GetShortArrayElements(sArray, NULL);
 
     jint n = size/2;
 	int code = sc68_process(pd->sc68, ptr, &n);
@@ -165,7 +165,7 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getSoundDat
 
 	unsigned short *ptr2 = (unsigned short*)ptr;
 
-	env->ReleaseShortArrayElements(bArray, (jshort*)ptr, 0);
+	env->ReleaseShortArrayElements(sArray, (jshort*)ptr, 0);
 
 	if(!pd->trackChanged && (code & SC68_CHANGE)) {
         __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "Ending track");
