@@ -167,7 +167,7 @@ JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1setTune(
 }
 
 
-JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1getSoundData(JNIEnv *env, jobject obj, jlong song, jshortArray bArray, int size)
+JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1getSoundData(JNIEnv *env, jobject obj, jlong song, jshortArray sArray, int size)
 {
 	GMEInfo *info = (GMEInfo*)song;
 
@@ -180,11 +180,11 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1getSoundData
 		return 0;
 	}
 
-	jshort *ptr = env->GetShortArrayElements(bArray, NULL);
+	jshort *ptr = env->GetShortArrayElements(sArray, NULL);
 
 	gme_err_t err = gme_play(info->emu, size, ptr);
 
-	env->ReleaseShortArrayElements(bArray, ptr, 0);
+	env->ReleaseShortArrayElements(sArray, ptr, 0);
 	return size;
 }
 

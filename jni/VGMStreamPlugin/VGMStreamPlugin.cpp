@@ -129,9 +129,6 @@ JNIEXPORT void Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1unload(JNIEnv 
 
 JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSoundData(JNIEnv *env, jobject obj, jlong song, jshortArray sArray, jint size) 
 {
-    // Get the short* pointer from the Java array
-    jshort *ptr = (jshort*)env->GetShortArrayElements(sArray, NULL);
-    
     if (playing = true)
     {       
         // Audio write function
@@ -144,9 +141,15 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSou
             return 0;
         }
         
+        // Get the short* pointer from the Java array
+        jshort *ptr = (jshort*)env->GetShortArrayElements(sArray, NULL);
+        
         //Original: Just in case the current one gives us problems.
         //render_vgmstream((sample *)ptr, size / (channels << 1), vgmStream);
         render_vgmstream((sample *)ptr, size / channels, vgmStream);
+        
+        env->ReleaseShortArrayElements(sArray, ptr, 0);
+        
         return size;
     }
 
