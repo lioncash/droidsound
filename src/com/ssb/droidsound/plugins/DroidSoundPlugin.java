@@ -22,6 +22,7 @@ public abstract class DroidSoundPlugin {
 			new VICEPlugin(),
 			new GMEPlugin(),
 			new SC68Plugin(),
+			new VGMStreamPlugin(),
 			new UADEPlugin(),
 			new ModPlugin(),
 			new HivelyPlugin()
