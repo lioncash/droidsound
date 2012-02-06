@@ -359,6 +359,6 @@ public class VICEPlugin extends DroidSoundPlugin {
 
 	@Override
 	public String getVersion() {
-		return "VICEPlugin (vsid r25230))";
+		return "VICEPlugin (vsid r25231))";
 	}
 }
