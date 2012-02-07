@@ -4,18 +4,17 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * This class performs 4096 point FFT with 75 % overlap between
- * successive frames, and publishes results with timestamps which mark the time
- * for their consumption.
+ * Input signal is converted to mono and FFTs are run at multiple resolutions
+ * to provide overall coverage from 55 Hz and above.
  *
  * @author alankila
  */
 public class OverlappingFFT {
 	public static class Data implements Comparable<Data> {
 		private final Long time;
-		private final short[] fft;
+		private final short[][] fft;
 
-		public Data(long time, short[] fft) {
+		public Data(long time, short[][] fft) {
 			this.time = time;
 			this.fft = fft;
 		}
@@ -24,7 +23,7 @@ public class OverlappingFFT {
 			return time;
 		}
 
-		public short[] getFft() {
+		public short[][] getFft() {
 			return fft;
 		}
 
@@ -37,8 +36,12 @@ public class OverlappingFFT {
 	/** Queue of generated FFT frames for later processing. */
 	private final Queue<Data> queue = new ConcurrentLinkedQueue<Data>();
 
-	/** Accumulation buffer until full FFT has been reached. 16-bit stereo. */
-	private final short[] fftSamples = new short[8192 * 2];
+	/**
+	 * Accumulation buffers until full FFT has been reached. 16-bit mono.
+	 * The buffer at index 0 has 44.1 kHz sample rate, buffer at index 1
+	 * has 11.1 kHz and so on.
+	 */
+	private final short[][] fftSamples = new short[4][1024];
 
 	/** Current index within accumulation buffer */
 	private int fftSamplesIdx;
@@ -54,49 +57,79 @@ public class OverlappingFFT {
 		bufferingMs = bufsizeFrames * 1000 / frameRate;
 	}
 
+	/*
+	double phase = 0;
+	double phaseInc = 0;
+	*/
+
 	public void feed(short[] samples, int posInSamples, int lengthInSamples) {
-		/* This assumes that the last audiotrack.write() just filled the buffer
-		 * maximally. However, I don't know if it's actually true. */
-		long estimatedPlaybackTime = System.currentTimeMillis() + bufferingMs;
-		while (posInSamples < lengthInSamples) {
-			/* Fill as much as possible into fftInput1 */
-			int copyLenInSamples = Math.min(lengthInSamples - posInSamples, fftSamples.length - fftSamplesIdx);
-			System.arraycopy(samples, posInSamples, fftSamples, fftSamplesIdx, copyLenInSamples);
-			fftSamplesIdx += copyLenInSamples;
-			posInSamples += copyLenInSamples;
+		for (int i = 0; i < lengthInSamples; i += 2) {
+			int mono = samples[posInSamples + i] + samples[posInSamples + i + 1];
 
-			/* Complete buffer? */
-			if (fftSamplesIdx == fftSamples.length) {
-				/* Consume events if the view isn't consuming them.
-				 * The condition to wait is 2 buffer lengths, after which
-				 * the elements are just thrown away. We should probably work out
-				 * how to stop OverlapppingFFT
-				 */
-				while (true) {
-					Data d = queue.peek();
-					if (d != null && d.getTime() + bufferingMs < System.currentTimeMillis()) {
-						queue.poll();
-						continue;
-					}
-					break;
-				}
+			/*
+			mono = (int) (Math.sin(phase) * 65535 / 2);
+			phase += phaseInc;
+			*/
 
-				/* The length is halved because FFT is computed over mono signal,
-				 * and then halved again because only half of the FFT spectrum is
-				 * actually returned.
-				 */
-				short[] buf = new short[fftSamples.length >> 2];
-
-				/* Run FFT, and place estimated time this buffer will be played back
-				 * at start of some ignored FFT components... */
-				FFT.fft(fftSamples, buf);
-				long time = estimatedPlaybackTime + 1000 * posInSamples / 2 / frameRate;
-				queue.add(new Data(time, buf));
-
-				fftSamplesIdx = (fftSamples.length >> 2) * 3;
-				System.arraycopy(fftSamples, fftSamples.length >> 2, fftSamples, 0, fftSamplesIdx);
+			fftSamples[0][fftSamplesIdx] = (short) (mono >> 1);
+			if (++ fftSamplesIdx == fftSamples[0].length) {
+				runFfts(posInSamples, lengthInSamples);
+				fftSamplesIdx = 0;
 			}
 		}
+		/*
+		phaseInc *= 1.003;
+		if (phaseInc < 2e-3 || phaseInc > 1) {
+			phaseInc = 2e-3;
+		}
+		*/
+	}
+
+	/**
+	 * Move 1/4 of the buffer into bit bucket
+	 * fill in the empty space at end from new data
+	 *
+	 * @param in
+	 * @param out
+	 */
+	private static void resample2oct(short[] in, short[] out) {
+		int len = in.length;
+		System.arraycopy(out, len >> 2, out, 0, len - (len >> 2));
+		for (int i = 0; i < len; i += 4) {
+			int boxcar = in[i] + in[i + 1] + in[i + 2] + in[i + 3];
+			out[len - (len >> 2) + (i >> 2)] = (short) (boxcar >> 2);
+		}
+	}
+
+	/**
+	 * Run FFTs simulating 1024, 4096, 16384 and 65536 points
+	 *
+	 * @param posInSamples
+	 * @param lengthInSamples
+	 */
+	private void runFfts(int posInSamples, int lengthInSamples) {
+		resample2oct(fftSamples[0], fftSamples[1]);
+		resample2oct(fftSamples[1], fftSamples[2]);
+		resample2oct(fftSamples[2], fftSamples[3]);
+
+		short[][] out = new short[4][fftSamples[0].length >> 1];
+		FFT.fft(fftSamples[0], out[0]);
+		FFT.fft(fftSamples[1], out[1]);
+		FFT.fft(fftSamples[2], out[2]);
+		FFT.fft(fftSamples[3], out[3]);
+
+		while (true) {
+			Data d = queue.peek();
+			if (d != null && d.getTime() + bufferingMs < System.currentTimeMillis()) {
+				queue.poll();
+				continue;
+			}
+			break;
+		}
+
+        long estimatedPlaybackTime = System.currentTimeMillis() + bufferingMs;
+		long time = estimatedPlaybackTime + 1000 * (posInSamples - lengthInSamples) / 2 / frameRate;
+		queue.add(new Data(time, out));
 	}
 
 	public Queue<Data> getQueue() {

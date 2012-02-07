@@ -13,11 +13,11 @@ import com.ssb.droidsound.utils.Color;
 import com.ssb.droidsound.utils.OverlappingFFT;
 
 public class VisualizationView extends SurfaceView {
-	public static final int BINS = 12 * 7;
+	public static final int BINS = 12 * 8;
 
 	protected static final String TAG = VisualizationView.class.getSimpleName();
 
-	private final double minFreq = 110; /* A */
+	private final double minFreq = 55; /* A */
 	private final double[] fft = new double[BINS * 3];
 	private Color[] colors;
 
@@ -122,21 +122,31 @@ public class VisualizationView extends SurfaceView {
 		return c1 + (c2 - c1) * (x - i);
 	}
 
-	private void updateFftData(short[] buf) {
+	private void updateFftData(short[][] buf) {
 		/* Remap data bins into our freq-linear fft */
 		for (int i = 0; i < fft.length; i ++) {
 			final double startFreq = projectFft((i - 1 - 0.5) / 3);
 			final double endFreq = projectFft((i - 1 + 0.5) / 3);
 
-			final double startIdx = startFreq / 22050 * (buf.length >> 1);
-			final double endIdx = endFreq / 22050 * (buf.length >> 1);
+			double startIdx = startFreq / 22050 * (buf[0].length >> 1);
+			double endIdx = endFreq / 22050 * (buf[0].length >> 1);
 
-			double lenSqMax = getInterpolated(buf, startIdx);
-			lenSqMax = Math.max(lenSqMax, getInterpolated(buf, endIdx));
+			/* Select correct FFT set. Should write better code than this... */
+			startIdx *= 64;
+			endIdx *= 64;
+			int bufIdx = 3;
+			while (bufIdx != 0 && endIdx >= (buf[0].length / 3)) {
+				startIdx /= 4;
+				endIdx /= 4;
+				bufIdx --;
+			}
+
+			double lenSqMax = getInterpolated(buf[bufIdx], startIdx);
+			lenSqMax = Math.max(lenSqMax, getInterpolated(buf[bufIdx], endIdx));
 			int x = (int) startIdx + 1;
 			int xEnd = (int) endIdx + 1;
 			while (x < xEnd) {
-				double c = getBin(buf, x);
+				double c = getBin(buf[bufIdx], x);
 				lenSqMax = Math.max(lenSqMax, c);
 				x += 1;
 			}

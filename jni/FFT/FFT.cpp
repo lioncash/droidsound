@@ -7,7 +7,7 @@ JNIEXPORT void JNICALL Java_com_ssb_droidsound_utils_FFT_fft(JNIEnv *env, jclass
         int32_t tmp[MAX_FFT_SIZE];
 
         int32_t fftLen = env->GetArrayLength(jin);
-        fftLen >>= 2;
+        fftLen >>= 1;
         if (fftLen < 0 || fftLen > MAX_FFT_SIZE) {
             return;
         }
@@ -28,12 +28,12 @@ JNIEXPORT void JNICALL Java_com_ssb_droidsound_utils_FFT_fft(JNIEnv *env, jclass
         /* Convert 16-bit stereo to real-valued mono input packing 2 values per int32 */
         for (int32_t i = 0; i < fftLen >> 1; i += 1) {
             /* head sample */
-            int32_t mh1 = in[(i << 2) + 0] + in[(i << 2) + 1] >> 1;
-            int32_t mh2 = in[(i << 2) + 2] + in[(i << 2) + 3] >> 1;
+            int32_t mh1 = in[(i << 1) + 0];
+            int32_t mh2 = in[(i << 1) + 1];
             /* tail sample */
             int32_t j = fftLen - 1 - i;
-            int32_t mt1 = in[(j << 2) + 0] + in[(j << 2) + 1] >> 1;
-            int32_t mt2 = in[(j << 2) + 2] + in[(j << 2) + 3] >> 1;
+            int32_t mt1 = in[(j << 1) + 0];
+            int32_t mt2 = in[(j << 1) + 1];
 
             /* Get window function index, half of the table. */
             int32_t widx = i != 0 ? i : 1;
