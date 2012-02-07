@@ -17,6 +17,15 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 
 	/* These are the supported extensions so far. I can guarantee more will come in the future.*/
 	/* Most of the formats need to be tested before being actually added to the list           */
+	
+	/* Status of extensions in terms of stability: 
+	 * 
+	 * ADX: Plays back fine, does not change to next track when done playing however.
+	 * AAX: Plays back fine, crashes player when done playing (this is really weird)
+	 * 
+	 * 
+	 * */
+
 	private static final Set<String> EXTENSIONS = new HashSet<String>(Arrays.asList("AAX", "ADX"));
 	
 	@Override
