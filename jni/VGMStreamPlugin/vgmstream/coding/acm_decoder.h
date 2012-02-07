@@ -39,48 +39,48 @@
 #define ACM_ERR_NOT_SEEKABLE	-8
 
 typedef struct ACMInfo {
-	unsigned channels;
-	unsigned rate;
-	unsigned acm_id;
-	unsigned acm_version;
-	unsigned acm_level;
-	unsigned acm_cols;		/* 1 << acm_level */
-	unsigned acm_rows;
+    unsigned channels;
+    unsigned rate;
+    unsigned acm_id;
+    unsigned acm_version;
+    unsigned acm_level;
+    unsigned acm_cols;		/* 1 << acm_level */
+    unsigned acm_rows;
 } ACMInfo;
 
 struct ACMStream {
-	ACMInfo info;
-	unsigned total_values;
+    ACMInfo info;
+    unsigned total_values;
 
-	/* acm data stream */
+    /* acm data stream */
     STREAMFILE *streamfile;
-	unsigned data_len;
+    unsigned data_len;
 
-	/* acm stream buffer */
-	unsigned bit_avail;
-	unsigned bit_data;
-	unsigned buf_start_ofs;
+    /* acm stream buffer */
+    unsigned bit_avail;
+    unsigned bit_data;
+    unsigned buf_start_ofs;
 
-	/* block lengths (in samples) */
-	unsigned block_len;
-	unsigned wrapbuf_len;
-	/* buffers */
-	int *block;
-	int *wrapbuf;
-	int *ampbuf;
-	int *midbuf;			/* pointer into ampbuf */
-	/* result */
-	unsigned block_ready:1;
-	unsigned file_eof:1;
-	unsigned stream_pos;			/* in words. absolute */
-	unsigned block_pos;			/* in words, relative */
+    /* block lengths (in samples) */
+    unsigned block_len;
+    unsigned wrapbuf_len;
+    /* buffers */
+    int *block;
+    int *wrapbuf;
+    int *ampbuf;
+    int *midbuf;			/* pointer into ampbuf */
+    /* result */
+    unsigned block_ready:1;
+    unsigned file_eof:1;
+    unsigned stream_pos;			/* in words. absolute */
+    unsigned block_pos;			    /* in words, relative */
 };
 typedef struct ACMStream ACMStream;
 
 /* decode.c */
 int acm_open_decoder(ACMStream **res, STREAMFILE *facilitator_file, const char *const filename);
 int acm_read(ACMStream *acm, void *buf, unsigned nbytes,
-		int bigendianp, int wordlen, int sgned);
+        int bigendianp, int wordlen, int sgned);
 void acm_close(ACMStream *acm);
 void acm_reset(ACMStream *acm);
 

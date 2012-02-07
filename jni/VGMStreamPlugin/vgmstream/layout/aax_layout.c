@@ -16,10 +16,10 @@ void render_vgmstream_aax(sample * buffer, int32_t sample_count, VGMSTREAM * vgm
 
             reset_vgmstream(data->adxs[data->current_segment]);
 
-            /* carry over the history from the loop point */
+            /* Carry over the history from the loop point */
             if (data->loop_segment > 0)
             {
-                for (i=0;i<data->adxs[0]->channels;i++)
+                for (i = 0; i < data->adxs[0]->channels; i++)
                 {
                     data->adxs[data->loop_segment]->ch[i].adpcm_history1_32 = 
                         data->adxs[data->loop_segment-1]->ch[i].adpcm_history1_32;
@@ -33,20 +33,20 @@ void render_vgmstream_aax(sample * buffer, int32_t sample_count, VGMSTREAM * vgm
 
         samples_to_do = vgmstream_samples_to_do(samples_this_block, 1, vgmstream);
 
-        /*printf("samples_to_do=%d,samples_this_block=%d,samples_written=%d,sample_count=%d\n",samples_to_do,samples_this_block,samples_written,sample_count);*/
+        /*printf("samples_to_do = %d, samples_this_block = %d, samples_written = %d, sample_count = %d\n", samples_to_do, samples_this_block, samples_written, sample_count);*/
 
-        if (samples_written+samples_to_do > sample_count)
-            samples_to_do=sample_count-samples_written;
+        if (samples_written + samples_to_do > sample_count)
+            samples_to_do = sample_count - samples_written;
 
         if (samples_to_do == 0)
         {
             int i;
             data->current_segment++;
-            /*printf("advance to %d at %d samples\n",data->current_segment,vgmstream->current_sample);*/
+            /*printf("advance to %d at %d samples\n", data->current_segment, vgmstream->current_sample);*/
             reset_vgmstream(data->adxs[data->current_segment]);
 
-            /* carry over the history from the previous segment */
-            for (i=0;i<data->adxs[0]->channels;i++)
+            /* Carry over the history from the previous segment */
+            for (i = 0; i < data->adxs[0]->channels; i++)
             {
                 data->adxs[data->current_segment]->ch[i].adpcm_history1_32 = 
                     data->adxs[data->current_segment-1]->ch[i].adpcm_history1_32;
@@ -57,8 +57,8 @@ void render_vgmstream_aax(sample * buffer, int32_t sample_count, VGMSTREAM * vgm
             continue;
         }
 
-        render_vgmstream(&buffer[samples_written*data->adxs[data->current_segment]->channels],
-                samples_to_do,data->adxs[data->current_segment]);
+        render_vgmstream(&buffer[samples_written * data->adxs[data->current_segment]->channels],
+                samples_to_do, data->adxs[data->current_segment]);
 
         samples_written += samples_to_do;
         vgmstream->current_sample += samples_to_do;
