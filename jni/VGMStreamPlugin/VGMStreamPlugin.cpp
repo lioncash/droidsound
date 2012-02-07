@@ -5,6 +5,8 @@
  *  -Figure out why the hell the songs keep cutting out
  *   after playing for roughly 1:25.
  *
+ *  UPDATE: See line 131
+ *
  **********************************************/
 
 
@@ -18,8 +20,6 @@
 extern "C" {
 #include <vgmstream/vgmstream.h>
 }
-
-VGMSTREAM * vgmStream = NULL;
 
 int current_sample;
 int total_samples = 0;
@@ -35,7 +35,7 @@ int samplerate = 44100;
 int kbps = 320;
 
 long length;
-int subtunes;
+int subtunes = 1;
 
 char title[128];
 char artist[128];
@@ -61,19 +61,19 @@ static jstring NewString(JNIEnv *env, const char *str)
 
 JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadFile(JNIEnv *env, jobject obj, jstring fname)
 {
+    VGMSTREAM * vgmStream;
+    
     jboolean iscopy;
 	const char *s = env->GetStringUTFChars(fname, &iscopy);
     
     //Initialize and check if format is playable
-    vgmStream = init_vgmstream(s);
+    //vgmStream = init_vgmstream(s);
+    if ((vgmStream = init_vgmstream(s)) == NULL)
+    {
+	    return 0;
+    }
     
     env->ReleaseStringUTFChars(fname, s);
-    
-    //If stream could not be opened, exit.
-    if(!vgmStream)
-    {
-        return -1;
-    }
     
     //If no channels are present/recognized
     if (vgmStream->channels <= 0)
@@ -100,7 +100,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
     {
         vgmStream->loop_flag = 0;
     }
-    
+
     channels = vgmStream->channels;
     samplerate = vgmStream->sample_rate;
     kbps = get_vgmstream_frame_size(vgmStream);
@@ -113,24 +113,41 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
         length = 200000;
     }
    
-    
     playing = true;
-	return length;
+	return (long)vgmStream;  //return length;
 }
 
 
 JNIEXPORT void Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1unload(JNIEnv *env, jobject obj, jlong song)
 {
+    VGMSTREAM* vgmDealloc = (VGMSTREAM*)song;
+
     // Cleanup
-    close_vgmstream(vgmStream);
-    vgmStream = NULL;
-    
+    close_vgmstream(vgmDealloc);
+    vgmDealloc = NULL;    
 }
 
+
+/*
+ * NOTE:
+ * The problem with the crashing seems to occur in getSoundData when the jshort array is freed.
+ *
+ * This is assumed from what I can grasp of the issue. 
+ *
+ * It may be in a different area of the code. vgmstream is incredibly peculiar. This -should- be working
+ * 
+ * Someone, anyone with awesome JNI skills, please help my stupid ass out here. I literally cannot 
+ * find anything wrong with this code, yet it still crashes droidsound when playing AAX files.
+ *
+ */
 JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSoundData(JNIEnv *env, jobject obj, jlong song, jshortArray sArray, jint size) 
 {
+    VGMSTREAM* vgm = (VGMSTREAM*)song;
+                
+    jshort *ptr = env->GetShortArrayElements(sArray, NULL);
+    /*
     if (playing = true)
-    {       
+    {   
         // Audio write function
         // Have we finished decoding ?
         current_sample += size / (channels);
@@ -138,22 +155,20 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSou
         if(current_sample >= total_samples) 
         {
             playing = false;
-            return 0;
         }
-        
-        // Get the short* pointer from the Java array
-        jshort *ptr = (jshort*)env->GetShortArrayElements(sArray, NULL);
-        
-        //Original: Just in case the current one gives us problems.
-        //render_vgmstream((sample *)ptr, size / (channels << 1), vgmStream);
-        render_vgmstream((sample *)ptr, size / channels, vgmStream);
-        
-        env->ReleaseShortArrayElements(sArray, ptr, 0);
-        
-        return size;
-    }
 
-    return 0;
+        //Original: Just in case the current one gives us problems.
+        //render_vgmstream((sample *)ptr, size / channels, vgmStream);
+        render_vgmstream((sample*)ptr, size / (vgm->channels), (VGMSTREAM*)song);
+
+        env->ReleaseShortArrayElements(sArray, ptr, 0);
+
+        return size;
+    }*/
+    
+	render_vgmstream((sample*)ptr, size / (vgm->channels), (VGMSTREAM*)song);
+    env->ReleaseShortArrayElements(sArray, (sample*)ptr, 0);
+    return size;
 }
 
 
@@ -165,7 +180,7 @@ JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1se
 
 JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1setTune(JNIEnv *env, jobject obj, jlong song, jint tune)
 {
-    return true;
+    return false;
 }
 
 

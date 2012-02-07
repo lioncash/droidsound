@@ -17,7 +17,7 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 
 	/* These are the supported extensions so far. I can guarantee more will come in the future.*/
 	/* Most of the formats need to be tested before being actually added to the list           */
-	private static final Set<String> EXTENSIONS = new HashSet<String>(Arrays.asList("AAX", "ADX", "BNSF"));
+	private static final Set<String> EXTENSIONS = new HashSet<String>(Arrays.asList("AAX", "ADX", "2SFLIB"));
 	
 	@Override
 	public boolean canHandle(String name) {
@@ -28,7 +28,7 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 	private long currentSong;
 
 	@Override
-	protected boolean load(String name, byte[] module) {
+	protected boolean load(String name, byte[] data) {
 		throw new RuntimeException("This should not be called");
 	}
 	
@@ -66,11 +66,6 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 
 	@Override
 	public void unload() {
-		
-		if (currentSong == 0) {
-			return;
-		}
-		
 		N_unload(currentSong);
 		currentSong = 0;
 	}
@@ -78,6 +73,11 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 	@Override
 	public void setOption(String string, Object val) {
 		/* To be implemented */
+	}
+	
+	@Override
+	public boolean setTune(int tune) {
+		return N_setTune(currentSong, tune);
 	}
 
 	@Override
@@ -90,10 +90,9 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 		/* To be implemented */
 		return null;
 	}
-	
+
 	native private static void N_setOption(int what, int val);
 
-	native private long N_load(byte [] module, int size);
 	native private long N_loadFile(String name);
 	native private void N_unload(long song);
 
