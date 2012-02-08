@@ -77,7 +77,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
         vgmStream->loop_start_sample = 0;
         vgmStream->loop_end_sample = vgmStream->num_samples;
         //TODO: Fix this
-        //vgmStream->loop_ch = calloc(vgmStream->channels, sizeof(VGMSTREAMCHANNEL));
+        //vgmStream->loop_ch = (VGMSTREAM*) calloc(vgmStream->channels, sizeof(VGMSTREAMCHANNEL));
     }
     
     /* Ignore Loop Flags */
