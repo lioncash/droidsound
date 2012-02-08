@@ -24,21 +24,20 @@
 
 #include "com_ssb_droidsound_plugins_ModPlugin.h"
 
-//#include "modplug/libmodplug/it_defs.h"
 //#include "modplug/libmodplug/sndfile.h"
 
-#define INFO_TITLE 0
-#define INFO_AUTHOR 1
-#define INFO_LENGTH 2
-#define INFO_TYPE 3
-#define INFO_COPYRIGHT 4
-#define INFO_GAME 5
-#define INFO_SUBTUNES 6
-#define INFO_STARTTUNE 7
+#define INFO_TITLE      0
+#define INFO_AUTHOR     1
+#define INFO_LENGTH     2
+#define INFO_TYPE       3
+#define INFO_COPYRIGHT  4
+#define INFO_GAME       5
+#define INFO_SUBTUNES   6
+#define INFO_STARTTUNE  7
 
 #define INFO_INSTRUMENTS 100
-#define INFO_CHANNELS 101
-#define INFO_PATTERNS 102
+#define INFO_CHANNELS    101
+#define INFO_PATTERNS    102
 
 
 static jstring NewString(JNIEnv *env, const char *str)

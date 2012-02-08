@@ -8,16 +8,16 @@
 
 #include "com_ssb_droidsound_plugins_GMEPlugin.h"
 
-#define INFO_TITLE 0
-#define INFO_AUTHOR 1
-#define INFO_LENGTH 2
-#define INFO_TYPE 3
-#define INFO_COPYRIGHT 4
-#define INFO_GAME 5
-#define INFO_SUBTUNES 6
-#define INFO_STARTTUNE 7
-#define INFO_SUBTUNE_TITLE 8
-#define INFO_COMMENT 11
+#define INFO_TITLE          0
+#define INFO_AUTHOR         1
+#define INFO_LENGTH         2
+#define INFO_TYPE           3
+#define INFO_COPYRIGHT      4
+#define INFO_GAME           5
+#define INFO_SUBTUNES       6
+#define INFO_STARTTUNE      7
+#define INFO_SUBTUNE_TITLE  8
+#define INFO_COMMENT        11
 
 #include "gme/gme.h"
 

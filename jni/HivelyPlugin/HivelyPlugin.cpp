@@ -10,15 +10,15 @@ extern "C" {
 #include "hvl_replay.h"
 }
 
-#define INFO_TITLE 0
-#define INFO_AUTHOR 1
-#define INFO_LENGTH 2
-#define INFO_TYPE 3
-#define INFO_COPYRIGHT 4
-#define INFO_GAME 5
-#define INFO_SUBTUNES 6
-#define INFO_STARTTUNE 7
-#define INFO_SUBTUNE_TITLE 8
+#define INFO_TITLE          0
+#define INFO_AUTHOR         1
+#define INFO_LENGTH         2
+#define INFO_TYPE           3
+#define INFO_COPYRIGHT      4
+#define INFO_GAME           5
+#define INFO_SUBTUNES       6
+#define INFO_STARTTUNE      7
+#define INFO_SUBTUNE_TITLE  8
 
 static jstring NewString(JNIEnv *env, const char *str)
 {
