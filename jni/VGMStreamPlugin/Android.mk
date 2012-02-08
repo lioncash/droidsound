@@ -1,7 +1,8 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_MODULE := vgmstream
-LOCAL_CFLAGS := -O2 -Wall
+#LOCAL_CFLAGS := -O2 -Wall
+LOCAL_LDLIBS := -llog
 
 LOCAL_SRC_FILES := \
     VGMStreamPlugin.cpp \

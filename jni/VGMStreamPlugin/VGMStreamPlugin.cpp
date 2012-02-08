@@ -30,7 +30,7 @@ int loop_count;
 
 bool playing = false;
 
-int channels = 1;
+int channels;
 int samplerate = 44100;
 int kbps = 320;
 
@@ -61,17 +61,20 @@ static jstring NewString(JNIEnv *env, const char *str)
 
 JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadFile(JNIEnv *env, jobject obj, jstring fname)
 {
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "in loadFile()");
+    
     VGMSTREAM * vgmStream;
     
     jboolean iscopy;
 	const char *s = env->GetStringUTFChars(fname, &iscopy);
     
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "Checking if file is playable");
     //Initialize and check if format is playable
-    //vgmStream = init_vgmstream(s);
     if ((vgmStream = init_vgmstream(s)) == NULL)
     {
 	    return 0;
     }
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File is indeed playable");
     
     env->ReleaseStringUTFChars(fname, s);
     
@@ -100,12 +103,22 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
     {
         vgmStream->loop_flag = 0;
     }
+    
 
-    channels = vgmStream->channels;
+    channels = vgmStream->channels; 
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "Audio Channels in File: %d", channels);
+
     samplerate = vgmStream->sample_rate;
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File Sample Rate: %d", samplerate);
+    
     kbps = get_vgmstream_frame_size(vgmStream);
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File Kbps: %d", kbps);
+    
     total_samples = get_vgmstream_play_samples((double)loop_count, 0, 0, vgmStream);
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File Total Samples: %d", total_samples);
+    
     length = (total_samples * 1000) / vgmStream->sample_rate;
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File Length: %d", length);
     
     //If length is not specified, give it a default.
     if( length <= 0 ) 
@@ -120,10 +133,14 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
 
 JNIEXPORT void Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1unload(JNIEnv *env, jobject obj, jlong song)
 {
+    /*Clean up and free resources */
+    
     VGMSTREAM* vgmDealloc = (VGMSTREAM*)song;
 
-    // Cleanup
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "Closing and freeing file: %d", song);
     close_vgmstream(vgmDealloc);
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "Successfully closed the file");
+    
     vgmDealloc = NULL;    
 }
 
@@ -141,7 +158,7 @@ JNIEXPORT void Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1unload(JNIEnv 
  *
  */
 JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSoundData(JNIEnv *env, jobject obj, jlong song, jshortArray sArray, jint size) 
-{
+{   
     VGMSTREAM* vgm = (VGMSTREAM*)song;
                 
     jshort *ptr = env->GetShortArrayElements(sArray, NULL);
@@ -167,6 +184,7 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSou
     }*/
     
 	render_vgmstream((sample*)ptr, size / (vgm->channels), (VGMSTREAM*)song);
+    
     env->ReleaseShortArrayElements(sArray, (sample*)ptr, 0);
     return size;
 }
