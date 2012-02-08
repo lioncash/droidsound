@@ -33,6 +33,44 @@ public class OverlappingFFT {
 		}
 	}
 
+	public static class Downsample2Octaves {
+		/**
+		 * This is first half of sinc() * hamming with 25 % transition band,
+		 * and approximately 30 dB suppression of aliasing.
+		 */
+		private static final short[] FILTER = {
+			-483,
+			-2140,
+			7018,
+			28374,
+		};
+
+		/** Partial evaluation of the filter (first half) */
+		private int state;
+
+		/**
+		 * Perform 1/4 resampling with 4 input samples yielding 1 output sample
+		 *
+		 * @param x1
+		 * @param x2
+		 * @param x3
+		 * @param x4
+		 * @return resampled output
+		 */
+		public short input(short x1, short x2, short x3, short x4) {
+			int y = state
+					+ x1 * FILTER[3]
+					+ x2 * FILTER[2]
+					+ x3 * FILTER[1]
+					+ x4 * FILTER[0];
+
+			/* In the next round, remember the partial state of the filter */
+			state = x1 * FILTER[0] + x2 * FILTER[1] + x3 * FILTER[2] + x4 * FILTER[3];
+			return (short) (y >> 16);
+		}
+
+	}
+
 	/** Queue of generated FFT frames for later processing. */
 	private final Queue<Data> queue = new ConcurrentLinkedQueue<Data>();
 
@@ -41,7 +79,12 @@ public class OverlappingFFT {
 	 * The buffer at index 0 has 44.1 kHz sample rate, buffer at index 1
 	 * has 11.1 kHz and so on.
 	 */
-	private final short[][] fftSamples = new short[4][1024];
+	private final short[][] fftSamples = new short[3][1024];
+
+	/** Resamplers */
+	private final Downsample2Octaves[] resampler = new Downsample2Octaves[] {
+		new Downsample2Octaves(), new Downsample2Octaves()
+	};
 
 	/** Current index within accumulation buffer */
 	private int fftSamplesIdx;
@@ -57,19 +100,9 @@ public class OverlappingFFT {
 		bufferingMs = bufsizeFrames * 1000 / frameRate;
 	}
 
-	/*
-	double phase = 0;
-	double phaseInc = 0;
-	*/
-
 	public void feed(short[] samples, int posInSamples, int lengthInSamples) {
 		for (int i = 0; i < lengthInSamples; i += 2) {
 			int mono = samples[posInSamples + i] + samples[posInSamples + i + 1];
-
-			/*
-			mono = (int) (Math.sin(phase) * 65535 / 2);
-			phase += phaseInc;
-			*/
 
 			fftSamples[0][fftSamplesIdx] = (short) (mono >> 1);
 			if (++ fftSamplesIdx == fftSamples[0].length) {
@@ -77,27 +110,23 @@ public class OverlappingFFT {
 				fftSamplesIdx = 0;
 			}
 		}
-		/*
-		phaseInc *= 1.003;
-		if (phaseInc < 2e-3 || phaseInc > 1) {
-			phaseInc = 2e-3;
-		}
-		*/
 	}
 
 	/**
-	 * Move 1/4 of the buffer into bit bucket
-	 * fill in the empty space at end from new data
+	 * Move a portion of the buffer into bit bucket
+	 * fill in the empty space at end from new data, resampling it as we go.
 	 *
 	 * @param in
 	 * @param out
 	 */
-	private static void resample2oct(short[] in, short[] out) {
-		int len = in.length;
-		System.arraycopy(out, len >> 2, out, 0, len - (len >> 2));
-		for (int i = 0; i < len; i += 4) {
-			int boxcar = in[i] + in[i + 1] + in[i + 2] + in[i + 3];
-			out[len - (len >> 2) + (i >> 2)] = (short) (boxcar >> 2);
+	private static void resample2oct(Downsample2Octaves resampler, final int overlapLength, short[] in, short[] out) {
+		final int len = in.length;
+		System.arraycopy(out, overlapLength, out, 0, len - overlapLength);
+
+		final int inoffset = len - (overlapLength << 2);
+		for (int i = 0; i < overlapLength; i ++) {
+			int j = inoffset + (i << 2);
+			out[len - overlapLength + i] = resampler.input(in[j], in[j + 1], in[j + 2], in[j + 3]);
 		}
 	}
 
@@ -108,15 +137,16 @@ public class OverlappingFFT {
 	 * @param lengthInSamples
 	 */
 	private void runFfts(int posInSamples, int lengthInSamples) {
-		resample2oct(fftSamples[0], fftSamples[1]);
-		resample2oct(fftSamples[1], fftSamples[2]);
-		resample2oct(fftSamples[2], fftSamples[3]);
+		int overlapLength = fftSamples[0].length;
+		for (int i = 0; i < fftSamples.length - 1; i ++) {
+			overlapLength >>= 2;
+			resample2oct(resampler[i], overlapLength, fftSamples[i], fftSamples[i + 1]);
+		}
 
-		short[][] out = new short[4][fftSamples[0].length >> 1];
-		FFT.fft(fftSamples[0], out[0]);
-		FFT.fft(fftSamples[1], out[1]);
-		FFT.fft(fftSamples[2], out[2]);
-		FFT.fft(fftSamples[3], out[3]);
+		short[][] out = new short[fftSamples.length][fftSamples[0].length >> 1];
+		for (int i = 0; i < fftSamples.length; i ++) {
+			FFT.fft(fftSamples[i], out[i]);
+		}
 
 		while (true) {
 			Data d = queue.peek();
