@@ -25,12 +25,6 @@ int kbps = 320;
 long length;
 int subtunes = 1;
 
-char title[128];
-char artist[128];
-char album[128];
-char copyright[128];
-char format[128];
-
 /**** END DECLARATIONS ****/
 
 
