@@ -484,9 +484,8 @@ void psid_play(short *buf, int n)
             DO_INTERRUPT(IK_RESET);                                   \
             break;                                                    \
           case JAM_MONITOR:                                           \
-            caller_space = e_comp_space;                              \
-            monitor_startup();                                        \
-            IMPORT_REGISTERS();                                       \
+            monitor_startup(e_comp_space);                            \
+            IMPORT_REGISTERS();                                         \
             break;                                                    \
           default:                                                    \
             CLK++;                                                    \

@@ -3,7 +3,6 @@
 
 unsigned monitor_mask[NUM_MEMSPACES];
 struct break_list_s *breakpoints[NUM_MEMSPACES];
-MEMSPACE caller_space;
 struct break_list_s *watchpoints_load[NUM_MEMSPACES];
 struct break_list_s *watchpoints_store[NUM_MEMSPACES];
 
@@ -12,7 +11,7 @@ void monitor_init(monitor_interface_t *maincpu_interface,
                          struct monitor_cpu_type_s **asmarray) {}
 void monitor_shutdown(void) {}
 int monitor_cmdline_options_init(void) { return 0; }
-void monitor_startup(void) {}
+void monitor_startup(MEMSPACE mem) {}
 void monitor_startup_trap(void) {}
 void monitor_abort(void) {}
 int monitor_force_import(MEMSPACE mem) { return 0; }
