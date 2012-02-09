@@ -23,6 +23,8 @@ public class VisualizationView extends SurfaceView {
 
 	private Queue<OverlappingFFT.Data> queue;
 
+	private final short[][] buf = new short[3][512];
+
 	private final Paint white;
 	private final Paint fftPaint;
 
@@ -100,7 +102,10 @@ public class VisualizationView extends SurfaceView {
 
 			data = queue.poll();
 			if (data != null) {
-				updateFftData(data.getFrameRate() / 2, data.getFft());
+				buf[data.getIndex()] = data.getFft();
+				if (data.getIndex() == 0) {
+					updateFftData(data.getFrameRate() / 2);
+				}
 			}
 		}
 	}
@@ -122,7 +127,7 @@ public class VisualizationView extends SurfaceView {
 		return c1 + (c2 - c1) * (x - i);
 	}
 
-	private void updateFftData(final double halfFrameRate, final short[][] buf) {
+	private void updateFftData(final double halfFrameRate) {
 		final double len = buf[0].length >> 1;
 		for (int i = 0; i < fft.length; i ++) {
 			final double startFreq = projectFft((i - 1 - 0.5) / 3);
