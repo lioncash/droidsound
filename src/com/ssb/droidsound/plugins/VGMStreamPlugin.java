@@ -22,11 +22,12 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 	 * 
 	 * ADX: Plays back fine
 	 * AAX: Plays back fine
+	 * YMF: Plays back fine
 	 * 
 	 * 
 	 * */
 
-	private static final Set<String> EXTENSIONS = new HashSet<String>(Arrays.asList("AAX", "ADX", "XMA"));
+	private static final Set<String> EXTENSIONS = new HashSet<String>(Arrays.asList("AAX", "ADX", "YMF"));
 	
 	@Override
 	public boolean canHandle(String name) {
