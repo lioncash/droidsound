@@ -122,7 +122,7 @@ public class VisualizationView extends SurfaceView {
 		return c1 + (c2 - c1) * (x - i);
 	}
 
-	private void updateFftData(int frameRate, short[][] buf) {
+	private void updateFftData(int halfFrameRate, short[][] buf) {
 		/* Remap data bins into our freq-linear fft */
 
 		double s = Math.pow(4, buf.length - 1);
@@ -132,18 +132,22 @@ public class VisualizationView extends SurfaceView {
 			final double startFreq = projectFft((i - 1 - 0.5) / 3);
 			final double endFreq = projectFft((i - 1 + 0.5) / 3);
 
-			double startIdx = startFreq / frameRate * len;
-			double endIdx = endFreq / frameRate * len;
+			double startIdx = startFreq / halfFrameRate * len;
+			double endIdx = endFreq / halfFrameRate * len;
 
 			/* Select correct FFT set. Should write better code than this... */
 			startIdx *= s;
 			endIdx *= s;
 			int bufIdx = buf.length - 1;
-			while (bufIdx != 0 && endIdx >= (len * 0.75)) {
+			while (bufIdx != 0 && endIdx >= len) {
 				startIdx /= 4;
 				endIdx /= 4;
 				bufIdx --;
 			}
+
+			/* Hack to improve resolution when FFT runs out of bins */
+			startIdx = (startIdx + Math.min(endIdx, Math.ceil(startIdx))) * .5;
+			endIdx = (endIdx + Math.max(startIdx, Math.floor(endIdx))) * .5;
 
 			double lenSqMax = getInterpolated(buf[bufIdx], startIdx);
 			lenSqMax = Math.max(lenSqMax, getInterpolated(buf[bufIdx], endIdx));
