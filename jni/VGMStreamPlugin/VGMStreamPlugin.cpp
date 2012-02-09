@@ -128,35 +128,23 @@ JNIEXPORT void Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1unload(JNIEnv 
     vgmDealloc = NULL;    
 }
 
-#define BUFFERSIZE 4000
+
 JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSoundData(JNIEnv *env, jobject obj, jlong song, jshortArray sArray, jint size) 
 {   
     VGMSTREAM* vgm = (VGMSTREAM*)song;
     jshort *ptr = env->GetShortArrayElements(sArray, NULL);
     
-    //Playback loop
-    for (int i = 0; i < total_samples; i += BUFFERSIZE) 
+    if (total_samples - (size / vgm->channels) < 0) 
     {
-    
-      // Below is a test 'logger' for checking if the song remains in the playback loop 
-      
-      /*if (i > 0) 
-        {
-            __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "In the playback loop");
-        }*/
-         
-        size = BUFFERSIZE;
-        
-        if (i + BUFFERSIZE > total_samples) 
-        {
-            size = total_samples - i;
-        }
-    
-        render_vgmstream(ptr, (size / vgm->channels), vgm);
-    
-        env->ReleaseShortArrayElements(sArray, ptr, 0);
-        return size;
+        size = total_samples * vgm->channels;
     }
+    
+    render_vgmstream(ptr, (size / vgm->channels), vgm);
+        
+    total_samples -= (size / vgm->channels);
+    
+    env->ReleaseShortArrayElements(sArray, ptr, 0);
+    return size;
 }
 
 
