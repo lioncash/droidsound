@@ -11,12 +11,18 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class OverlappingFFT {
 	public static class Data implements Comparable<Data> {
+		private final int frameRate;
 		private final Long time;
 		private final short[][] fft;
 
-		public Data(long time, short[][] fft) {
+		public Data(int frameRate, long time, short[][] fft) {
+			this.frameRate = frameRate;
 			this.time = time;
 			this.fft = fft;
+		}
+
+		public int getFrameRate() {
+			return frameRate;
 		}
 
 		public long getTime() {
@@ -90,15 +96,10 @@ public class OverlappingFFT {
 	private int fftSamplesIdx;
 
 	/** Audio output rate */
-	private final int frameRate;
+	private int frameRate;
 
 	/** Length of data buffering */
-	private final int bufferingMs;
-
-	public OverlappingFFT(int bufsizeFrames, int frameRate) {
-		this.frameRate = frameRate;
-		bufferingMs = bufsizeFrames * 1000 / frameRate;
-	}
+	private int bufferingMs;
 
 	public void feed(short[] samples, int posInSamples, int lengthInSamples) {
 		for (int i = 0; i < lengthInSamples; i += 2) {
@@ -159,10 +160,15 @@ public class OverlappingFFT {
 
         long estimatedPlaybackTime = System.currentTimeMillis() + bufferingMs;
 		long time = estimatedPlaybackTime + 1000 * (posInSamples - lengthInSamples) / 2 / frameRate;
-		queue.add(new Data(time, out));
+		queue.add(new Data(frameRate, time, out));
 	}
 
 	public Queue<Data> getQueue() {
 		return queue;
+	}
+
+	public void calculateTiming(int frameRate, int bufferFrames) {
+		this.frameRate = frameRate;
+		bufferingMs = bufferFrames * 1000 / frameRate;
 	}
 }

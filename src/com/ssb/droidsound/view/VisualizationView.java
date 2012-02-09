@@ -100,7 +100,7 @@ public class VisualizationView extends SurfaceView {
 
 			data = queue.poll();
 			if (data != null) {
-				updateFftData(data.getFft());
+				updateFftData(data.getFrameRate() / 2, data.getFft());
 			}
 		}
 	}
@@ -122,7 +122,7 @@ public class VisualizationView extends SurfaceView {
 		return c1 + (c2 - c1) * (x - i);
 	}
 
-	private void updateFftData(short[][] buf) {
+	private void updateFftData(int frameRate, short[][] buf) {
 		/* Remap data bins into our freq-linear fft */
 
 		double s = Math.pow(4, buf.length - 1);
@@ -132,16 +132,13 @@ public class VisualizationView extends SurfaceView {
 			final double startFreq = projectFft((i - 1 - 0.5) / 3);
 			final double endFreq = projectFft((i - 1 + 0.5) / 3);
 
-			double startIdx = startFreq / 22050 * len;
-			double endIdx = endFreq / 22050 * len;
+			double startIdx = startFreq / frameRate * len;
+			double endIdx = endFreq / frameRate * len;
 
 			/* Select correct FFT set. Should write better code than this... */
 			startIdx *= s;
 			endIdx *= s;
 			int bufIdx = buf.length - 1;
-			/* There's some fairly noticeable aliasing here due to boxcar design.
-			 * I'll try to arrange real filter with about 75 % passthrough to
-			 * justify this later. */
 			while (bufIdx != 0 && endIdx >= (len * 0.75)) {
 				startIdx /= 4;
 				endIdx /= 4;

@@ -143,4 +143,8 @@ public abstract class DroidSoundPlugin {
 		}
 		return handle ? EMPTY_INFO : null;
 	}
+
+	public int getFrameRate() {
+		return 44100;
+	}
 }

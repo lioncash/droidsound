@@ -35,8 +35,6 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 	public static final String ACTION_UNLOADING_SONG = "com.ssb.droidsound.UNLOADING_SONG";
 
 	private static final String TAG = Player.class.getSimpleName();
-	private static final int FREQUENCY_HZ = 44100;
-	private static final int BUFSIZE_BYTES = FREQUENCY_HZ * 4;
 
 	private final SongDatabase db; /* fixme: get rid of this! */
 	private final DroidSoundPlugin plugin;
@@ -90,7 +88,14 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 	 */
 	public Queue<OverlappingFFT.Data> enableFftQueue() {
 		if (fft.get() == null) {
-			fft.set(new OverlappingFFT(BUFSIZE_BYTES / 4, FREQUENCY_HZ));
+			OverlappingFFT offt = new OverlappingFFT();
+			int fr = plugin.getFrameRate();
+			/* if the plugin is not yet ready, we'll just pass some default */
+			if (fr == 0) {
+				fr = 44100;
+			}
+			offt.calculateTiming(fr, fr);
+			fft.set(offt);
 		}
 		return fft.get().getQueue();
 	}
@@ -206,42 +211,48 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 
 	@Override
 	protected Void doInBackground(Void... ignored) {
+		/* Note, this should not fail because it has already been executed once. */
+		if (! plugin.load(f1, data1, f2, data2)) {
+			Log.w(TAG, "Plugin could not load song.");
+			return null;
+		}
+
 		/* In theory we could ask plugin about desired frequency and other information. */
 		AudioTrack audioTrack = new AudioTrack(
 				AudioManager.STREAM_MUSIC,
-				FREQUENCY_HZ,
+				plugin.getFrameRate(),
 				AudioFormat.CHANNEL_CONFIGURATION_STEREO,
 				AudioFormat.ENCODING_PCM_16BIT,
-				BUFSIZE_BYTES,
+				plugin.getFrameRate() * 4,
 				AudioTrack.MODE_STREAM);
         Intent sessionOpen = new Intent(AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION);
         sessionOpen.putExtra(AudioEffect.EXTRA_AUDIO_SESSION, audioTrack.getAudioSessionId());
         sessionOpen.putExtra(AudioEffect.EXTRA_PACKAGE_NAME, Application.packageName());
         publishProgress(sessionOpen);
 
-		/* Note, this should not fail because it has already been executed once. */
-		if (plugin.load(f1, data1, f2, data2)) {
-			Log.i(TAG, "Entering audio playback loop.");
-			try {
-				subsongs.set(plugin.getIntInfo(DroidSoundPlugin.INFO_SUBTUNE_COUNT));
-				defaultSubsong.set(plugin.getIntInfo(DroidSoundPlugin.INFO_STARTTUNE));
-				sendLoadingWithSubsong(defaultSubsong.get());
-				doInBackgroundPlayloop(audioTrack);
-				sendUnloading();
-			}
-			catch (Exception e) {
-				Log.w(TAG, "Exiting playloop via exception", e);
-			}
-			plugin.unload();
-			Log.i(TAG, "Exiting audio playback loop.");
-		} else {
-			Log.w(TAG, "Plugin could not load song.");
+		OverlappingFFT offt = fft.get();
+		if (offt != null) {
+			offt.calculateTiming(plugin.getFrameRate(), plugin.getFrameRate());
 		}
 
-        Intent sessionClose = new Intent(AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION);
-        sessionClose.putExtra(AudioEffect.EXTRA_AUDIO_SESSION, audioTrack.getAudioSessionId());
-        sessionClose.putExtra(AudioEffect.EXTRA_PACKAGE_NAME, Application.packageName());
-        publishProgress(sessionClose);
+		Log.i(TAG, "Entering audio playback loop.");
+		try {
+			subsongs.set(plugin.getIntInfo(DroidSoundPlugin.INFO_SUBTUNE_COUNT));
+			defaultSubsong.set(plugin.getIntInfo(DroidSoundPlugin.INFO_STARTTUNE));
+			sendLoadingWithSubsong(defaultSubsong.get());
+			doInBackgroundPlayloop(audioTrack);
+			sendUnloading();
+		}
+		catch (Exception e) {
+			Log.w(TAG, "Exiting playloop via exception", e);
+		}
+		plugin.unload();
+		Log.i(TAG, "Exiting audio playback loop.");
+
+		Intent sessionClose = new Intent(AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION);
+		sessionClose.putExtra(AudioEffect.EXTRA_AUDIO_SESSION, audioTrack.getAudioSessionId());
+		sessionClose.putExtra(AudioEffect.EXTRA_PACKAGE_NAME, Application.packageName());
+		publishProgress(sessionClose);
 		audioTrack.release();
 
 		return null;

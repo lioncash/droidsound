@@ -10,37 +10,37 @@ import java.util.Set;
 import com.ssb.droidsound.app.Application;
 
 public class VGMStreamPlugin extends DroidSoundPlugin {
-	
+
 	static {
 		System.loadLibrary("vgmstream");
 	}
 
 	/* These are the supported extensions so far. I can guarantee more will come in the future.*/
 	/* Most of the formats need to be tested before being actually added to the list           */
-	
-	/* Status of extensions in terms of stability: 
-	 * 
+
+	/* Status of extensions in terms of stability:
+	 *
 	 * ADX: Plays back fine, does not change to next track when done playing however.
 	 * AAX: Plays back fine, crashes player when done playing (this is really weird)
-	 * 
-	 * 
+	 *
+	 *
 	 * */
 
 	private static final Set<String> EXTENSIONS = new HashSet<String>(Arrays.asList("AAX", "ADX"));
-	
+
 	@Override
 	public boolean canHandle(String name) {
 		String ext = name.substring(name.indexOf('.') + 1).toUpperCase();
 		return EXTENSIONS.contains(ext);
 	}
-	
+
 	private long currentSong;
 
 	@Override
 	protected boolean load(String name, byte[] data) {
 		throw new RuntimeException("This should not be called");
 	}
-	
+
 	@Override
 	public boolean load(String f1, byte[] data1, String f2, byte[] data2) {
 		File tmpDir = Application.getTmpDirectory();
@@ -83,7 +83,7 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 	public void setOption(String string, Object val) {
 		/* To be implemented */
 	}
-	
+
 	@Override
 	public boolean setTune(int tune) {
 		return N_setTune(currentSong, tune);
@@ -98,6 +98,13 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 	protected MusicInfo getMusicInfo(String name, byte[] module) {
 		/* To be implemented */
 		return null;
+	}
+
+	@Override
+	public int getFrameRate() {
+		/* ??? */
+		//return N_getFrameRate(currentSong);
+		return 44100;
 	}
 
 	native private static void N_setOption(int what, int val);
