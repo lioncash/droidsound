@@ -16,11 +16,13 @@ int ignore_loop;
 int force_loop;
 int loop_count;
 
+double fade_seconds = 10.0;
+double fade_delay_seconds = 0.0;
+
 bool playing = false;
 
 int channels;
 int samplerate = 44100;
-int kbps = 320;
 
 long length;
 int subtunes = 1;
@@ -56,7 +58,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
     {
 	    return 0;
     }
-    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File is indeed playable");
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File %d is indeed playable", fname);
     
     if (!vgmStream) 
     {
@@ -78,7 +80,6 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
 	/* Force only if there aren't already loop points */
     if (force_loop && !vgmStream->loop_flag) 
     {
-        // This requires a bit more messing with the VGMSTREAM than I'm comfortable with... 
         vgmStream->loop_flag = 1;
         vgmStream->loop_start_sample = 0;
         vgmStream->loop_end_sample = vgmStream->num_samples;
@@ -97,10 +98,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
     samplerate = vgmStream->sample_rate;
     __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File Sample Rate: %d", samplerate);
     
-    kbps = get_vgmstream_frame_size(vgmStream);
-    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File Kbps: %d", kbps);
-    
-    total_samples = get_vgmstream_play_samples(loop_count, 0, 0, vgmStream);
+    total_samples = get_vgmstream_play_samples(loop_count, fade_seconds, fade_delay_seconds, vgmStream);
     __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File Total Samples: %d", total_samples);
     
     length = (total_samples * 1000) / vgmStream->sample_rate;
@@ -130,7 +128,7 @@ JNIEXPORT void Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1unload(JNIEnv 
     vgmDealloc = NULL;    
 }
 
-#define BUFSIZE 4000
+#define BUFFERSIZE 4000
 JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSoundData(JNIEnv *env, jobject obj, jlong song, jshortArray sArray, jint size) 
 {   
     VGMSTREAM* vgm = (VGMSTREAM*)song;
@@ -140,21 +138,16 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSou
     for (int i = 0; i < total_samples; i += BUFSIZE) 
     {
     
-      // Below are test 'loggers' for checking if the song remains in the playback loop 
+      // Below is a test 'logger' for checking if the song remains in the playback loop 
       
-      /*if (i = 0) 
+      /*if (i > 0) 
         {
             __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "In the playback loop");
-        }
+        }*/
+         
+        size = BUFFERSIZE;
         
-        if (i = 100)
-        {
-            __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "Still in the loop, looks like playback is fine");
-        } */
-        
-        size = BUFSIZE;
-        
-        if (i + BUFSIZE > total_samples) 
+        if (i + BUFFERSIZE > total_samples) 
         {
             size = total_samples - i;
         }
