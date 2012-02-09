@@ -12,7 +12,7 @@ import android.util.Log;
 import com.ssb.droidsound.app.Application;
 
 public class VGMStreamPlugin extends DroidSoundPlugin {
-	private static final String TAG = ModPlugin.class.getSimpleName();
+	private static final String TAG = VGMStreamPlugin.class.getSimpleName();
 
 	static {
 		System.loadLibrary("vgmstream");
