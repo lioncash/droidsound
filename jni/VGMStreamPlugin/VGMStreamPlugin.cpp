@@ -135,7 +135,7 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSou
     jshort *ptr = env->GetShortArrayElements(sArray, NULL);
     
     //Playback loop
-    for (int i = 0; i < total_samples; i += BUFSIZE) 
+    for (int i = 0; i < total_samples; i += BUFFERSIZE) 
     {
     
       // Below is a test 'logger' for checking if the song remains in the playback loop 
