@@ -7,9 +7,12 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import android.util.Log;
+
 import com.ssb.droidsound.app.Application;
 
 public class VGMStreamPlugin extends DroidSoundPlugin {
+	private static final String TAG = VGMStreamPlugin.class.getSimpleName();
 
 	static {
 		System.loadLibrary("vgmstream");
@@ -105,8 +108,12 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 	@Override
 	public int getFrameRate() {
 
+		int freq = N_getFrameRate(currentSong);
+		
+		Log.i(TAG, "Frequency reported by Android: " + freq);
+		
 		return N_getFrameRate(currentSong);
-		//return 44100;
+		
 	}
 
 	native private static int N_getFrameRate(long song);
