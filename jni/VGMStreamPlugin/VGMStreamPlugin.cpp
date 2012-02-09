@@ -9,7 +9,6 @@ extern "C" {
 #include <vgmstream/vgmstream.h>
 }
 
-int current_sample;
 int total_samples = 0;
 
 int ignore_loop;

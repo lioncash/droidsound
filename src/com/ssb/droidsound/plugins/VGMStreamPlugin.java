@@ -20,13 +20,13 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 	
 	/* Status of extensions in terms of stability: 
 	 * 
-	 * ADX: Plays back fine, does not change to next track when done playing however.
+	 * ADX: Plays back fine
 	 * AAX: Plays back fine
 	 * 
 	 * 
 	 * */
 
-	private static final Set<String> EXTENSIONS = new HashSet<String>(Arrays.asList("AAX", "ADX"));
+	private static final Set<String> EXTENSIONS = new HashSet<String>(Arrays.asList("AAX", "ADX", "XMA"));
 	
 	@Override
 	public boolean canHandle(String name) {
