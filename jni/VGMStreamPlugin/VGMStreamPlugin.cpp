@@ -94,7 +94,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
     samplerate = vgmStream->sample_rate;
     __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File Sample Rate: %d", samplerate);
     
-    total_samples = get_vgmstream_play_samples(loop_count, fade_seconds, fade_delay_seconds, vgmStream);
+    total_samples = get_vgmstream_play_samples(loop_count, 0, 0, vgmStream);
     __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File Total Samples: %d", total_samples);
     
     length = (total_samples * 1000) / vgmStream->sample_rate;
@@ -107,7 +107,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
     }
    
     playing = true;
-	return (long)vgmStream;  //return length;
+	return (long)vgmStream;
 }
 
 
@@ -117,7 +117,7 @@ JNIEXPORT void Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1unload(JNIEnv 
     
     VGMSTREAM* vgmDealloc = (VGMSTREAM*)song;
 
-    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "Closing and freeing file: %d", song);
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "Closing and freeing file");
     close_vgmstream(vgmDealloc);
     __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "Successfully closed the file");
     
@@ -135,7 +135,7 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSou
         size = total_samples * vgm->channels;
     }
     
-    render_vgmstream(ptr, (size / vgm->channels), vgm);
+    render_vgmstream(ptr, size / vgm->channels, vgm);
         
     total_samples -= (size / vgm->channels);
     
