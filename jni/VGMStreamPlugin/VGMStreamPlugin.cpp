@@ -15,9 +15,6 @@ int ignore_loop;
 int force_loop;
 int loop_count;
 
-double fade_seconds = 10.0;
-double fade_delay_seconds = 0.0;
-
 bool playing = false;
 
 int channels;
@@ -57,11 +54,11 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
     {
 	    return 0;
     }
-    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File %d is indeed playable", fname);
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File is indeed playable");
     
     if (!vgmStream) 
     {
-        __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "Failed to open file: %d", fname);
+        __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "Failed to open file");
         return 1;
     }
     
@@ -144,6 +141,13 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSou
     
     env->ReleaseShortArrayElements(sArray, ptr, 0);
     return size;
+}
+
+JNIEXPORT jint Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getFrameRate(JNIEnv *env, jobject obj, jlong song)
+{
+    VGMSTREAM *vgm = (VGMSTREAM*)song;
+    
+    return vgm->sample_rate;
 }
 
 

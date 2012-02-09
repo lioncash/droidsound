@@ -20,13 +20,15 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 
 	/* Status of extensions in terms of stability:
 	 *
-	 * ADX: Plays back fine, does not change to next track when done playing however.
-	 * AAX: Plays back fine, crashes player when done playing (this is really weird)
-	 *
+	 * ADX: Plays back fine.
+	 * AAX: Plays back fine.
+	 * DSP: Plays back to fast (needs upsampling)
+	 * HPS: Plays back, cuts out before song is done (needs upsampling) 
+	 * YMF: Plays back fine.
 	 *
 	 * */
 
-	private static final Set<String> EXTENSIONS = new HashSet<String>(Arrays.asList("AAX", "ADX"));
+	private static final Set<String> EXTENSIONS = new HashSet<String>(Arrays.asList("AAX", "ADX", "YMF", "HPS", "DSP"));
 
 	@Override
 	public boolean canHandle(String name) {
@@ -102,13 +104,13 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 
 	@Override
 	public int getFrameRate() {
-		/* ??? */
-		//return N_getFrameRate(currentSong);
-		return 44100;
+
+		return N_getFrameRate(currentSong);
+		//return 44100;
 	}
 
+	native private static int N_getFrameRate(long song);
 	native private static void N_setOption(int what, int val);
-
 	native private long N_loadFile(String name);
 	native private void N_unload(long song);
 

@@ -47,6 +47,14 @@ JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1unload
  */
 JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSoundData
   (JNIEnv *, jobject, jlong, jshortArray, jint);
+  
+/*
+ * Class:     com_ssb_droidsound_plugins_VGMStreamPlugin
+ * Method:    N_getSoundData
+ * Signature: (J[SI)I
+ */
+JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getFrameRate
+  (JNIEnv *, jobject, jlong);
 
 /*
  * Class:     com_ssb_droidsound_plugins_VGMStreamPlugin
