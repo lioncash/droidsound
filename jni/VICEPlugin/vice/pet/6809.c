@@ -190,7 +190,8 @@ union regs {
 static WORD X, Y, S, U, PC;
 static BYTE DP;
 static BYTE EFI;
-static BYTE H, N, Z, OV, C;
+static BYTE H, N, OV;
+static DWORD C, Z;
 
 #ifdef H6309
 static WORD V;
@@ -371,7 +372,8 @@ static void indexed(void)			/* note take 1 extra cycle */
     if (post & 0x80) {
         switch (post & 0x1f) {
             case 0x00:	/* ,R+ */
-                ea = *R++;
+                ea = *R;
+                *R += 1;
                 CLK += 6;
                 break;
             case 0x01:	/* ,R++ */
@@ -380,7 +382,8 @@ static void indexed(void)			/* note take 1 extra cycle */
                 CLK += 7;
                 break;
             case 0x02:	/* ,-R */
-                ea = *--R;
+                *R -= 1;
+                ea = *R;
                 CLK += 6;
                 break;
             case 0x03:	/* ,--R */
@@ -393,7 +396,7 @@ static void indexed(void)			/* note take 1 extra cycle */
                 CLK += 4;
                 break;
             case 0x05:	/* B,R */
-			ea = *R + (INT8)B;
+                ea = *R + (INT8)B;
                 CLK += 5;
                 break;
             case 0x06:	/* A,R */
@@ -434,7 +437,8 @@ static void indexed(void)			/* note take 1 extra cycle */
                 CLK += 8;
                 break;
             case 0x0c:	/* 8bit,PC */
-                ea = PC + (INT8)imm_byte();
+                ea = (INT8)imm_byte();
+                ea += PC;
                 CLK += 5;
                 break;
             case 0x0d:	/* 16bit,PC */
@@ -503,7 +507,8 @@ static void indexed(void)			/* note take 1 extra cycle */
 #endif
 #ifdef FULL6809
             case 0x10:	/* [,R+] (UNDOC) */
-                ea = *R++;
+                ea = *R;
+                *R += 1;
                 ea = RDMEM16(ea);
                 break;
 #endif
@@ -515,7 +520,8 @@ static void indexed(void)			/* note take 1 extra cycle */
                 CLK += 2;
                 break;
             case 0x12:	/* [,-R] (UNDOC) */
-                ea = *--R;
+                *R -= 1;
+                ea = *R;
                 ea = RDMEM16(ea);
                 break;
             case 0x13:	/* [,--R] */
@@ -628,7 +634,7 @@ static void indexed(void)			/* note take 1 extra cycle */
         } else {
             post &= 0x000f;
         }
-        ea = *R + post;
+        ea = *R + (INT8)post;
         CLK += 5;
     }
 }
