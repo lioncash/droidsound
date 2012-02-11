@@ -2,38 +2,52 @@
 #include "util.h"
 #include "streamtypes.h"
 
-int check_sample_rate(int32_t sr) {
+int check_sample_rate(int32_t sr)
+{
     return !(sr<1000 || sr>96000);
 }
 
-const char * filename_extension(const char * filename) {
+const char * filename_extension(const char * filename)
+{
     const char * ext;
 
     /* You know what would be nice? strrchrnul().
      * Instead I have to do it myself. */
     ext = strrchr(filename,'.');
-    if (ext == NULL) ext = filename + strlen(filename); /* Point to null, i.e. an empty string for the extension */
-    else ext = ext + 1; /* Skip the dot */
+    if (ext == NULL)
+    {
+        /* Point to null, i.e. an empty string for the extension */
+        ext = filename + strlen(filename); 
+    }
+    else
+    {
+        /* Skip the dot */
+        ext = ext + 1; 
+    }
 
     return ext;
 }
 
-void interleave_channel(sample * outbuffer, sample * inbuffer, int32_t sample_count, int channel_count, int channel_number) {
+void interleave_channel(sample * outbuffer, sample * inbuffer, int32_t sample_count, int channel_count, int channel_number)
+{
     int32_t insample,outsample;
 
-    if (channel_count == 1) {
+    if (channel_count == 1)
+    {
         memcpy(outbuffer, inbuffer, sizeof(sample) * sample_count);
         return;
     }
 
-    for (insample = 0, outsample = channel_number; insample<sample_count; insample++, outsample += channel_count) {
+    for (insample = 0, outsample = channel_number; insample<sample_count; insample++, outsample += channel_count)
+    {
         outbuffer[outsample] = inbuffer[insample];
     }
 }
 
 /* Failed attempt at interleave in place */
 /*
-void interleave_stereo(sample * buffer, int32_t sample_count) {
+void interleave_stereo(sample * buffer, int32_t sample_count) 
+{
     int32_t tomove, belongs;
     sample moving,temp;
 
@@ -42,11 +56,15 @@ void interleave_stereo(sample * buffer, int32_t sample_count) {
 
     do {
         if (tomove<sample_count)
+        {
             belongs = tomove*2;
+        }
         else
-            belongs = (tomove-sample_count)*2+1;
+        {
+            belongs = (tomove - sample_count) * 2 + 1;
+        }
 
-        printf("move %d to %d\n",tomove,belongs);
+        printf("move %d to %d\n", tomove, belongs);
 
         temp = buffer[belongs];
         buffer[belongs] = moving;
@@ -57,24 +75,28 @@ void interleave_stereo(sample * buffer, int32_t sample_count) {
 }
 */
 
-void put_16bitLE(uint8_t * buf, int16_t i) {
+void put_16bitLE(uint8_t * buf, int16_t i)
+{
     buf[0] = (i & 0xFF);
     buf[1] = i >> 8;
 }
 
-void put_32bitLE(uint8_t * buf, int32_t i) {
+void put_32bitLE(uint8_t * buf, int32_t i)
+{
     buf[0] = (uint8_t)(i & 0xFF);
     buf[1] = (uint8_t)((i >> 8) & 0xFF);
     buf[2] = (uint8_t)((i >> 16) & 0xFF);
     buf[3] = (uint8_t)((i >> 24) & 0xFF);
 }
 
-void put_16bitBE(uint8_t * buf, int16_t i) {
+void put_16bitBE(uint8_t * buf, int16_t i)
+{
     buf[0] = i >> 8;
     buf[1] = (i & 0xFF);
 }
 
-void put_32bitBE(uint8_t * buf, int32_t i) {
+void put_32bitBE(uint8_t * buf, int32_t i)
+{
     buf[0] = (uint8_t)((i >> 24) & 0xFF);
     buf[1] = (uint8_t)((i >> 16) & 0xFF);
     buf[2] = (uint8_t)((i >> 8) & 0xFF);
@@ -83,10 +105,11 @@ void put_32bitBE(uint8_t * buf, int32_t i) {
 
 /* Make a header for PCM .wav */
 /* Buffer must be 0x2c bytes */
-void make_wav_header(uint8_t * buf, int32_t sample_count, int32_t sample_rate, int channels) {
+void make_wav_header(uint8_t * buf, int32_t sample_count, int32_t sample_rate, int channels)
+{
     size_t bytecount;
 
-    bytecount = sample_count*channels*sizeof(sample);
+    bytecount = sample_count * channels * sizeof(sample);
 
     /* RIFF header */
     memcpy(buf + 0, "RIFF", 4);
@@ -114,7 +137,7 @@ void make_wav_header(uint8_t * buf, int32_t sample_count, int32_t sample_rate, i
     put_32bitLE(buf + 0x1c, sample_rate * channels * sizeof(sample));
 
     /* Block align */
-    put_16bitLE(buf + 0x20, (int16_t)(channels*sizeof(sample)));
+    put_16bitLE(buf + 0x20, (int16_t)(channels * sizeof(sample)));
 
     /* Significant bits per sample */
     put_16bitLE(buf + 0x22, sizeof(sample) * 8);
@@ -123,13 +146,16 @@ void make_wav_header(uint8_t * buf, int32_t sample_count, int32_t sample_rate, i
 
     /* WAVE data chunk */
     memcpy(buf + 0x24, "data", 4);
+    
     /* Size of WAVE data chunk */
     put_32bitLE(buf + 0x28, (int32_t)bytecount);
 }
 
-void swap_samples_le(sample *buf, int count) {
+void swap_samples_le(sample *buf, int count)
+{
     int i;
-    for (i = 0; i < count; i++) {
+    for (i = 0; i < count; i++)
+    {
         uint8_t b0 = buf[i] & 0xff;
         uint8_t b1 = buf[i] >> 8;
         uint8_t *p = (uint8_t*) & (buf[i]);
@@ -138,8 +164,7 @@ void swap_samples_le(sample *buf, int count) {
     }
 }
 
-/* Length is maximum length of dst. dst will always be null-terminated if
- * length > 0 */
+/* Length is maximum length of dst. dst will always be null-terminated if length > 0 */
 void concatn(int length, char * dst, const char * src) {
     int i,j;
     if (length <= 0) return;
@@ -149,19 +174,35 @@ void concatn(int length, char * dst, const char * src) {
     dst[i]='\0';
 }
 
-/* Length is maximum length of dst. dst will always be double-null-terminated if
- * length > 1 */
-void concatn_doublenull(int length, char * dst, const char * src) {
+/* Length is maximum length of dst. dst will always be double-null-terminated if length > 1 */
+void concatn_doublenull(int length, char * dst, const char * src)
+{
     int i,j;
-    if (length <= 1) return;
+    
+    if (length <= 1)
+    {
+        return;
+    }
+    
     for (i = 0; i < length-2 && (dst[i] || dst[i + 1]); i++);   /* Find end of dst */
-    if (i == length - 2) {
+    
+    if (i == length - 2)
+    {
         dst[i]='\0';
         dst[i + 1]='\0';
         return;
     }
-    if (i > 0) i++;
-    for (j = 0; i < length-2 && (src[j] || src[j + 1]); i++, j++) dst[i] = src[j];
+    
+    if (i > 0)
+    {
+        i++;
+    }
+    
+    for (j = 0; i < length-2 && (src[j] || src[j + 1]); i++, j++)
+    {
+        dst[i] = src[j];
+    }
+    
     dst[i] = '\0';
     dst[i + 1] = '\0';
 }

@@ -758,8 +758,10 @@ void render_vgmstream(sample * buffer, int32_t sample_count, VGMSTREAM * vgmstre
 
 /* Smallest self-contained group of samples is a frame */
 int get_vgmstream_samples_per_frame(VGMSTREAM * vgmstream);
+
 /* Number of bytes per frame */
 int get_vgmstream_frame_size(VGMSTREAM * vgmstream);
+
 /* In NDS IMA the frame size is the block size, so the last one is short */
 int get_vgmstream_samples_per_shortframe(VGMSTREAM * vgmstream);
 int get_vgmstream_shortframe_size(VGMSTREAM * vgmstream);
