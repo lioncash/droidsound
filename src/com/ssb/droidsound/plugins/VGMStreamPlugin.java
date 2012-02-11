@@ -28,7 +28,7 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 	 * DSP: Plays back too fast (needs upsampling).                      [Test file was 32000Hz]
 	 * HPS: Plays back, cuts out before song is done (needs upsampling). [Test file was 32000Hz] 
 	 * RSF: Plays back too fast (needs upsampling)                       [Test file used was 32000Hz]
-	 * YMF: Plays back slightly too fast.                                [Test file used was 48000Hz]
+	 * YMF: Plays back slightly too slow.                                [Test file used was 48000Hz]
 	 *
 	 * */
 
@@ -137,10 +137,9 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 
 		int freq = N_getFrameRate(currentSong);
 		
-		Log.i(TAG, "Frequency reported by Android: " + freq + "hz");
+		Log.v(TAG, "Frequency reported by Android: " + freq + "hz");
 		
-		return 44100;//N_getFrameRate(currentSong);
-		
+		return 44100; //N_getFrameRate(currentSong);
 	}
 
 	native private static int N_getFrameRate(long song);
