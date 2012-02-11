@@ -196,7 +196,7 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1getString
             }
         }
         *ptr = 0;
-        return  NewString(env, instruments);
+        return NewString(env, instruments);
     }
         break;
     }

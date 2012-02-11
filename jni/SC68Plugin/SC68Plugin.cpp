@@ -236,9 +236,9 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getStrin
     case INFO_TITLE:
         return NewString(env, info.title);
     case 51:
-        return  NewString(env, pd->info.trk.hw);
+        return NewString(env, pd->info.trk.hw);
     case 52:
-        return  NewString(env, pd->info.replay);
+        return NewString(env, pd->info.replay);
     }
     return 0;
 }

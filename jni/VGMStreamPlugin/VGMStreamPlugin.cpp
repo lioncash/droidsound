@@ -14,15 +14,12 @@ int total_samples = 0;
 
 int ignore_loop;
 int force_loop;
-int loop_count;
-
-bool playing = false;
+int loop_count = 0;
 
 int channels;
 int samplerate = 44100;
 
 long length;
-int subtunes = 1;
 
 /**** END DECLARATIONS ****/
 
@@ -110,7 +107,6 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
         length = 200000;
     }
 
-    playing = true;
     return (long)vgmStream;
 }
 
@@ -171,8 +167,58 @@ JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1se
 
 JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getStringInfo(JNIEnv *env, jobject obj, jlong song, jint what)
 {
-    /* To be implemented */
-    return NULL;
+    VGMSTREAM *vgm = (VGMSTREAM*)song;
+    
+    //NOTE: Is there a better way of getting all this info ?
+    switch(what) 
+    {
+        //Shows the sample rate of the file
+        case 50:
+        {
+            char text[2];
+            sprintf(text, "%d", vgm->channels);
+            char* codingType = text;
+            return NewString(env, codingType);
+            break;
+        }
+        //Shows the number of channels in the file
+        case 51:
+        {
+            char text[7];
+            sprintf(text, "%d", vgm->sample_rate);
+            char* sRate = text;
+            return NewString(env, sRate);
+            break;   
+        }
+        // Shows the total samples that are to be played
+        case 52:
+        {
+            char text[12];
+            sprintf(text, "%d", get_vgmstream_play_samples(loop_count, 0, 0, vgm));
+            char *totalSamples = text;
+            return NewString(env, totalSamples);
+            break;
+        }
+        // Shows the frame size of the stream
+        case 53:
+        {
+            char text[5];
+            sprintf(text, "%d", get_vgmstream_frame_size(vgm));
+            char *frameSize = text;
+            return NewString(env, frameSize);
+            break;
+        }
+        // Shows the total samples per frame
+        case 54:
+        {
+            char text[5];
+            sprintf(text, "%d", get_vgmstream_samples_per_frame(vgm));
+            char *samplesPerFrame = text;
+            return NewString(env, samplesPerFrame);
+            break;
+        }
+    }
+    return 0;
 }
 
 

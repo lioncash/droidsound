@@ -116,6 +116,27 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 		return 44100;//N_getFrameRate(currentSong);
 		
 	}
+	
+	@Override
+	public String[] getDetailedInfo() {
+        String channels = N_getStringInfo(currentSong, 50);
+        String sampleRate = N_getStringInfo(currentSong, 51);
+        String totalPlaySamples = N_getStringInfo(currentSong, 52);
+        String frameSize = N_getStringInfo(currentSong, 53);
+        String samplesPerFrame = N_getStringInfo(currentSong, 54);
+        
+        return new String[] {
+        		String.format("Channels: %s", channels),
+        		"",
+        		String.format("Sample Rate: %s Hz", sampleRate),
+        		"",
+        		String.format("Total Play Samples: %s", totalPlaySamples),
+        		"",
+        		String.format("Frame Size: %s bytes", frameSize),
+        		"",
+        		String.format("Samples Per Frame: %s", samplesPerFrame)
+        };
+	}
 
 	native private static int N_getFrameRate(long song);
 	native private static void N_setOption(int what, int val);

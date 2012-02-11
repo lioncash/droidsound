@@ -149,6 +149,7 @@ JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1unload(JNIEn
     delete info;
 }
 
+
 JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1setTune(JNIEnv *env, jobject obj, jlong song, jint tune)
 {
     GMEInfo *info = (GMEInfo*)song;
@@ -187,6 +188,7 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1getSoundData
     env->ReleaseShortArrayElements(sArray, ptr, 0);
     return size;
 }
+
 
 JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1seekTo(JNIEnv *env, jobject obj, jlong song, int where)
 {
