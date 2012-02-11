@@ -226,7 +226,7 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getInt
     {
         case INFO_LENGTH:
         {
-            int length_in_ms = get_vgmstream_play_samples(loop_count, 0, 0, vgm) * 1000 / vgm->sample_rate;
+            int length_in_ms = get_vgmstream_play_samples(loop_count, 0, 0, vgm) * 1000LL / vgm->sample_rate;
             return length_in_ms;
         }
     }
