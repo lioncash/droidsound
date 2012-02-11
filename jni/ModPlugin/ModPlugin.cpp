@@ -134,15 +134,15 @@ JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1unload(JNIEn
 }
 
 
-JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1getSoundData(JNIEnv *env, jobject obj, jlong song, jshortArray bArray, int size)
+JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1getSoundData(JNIEnv *env, jobject obj, jlong song, jshortArray sArray, int size)
 {
     ModInfo *info = (ModInfo*)song;
 
-    jbyte *ptr = (jbyte*)env->GetShortArrayElements(bArray, NULL);
+    jbyte *ptr = (jbyte*)env->GetShortArrayElements(sArray, NULL);
 
     int rc = ModPlug_Read(info->mod, (void*)ptr, size*2);
 
-    env->ReleaseShortArrayElements(bArray, (jshort*)ptr, 0);
+    env->ReleaseShortArrayElements(sArray, (jshort*)ptr, 0);
 
     if(rc == 0) return -1;
 
