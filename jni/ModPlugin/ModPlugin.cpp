@@ -10,16 +10,16 @@
 
 #include "modplug/modplug.h"
 
-#define MOD_TYPE_NONE		0x00
-#define MOD_TYPE_MOD		0x01
-#define MOD_TYPE_S3M		0x02
-#define MOD_TYPE_XM			0x04
-#define MOD_TYPE_MED		0x08
-#define MOD_TYPE_MTM		0x10
-#define MOD_TYPE_IT			0x20
-#define MOD_TYPE_669		0x40
-#define MOD_TYPE_ULT		0x80
-#define MOD_TYPE_STM		0x100
+#define MOD_TYPE_NONE       0x00
+#define MOD_TYPE_MOD        0x01
+#define MOD_TYPE_S3M        0x02
+#define MOD_TYPE_XM         0x04
+#define MOD_TYPE_MED        0x08
+#define MOD_TYPE_MTM        0x10
+#define MOD_TYPE_IT         0x20
+#define MOD_TYPE_669        0x40
+#define MOD_TYPE_ULT        0x80
+#define MOD_TYPE_STM        0x100
 
 
 #include "com_ssb_droidsound_plugins_ModPlugin.h"
@@ -42,183 +42,183 @@
 
 static jstring NewString(JNIEnv *env, const char *str)
 {
-	static jchar temp[256];
-	jchar *ptr = temp;
-	while(*str) {
-		unsigned char c = (unsigned char)*str++;
-		*ptr++ = (c < 0x7f && c >= 0x20) || c >= 0xa0 || c == 0xa ? c : '?';
-	}
-	jstring j = env->NewString(temp, ptr - temp);
-	return j;
+    static jchar temp[256];
+    jchar *ptr = temp;
+    while(*str) {
+        unsigned char c = (unsigned char)*str++;
+        *ptr++ = (c < 0x7f && c >= 0x20) || c >= 0xa0 || c == 0xa ? c : '?';
+    }
+    jstring j = env->NewString(temp, ptr - temp);
+    return j;
 }
 
 
 struct ModInfo {
-	ModPlugFile *mod;
-	const char *modType;
-	char author[128];
-	char mod_name[128];
-	int mod_length;
+    ModPlugFile *mod;
+    const char *modType;
+    char author[128];
+    char mod_name[128];
+    int mod_length;
 };
 
 
 JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1load(JNIEnv *env, jobject obj, jbyteArray bArray, jint size)
 {
-	jboolean iscopy;
-	jbyte *ptr = env->GetByteArrayElements(bArray, NULL);
+    jboolean iscopy;
+    jbyte *ptr = env->GetByteArrayElements(bArray, NULL);
 
-	ModPlug_Settings settings;
-	ModPlug_GetSettings(&settings);
-	settings.mChannels = 2;
-	settings.mFrequency = 44100;
-	settings.mBits = 16;
-	ModPlug_SetSettings(&settings);
+    ModPlug_Settings settings;
+    ModPlug_GetSettings(&settings);
+    settings.mChannels = 2;
+    settings.mFrequency = 44100;
+    settings.mBits = 16;
+    ModPlug_SetSettings(&settings);
 
-	ModPlugFile *mod = ModPlug_Load(ptr, size);
-	ModInfo *info = NULL;
+    ModPlugFile *mod = ModPlug_Load(ptr, size);
+    ModInfo *info = NULL;
 
 
-	if(mod)
-	{
-		info = new ModInfo();
-		info->mod = mod;
-		strcpy(info->mod_name, ModPlug_GetName(mod));
-		info->mod_length = ModPlug_GetLength(mod);
-		info->modType = "ModPlug";
-		*info->author = 0;
+    if(mod)
+    {
+        info = new ModInfo();
+        info->mod = mod;
+        strcpy(info->mod_name, ModPlug_GetName(mod));
+        info->mod_length = ModPlug_GetLength(mod);
+        info->modType = "ModPlug";
+        *info->author = 0;
 
-		int t = ModPlug_GetModuleType(mod);
+        int t = ModPlug_GetModuleType(mod);
 
-		switch(t) {
-		case MOD_TYPE_MOD:
-			info->modType = "MOD";
-			break;
-		case MOD_TYPE_S3M:
-			info->modType = "S3M";
-			break;
-		case MOD_TYPE_XM:
-			info->modType = "XM";
-			break;
-		case MOD_TYPE_IT:
-			info->modType = "IT";
-			break;
-		case MOD_TYPE_STM:
-			info->modType = "STM";
-			break;
-		}
+        switch(t) {
+        case MOD_TYPE_MOD:
+            info->modType = "MOD";
+            break;
+        case MOD_TYPE_S3M:
+            info->modType = "S3M";
+            break;
+        case MOD_TYPE_XM:
+            info->modType = "XM";
+            break;
+        case MOD_TYPE_IT:
+            info->modType = "IT";
+            break;
+        case MOD_TYPE_STM:
+            info->modType = "STM";
+            break;
+        }
 
-		settings.mResamplingMode = MODPLUG_RESAMPLE_FIR;
+        settings.mResamplingMode = MODPLUG_RESAMPLE_FIR;
 
-		__android_log_print(ANDROID_LOG_VERBOSE, "ModPlugin", "Type is %d", t);
-		if(t == 1) {
-			settings.mResamplingMode = MODPLUG_RESAMPLE_NEAREST;
-			__android_log_print(ANDROID_LOG_VERBOSE, "ModPlugin", "NEAREST resampling");
-		}
+        __android_log_print(ANDROID_LOG_VERBOSE, "ModPlugin", "Type is %d", t);
+        if(t == 1) {
+            settings.mResamplingMode = MODPLUG_RESAMPLE_NEAREST;
+            __android_log_print(ANDROID_LOG_VERBOSE, "ModPlugin", "NEAREST resampling");
+        }
 
-		ModPlug_SetSettings(&settings);
+        ModPlug_SetSettings(&settings);
 
-	}
+    }
 
-	env->ReleaseByteArrayElements(bArray, ptr, 0);
-	return (long)info;
+    env->ReleaseByteArrayElements(bArray, ptr, 0);
+    return (long)info;
 }
 
 
 JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1unload(JNIEnv *env, jobject obj, jlong song)
 {
-	ModInfo *info = (ModInfo*)song;
-	if(info->mod)
-		ModPlug_Unload(info->mod);
-	delete info;
-	info = NULL;
+    ModInfo *info = (ModInfo*)song;
+    if(info->mod)
+        ModPlug_Unload(info->mod);
+    delete info;
+    info = NULL;
 }
 
 
 JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1getSoundData(JNIEnv *env, jobject obj, jlong song, jshortArray bArray, int size)
 {
-	ModInfo *info = (ModInfo*)song;
+    ModInfo *info = (ModInfo*)song;
 
-	jbyte *ptr = (jbyte*)env->GetShortArrayElements(bArray, NULL);
+    jbyte *ptr = (jbyte*)env->GetShortArrayElements(bArray, NULL);
 
-	int rc = ModPlug_Read(info->mod, (void*)ptr, size*2);
+    int rc = ModPlug_Read(info->mod, (void*)ptr, size*2);
 
-	env->ReleaseShortArrayElements(bArray, (jshort*)ptr, 0);
+    env->ReleaseShortArrayElements(bArray, (jshort*)ptr, 0);
 
-	if(rc == 0) return -1;
+    if(rc == 0) return -1;
 
-	return rc / 2;
+    return rc / 2;
 }
 
 
 JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1seekTo(JNIEnv *env, jobject obj, jlong song, int where)
 {
-	ModInfo *info = (ModInfo*)song;
-	ModPlug_Seek(info->mod, where);
-	return true;
+    ModInfo *info = (ModInfo*)song;
+    ModPlug_Seek(info->mod, where);
+    return true;
 }
 
 
 JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1getStringInfo(JNIEnv *env, jobject obj, jlong song, jint what)
 {
-	ModInfo *info = (ModInfo*)song;
-	switch(what)
-	{
-	case INFO_AUTHOR:
-		//if(mod)
-			return NewString(env, info->author);
-		break;
-	case INFO_TITLE:
-		//if(mod)
-			return NewString(env, info->mod_name);
-		break;
-	case INFO_TYPE:
-		//if(mod)
-			return NewString(env, info->modType);
-		break;
-	case INFO_INSTRUMENTS:
-	{
-		char instruments[16384];
-		char *ptr = instruments;
-		int ni = ModPlug_NumInstruments(info->mod);
-		int ns = ModPlug_NumSamples(info->mod);
-		__android_log_print(ANDROID_LOG_VERBOSE, "ModPlugin", "%d / %d instruments", ni, ns);
-		if(ni > 0) {
-			for(int i = 1; i < ni; i++) {
-				ModPlug_InstrumentName(info->mod, i, ptr);
-				ptr += strlen(ptr);
-				*ptr++ = 0xa;
-			}
-		} else if(ns > 0) {
-			for(int i = 1; i < ns; i++) {
-				ModPlug_SampleName(info->mod, i, ptr);
-				ptr += strlen(ptr);
-				*ptr++ = 0xa;
-			}
-		}
-		*ptr = 0;
-		return  NewString(env, instruments);
-	}
-		break;
-	}
-	return 0;
+    ModInfo *info = (ModInfo*)song;
+    switch(what)
+    {
+    case INFO_AUTHOR:
+        //if(mod)
+            return NewString(env, info->author);
+        break;
+    case INFO_TITLE:
+        //if(mod)
+            return NewString(env, info->mod_name);
+        break;
+    case INFO_TYPE:
+        //if(mod)
+            return NewString(env, info->modType);
+        break;
+    case INFO_INSTRUMENTS:
+    {
+        char instruments[16384];
+        char *ptr = instruments;
+        int ni = ModPlug_NumInstruments(info->mod);
+        int ns = ModPlug_NumSamples(info->mod);
+        __android_log_print(ANDROID_LOG_VERBOSE, "ModPlugin", "%d / %d instruments", ni, ns);
+        if(ni > 0) {
+            for(int i = 1; i < ni; i++) {
+                ModPlug_InstrumentName(info->mod, i, ptr);
+                ptr += strlen(ptr);
+                *ptr++ = 0xa;
+            }
+        } else if(ns > 0) {
+            for(int i = 1; i < ns; i++) {
+                ModPlug_SampleName(info->mod, i, ptr);
+                ptr += strlen(ptr);
+                *ptr++ = 0xa;
+            }
+        }
+        *ptr = 0;
+        return  NewString(env, instruments);
+    }
+        break;
+    }
+    return 0;
 }
 
 
 JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1getIntInfo(JNIEnv *env, jobject obj, jlong song, jint what)
 {
-	ModInfo *info = (ModInfo*)song;
-	switch(what)
-	{
-	case INFO_LENGTH:
-		return info->mod_length;
-	case INFO_SUBTUNES:
-		return 0;
-	case INFO_STARTTUNE:
-		return 0;
-	case INFO_CHANNELS:
-		return ModPlug_NumChannels(info->mod);
-	case INFO_PATTERNS:
-		return ModPlug_NumPatterns(info->mod);
-	}
-	return -1;
+    ModInfo *info = (ModInfo*)song;
+    switch(what)
+    {
+    case INFO_LENGTH:
+        return info->mod_length;
+    case INFO_SUBTUNES:
+        return 0;
+    case INFO_STARTTUNE:
+        return 0;
+    case INFO_CHANNELS:
+        return ModPlug_NumChannels(info->mod);
+    case INFO_PATTERNS:
+        return ModPlug_NumPatterns(info->mod);
+    }
+    return -1;
 }
