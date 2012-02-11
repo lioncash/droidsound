@@ -25,13 +25,14 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 	 *
 	 * ADX: Plays back fine.
 	 * AAX: Plays back fine.
-	 * DSP: Plays back to fast (needs upsampling)
-	 * HPS: Plays back, cuts out before song is done (needs upsampling) 
+	 * DSP: Plays back too fast (needs upsampling).
+	 * HPS: Plays back, cuts out before song is done (needs upsampling). 
+	 * RSF: Plays back too fast (needs upsampling).
 	 * YMF: Plays back fine.
 	 *
 	 * */
 
-	private static final Set<String> EXTENSIONS = new HashSet<String>(Arrays.asList("AAX", "ADX", "YMF", "HPS", "DSP"));
+	private static final Set<String> EXTENSIONS = new HashSet<String>(Arrays.asList("AAX", "ADX", "YMF", "RSF", "HPS", "DSP"));
 
 	@Override
 	public boolean canHandle(String name) {
@@ -112,7 +113,7 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 		
 		Log.i(TAG, "Frequency reported by Android: " + freq + "hz");
 		
-		return N_getFrameRate(currentSong);
+		return 44100;//N_getFrameRate(currentSong);
 		
 	}
 
