@@ -19,7 +19,7 @@ int loop_count = 0;
 int channels;
 int samplerate = 44100;
 
-long length;
+#define INFO_LENGTH 2
 
 /**** END DECLARATIONS ****/
 
@@ -97,15 +97,6 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
 
     total_samples = get_vgmstream_play_samples(loop_count, 0, 0, vgmStream);
     __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File Total Samples: %d", total_samples);
-
-    length = (total_samples * 1000) / vgmStream->sample_rate;
-    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File Length: %d", length);
-
-    //If length is not specified, give it a default.
-    if (length <= 0)
-    {
-        length = 200000;
-    }
 
     return (long)vgmStream;
 }
@@ -230,6 +221,14 @@ JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1setOpt
 
 JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getIntInfo(JNIEnv *env, jobject obj, jlong song, jint what)
 {
-    /* To be implemented */
-    return 0;
+    VGMSTREAM *vgm = (VGMSTREAM*)song;
+    switch(what)
+    {
+        case INFO_LENGTH:
+        {
+            int length_in_ms = get_vgmstream_play_samples(loop_count, 0, 0, vgm) * 1000 / vgm->sample_rate;
+            return length_in_ms;
+        }
+    }
+    return -1;
 }
