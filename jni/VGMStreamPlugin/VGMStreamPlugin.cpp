@@ -49,13 +49,12 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
     jboolean iscopy;
     const char *s = env->GetStringUTFChars(fname, &iscopy);
 
-    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "Checking if file is playable");
     //Initialize and check if format is playable
     if ((vgmStream = init_vgmstream(s)) == NULL)
     {
         return 0;
     }
-    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File is indeed playable");
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File is playable");
 
     if (!vgmStream)
     {
