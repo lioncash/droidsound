@@ -139,7 +139,7 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 		
 		Log.v(TAG, "Frequency reported by Android: " + freq + "hz");
 		
-		return 44100; //N_getFrameRate(currentSong);
+		return N_getFrameRate(currentSong);
 	}
 
 	native private static int N_getFrameRate(long song);
