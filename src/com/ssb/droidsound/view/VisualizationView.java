@@ -148,6 +148,12 @@ public class VisualizationView extends SurfaceView {
 			startIdx = (startIdx + Math.min(endIdx, Math.ceil(startIdx))) * .5;
 			endIdx = (endIdx + Math.max(startIdx, Math.floor(endIdx))) * .5;
 
+			/* Try to avoid access past end of fft array (low sample rate?) */
+			if (endIdx >= fft.length - 1) {
+				fft[i] = 1e-99;
+				continue;
+			}
+
 			double lenSqMax = getInterpolated(buf[bufIdx], startIdx);
 			lenSqMax = Math.max(lenSqMax, getInterpolated(buf[bufIdx], endIdx));
 			int x = (int) startIdx + 1;
