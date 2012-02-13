@@ -225,6 +225,9 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 				AudioFormat.ENCODING_PCM_16BIT,
 				plugin.getFrameRate() * 4,
 				AudioTrack.MODE_STREAM);
+		
+		audioTrack.setPlaybackRate(plugin.getFrameRate());
+		
         Intent sessionOpen = new Intent(AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION);
         sessionOpen.putExtra(AudioEffect.EXTRA_AUDIO_SESSION, audioTrack.getAudioSessionId());
         sessionOpen.putExtra(AudioEffect.EXTRA_PACKAGE_NAME, Application.packageName());

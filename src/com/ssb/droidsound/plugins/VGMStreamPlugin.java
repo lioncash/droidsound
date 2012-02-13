@@ -23,12 +23,8 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 
 	/* Status of extensions in terms of stability:
 	 *
-	 * ADX: Plays back fine.
-	 * AAX: Plays back fine.
-	 * DSP: Plays back too fast (needs upsampling).                      [Test file was 32000Hz]
-	 * HPS: Plays back, cuts out before song is done (needs upsampling). [Test file was 32000Hz] 
-	 * RSF: Plays back too fast (needs upsampling)                       [Test file used was 32000Hz]
-	 * YMF: Plays back slightly too slow.                                [Test file used was 48000Hz]
+	 * Everything works fine now. Any formats which are reported to have issues will go here.
+	 * in this comment so I know what to fix.
 	 *
 	 * */
 
