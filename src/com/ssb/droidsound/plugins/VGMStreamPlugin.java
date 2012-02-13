@@ -32,7 +32,8 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 	 *
 	 * */
 
-	private static final Set<String> EXTENSIONS = new HashSet<String>(Arrays.asList("AAX", "ADX", "DSP", "HPS", "RSF", "YMF"));
+	private static final Set<String> EXTENSIONS = new HashSet<String>(Arrays.asList(
+			"AAX", "ADX", "AIX", "BRSTM", "DSP", "HPS", "LOGG", "RSF", "YMF"));
 
 	@Override
 	public boolean canHandle(String name) {
