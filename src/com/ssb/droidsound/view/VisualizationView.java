@@ -149,7 +149,7 @@ public class VisualizationView extends SurfaceView {
 			endIdx = (endIdx + Math.max(startIdx, Math.floor(endIdx))) * .5;
 
 			/* Try to avoid access past end of fft array (low sample rate?) */
-			if (endIdx >= fft.length - 1) {
+			if (endIdx >= len - 1) {
 				fft[i] = 1e-99;
 				continue;
 			}
