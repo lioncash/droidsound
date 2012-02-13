@@ -155,7 +155,6 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH) \
     $(LOCAL_PATH)/vice/drive \
     $(LOCAL_PATH)/vice/imagecontents \
     $(LOCAL_PATH)/vice/raster \
-    $(LOCAL_PATH)/vice/rs232drv \
     $(LOCAL_PATH)/vice/sid \
     $(LOCAL_PATH)/vice/tape \
     $(LOCAL_PATH)/vice/userport \
