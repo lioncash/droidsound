@@ -227,6 +227,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 				AudioTrack.MODE_STREAM);
 		
 		// Let plugin set the playback rate if the plugin overrides getFrameRate().
+		// If not overridden, the playback rate will default to 44100Hz
 		audioTrack.setPlaybackRate(plugin.getFrameRate());
 		
         Intent sessionOpen = new Intent(AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION);
