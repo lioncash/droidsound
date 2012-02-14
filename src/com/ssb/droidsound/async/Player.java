@@ -226,6 +226,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 				plugin.getFrameRate() * 4,
 				AudioTrack.MODE_STREAM);
 		
+		// Let plugin set the playback rate if the plugin overrides getFrameRate().
 		audioTrack.setPlaybackRate(plugin.getFrameRate());
 		
         Intent sessionOpen = new Intent(AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION);
