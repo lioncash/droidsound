@@ -110,13 +110,9 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 
 	@Override
 	public void setOption(String string, Object val) {
-		/* To be implemented */
+		/* No Options */
 	}
 
-	@Override
-	public boolean setTune(int tune) {
-		return N_setTune(currentSong, tune);
-	}
 
 	@Override
 	public String getVersion() {
@@ -151,8 +147,6 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 
 	// Expects Stereo, 44.1Khz, signed, big-endian shorts
 	native private int N_getSoundData(long song, short [] dest, int size);
-	native private boolean N_seekTo(long song, int seconds);
-	native private boolean N_setTune(long song, int tune);
 	native private String N_getStringInfo(long song, int what);
 	native private int N_getIntInfo(long song, int what);
 

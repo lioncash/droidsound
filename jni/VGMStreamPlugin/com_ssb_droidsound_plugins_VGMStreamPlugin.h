@@ -64,13 +64,6 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getFra
 JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1seekTo
   (JNIEnv *, jobject, jlong, jint);
 
-/*
- * Class:     com_ssb_droidsound_plugins_VGMStreamPlugin
- * Method:    N_setTune
- * Signature: (JI)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1setTune
-  (JNIEnv *, jobject, jlong, jint);
 
 /*
  * Class:     com_ssb_droidsound_plugins_VGMStreamPlugin

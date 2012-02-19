@@ -49,11 +49,12 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
     jboolean iscopy;
     const char *s = env->GetStringUTFChars(fname, &iscopy);
 
-    //Initialize and check if format is playable
+    // Initialize and check if format is playable
     if ((vgmStream = init_vgmstream(s)) == NULL)
     {
         return 0;
     }
+    
     __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File is playable");
 
     if (!vgmStream)
@@ -64,9 +65,10 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
 
     env->ReleaseStringUTFChars(fname, s);
 
-    //If no channels are present/recognized
+    // If no channels are present/recognized
     if (vgmStream->channels <= 0)
     {
+        // Close down the stream
         close_vgmstream(vgmStream);
         vgmStream = NULL;
         return -1;
@@ -103,7 +105,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
 
 JNIEXPORT void Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1unload(JNIEnv *env, jobject obj, jlong song)
 {
-    /*Clean up and free resources */
+    /* Clean up and free resources */
 
     VGMSTREAM* vgmDealloc = (VGMSTREAM*)song;
 
@@ -125,8 +127,11 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSou
         size = total_samples * vgm->channels;
     }
 
+    // Render the sound data into the buffer.
     render_vgmstream(ptr, size / vgm->channels, vgm);
 
+    // Decrement over time so we don't ask for more samples
+    // than what is available.
     total_samples -= (size / vgm->channels);
 
     env->ReleaseShortArrayElements(sArray, ptr, 0);
@@ -148,21 +153,14 @@ JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1se
 }
 
 
-JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1setTune(JNIEnv *env, jobject obj, jlong song, jint tune)
-{
-    /* To be implemented */
-    return false;
-}
-
-
 JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getStringInfo(JNIEnv *env, jobject obj, jlong song, jint what)
 {
     VGMSTREAM *vgm = (VGMSTREAM*)song;
     
-    //NOTE: Is there a better way of getting all this info ?
+    // NOTE: Is there a better way of getting all this info ?
     switch(what) 
     {
-        //Shows the sample rate of the file
+        // Shows the sample rate of the file
         case 50:
         {
             char text[2];
@@ -171,7 +169,7 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1get
             return NewString(env, codingType);
             break;
         }
-        //Shows the number of channels in the file
+        // Shows the number of channels in the file
         case 51:
         {
             char text[7];
@@ -214,13 +212,14 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1get
 
 JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1setOption(JNIEnv *env, jclass cl, jint what, jint val)
 {
-    /* To be implemented */
+    /* No Options, yet. */
 }
 
 
 JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getIntInfo(JNIEnv *env, jobject obj, jlong song, jint what)
 {
     VGMSTREAM *vgm = (VGMSTREAM*)song;
+    
     switch(what)
     {
         case INFO_LENGTH:
