@@ -33,10 +33,10 @@ static jstring NewString(JNIEnv *env, const char *str)
     static jchar temp[256];
     jchar *ptr = temp;
 
-    if(str == 0) {
+    if (str == 0) {
         *ptr++ = 0;
     } else {
-        while(*str) {
+        while (*str) {
             unsigned char c = (unsigned char)*str++;
             *ptr++ = (c < 0x7f && c >= 0x20) || c >= 0xa0 || c == 0xa ? c : '?';
         }
@@ -115,7 +115,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1load(JNIEn
     pd->trackChanged = false;
 
     sc68_play(pd->sc68, 0, 0);
-    if(sc68_process(pd->sc68, NULL, 0) < 0) {
+    if (sc68_process(pd->sc68, NULL, 0) < 0) {
         env->ReleaseByteArrayElements(bArray, ptr, 0);
         free(pd);
         sc68_destroy(sc68);
@@ -125,8 +125,9 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1load(JNIEn
 
     pd->defaultTrack = sc68_play(pd->sc68, -1, 0);
 
-    if(pd->defaultTrack == 0)
+    if (pd->defaultTrack == 0) {
         pd->defaultTrack = 1;
+    }
 
     pd->currentTrack = pd->defaultTrack;
 
@@ -147,9 +148,9 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getSoundDat
     }
 
     /* Set track number : command line is prior to config force-track */
-    if(pd->currentTrack < 0) {
+    if (pd->currentTrack < 0) {
         pd->currentTrack = 0;
-        if(sc68_play(pd->sc68, pd->currentTrack, 0)) {
+        if (sc68_play(pd->sc68, pd->currentTrack, 0)) {
             return -1;
         }
     }
@@ -159,7 +160,7 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getSoundDat
     jint n = size/2;
     int code = sc68_process(pd->sc68, ptr, &n);
 
-    if(code) {
+    if (code) {
         __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "CODE: 0x%x", code);
     }
 
@@ -167,7 +168,7 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getSoundDat
 
     env->ReleaseShortArrayElements(sArray, (jshort*)ptr, 0);
 
-    if(!pd->trackChanged && (code & SC68_CHANGE)) {
+    if (!pd->trackChanged && (code & SC68_CHANGE)) {
         __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "Ending track");
         return -1;
     }
@@ -211,7 +212,7 @@ JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1setTune
     PlayData *pd = (PlayData*)song;
     
     pd->currentTrack = tune+1;
-    if(sc68_play(pd->sc68, pd->currentTrack, 0)) {
+    if (sc68_play(pd->sc68, pd->currentTrack, 0)) {
         pd->currentTrack = -1;
         return false;
     }
@@ -225,7 +226,7 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getStrin
     PlayData *pd = (PlayData*)song;
     int track = pd->currentTrack;
     
-    if(track < 0) track = 1;
+    if (track < 0) track = 1;
     if (!sc68_music_info(pd->sc68, &pd->info, track, 0)) {}
     
     sc68_music_info_t &info = pd->info;
@@ -250,7 +251,7 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getIntInfo(
     PlayData *pd = (PlayData*)song;
     int track = pd->currentTrack;
     
-    if(track < 0) track = 1;
+    if (track < 0) track = 1;
     if (!sc68_music_info(pd->sc68, &pd->info, track, 0)) {
     }
     sc68_music_info_t &info = pd->info;

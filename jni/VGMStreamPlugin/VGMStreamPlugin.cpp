@@ -29,7 +29,7 @@ static jstring NewString(JNIEnv *env, const char *str)
     static jchar temp[256];
     jchar *ptr = temp;
     
-    while(*str)
+    while (*str)
     {
         unsigned char c = (unsigned char)*str++;
         *ptr++ = (c < 0x7f && c >= 0x20) || c >= 0xa0 ? c : '?';

@@ -25,7 +25,7 @@ static jstring NewString(JNIEnv *env, const char *str)
 	static jchar temp[256];
 	jchar *ptr = temp;
 
-	while(*str)
+	while (*str)
     {
 		unsigned char c = (unsigned char)*str++;
 		*ptr++ = (c < 0x7f && c >= 0x20) || c >= 0xa0 ? c : '?';
@@ -40,7 +40,7 @@ static bool inited = false;
 
 JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_HivelyPlugin_N_1load(JNIEnv *env, jobject obj, jbyteArray bArray, int size)
 {
-	if(!inited)
+	if (!inited)
     {
 		hvl_InitReplayer();
 		inited = true;
@@ -52,7 +52,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_HivelyPlugin_N_1load(JNI
 
 	struct hvl_tune *tune = hvl_LoadTuneMemory((uint8*)ptr, size, 44100, 0);
 
-	if(tune)
+	if (tune)
     {
 		__android_log_print(ANDROID_LOG_VERBOSE, "HivelyPlugin", "CHAN %d NAME '%s' TIME %d", tune->ht_Channels, tune->ht_Name, tune->ht_PlayingTime);
 	}
@@ -79,7 +79,7 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_HivelyPlugin_N_1getSoundD
 
 	int len = ((44100 * 2) / 5);
 
-	for(int i = 0; i < 10; i++)
+	for (int i = 0; i < 10; i++)
     {
 		hvl_DecodeFrame(tune, ptr, ptr + 2, 4);
 		ptr += ((44100 * 2 * 2) / 50);

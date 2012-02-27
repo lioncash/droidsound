@@ -25,7 +25,7 @@ static jstring NewString(JNIEnv *env, const char *str)
 {
     static jchar temp[256];
     jchar *ptr = temp;
-    while(*str) {
+    while (*str) {
         unsigned char c = (unsigned char)*str++;
         *ptr++ = (c < 0x7f && c >= 0x20) || c >= 0xa0 ? c : '?';
     }
@@ -56,19 +56,19 @@ jlong setUp(Music_Emu *emu)
 
     __android_log_print(ANDROID_LOG_VERBOSE, "GMEPlugin", "(RC %s) -> SONG '%s' GAME '%s' LEN '%d' COUNT '%d'", err, track0->song, track0->game, track0->length, track_count);
 
-    if(!err) {
+    if (!err) {
         GMEInfo *info = new GMEInfo();
 
-        if(!strlen(track0->song)) {
+        if (!strlen(track0->song)) {
             bool nameOk = false;
             // If name is all upper case it is most likely a rom name
-            for(int i = 0; i < strlen(track0->game); i++) {
+            for (int i = 0; i < strlen(track0->game); i++) {
                 char c = track0->game[i];
-                if(isalpha(c) && !isupper(c)) {
+                if (isalpha(c) && !isupper(c)) {
                     nameOk = true;
                 }
             }
-            if(nameOk) {
+            if (nameOk) {
                 strcpy(info->mainTitle, track0->game);
             } else {
                 info->mainTitle[0] = 0;
@@ -76,12 +76,12 @@ jlong setUp(Music_Emu *emu)
         } else {
             strcpy(info->mainTitle, track0->song);
 
-            if(track_count > 1) {
+            if (track_count > 1) {
                 err = gme_track_info(emu, &track1, 1);
 
                 __android_log_print(ANDROID_LOG_VERBOSE, "GMEPlugin", "'%s' vs '%s'", track0->song, track1->song);
 
-                if(!err && strcmp(track0->song, track1->song) != 0) {
+                if (!err && strcmp(track0->song, track1->song) != 0) {
                     // We have more than one subsong, and their names differ
                     strcpy(info->mainTitle, track0->game);
                 }
@@ -109,7 +109,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1loadFile(JN
 
     __android_log_print(ANDROID_LOG_VERBOSE, "GMEPlugin", "Loading from file '%s' => %s", s, err ? err : "OK");
 
-    if(!err) {
+    if (!err) {
         rc = setUp(emu);
     }
     env->ReleaseStringUTFChars(fname, s);
@@ -130,7 +130,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1load(JNIEnv
 
     __android_log_print(ANDROID_LOG_VERBOSE, "GMEPlugin", "Done ERR '%s'", err);
 
-    if(!err) {
+    if (!err) {
         rc = setUp(emu);
     }
 
@@ -142,10 +142,13 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1load(JNIEnv
 JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1unload(JNIEnv *env, jobject obj, jlong song)
 {
     GMEInfo *info = (GMEInfo*)song;
-    if (info->currentSong)
+    if (info->currentSong) {
         gme_free_info(info->lastTrack);
-    if(info->emu)
+    }
+    
+    if (info->emu) {
         gme_delete(info->emu);
+    }
     delete info;
 }
 
@@ -172,12 +175,12 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1getSoundData
 {
     GMEInfo *info = (GMEInfo*)song;
 
-    if(!info->started) {
+    if (!info->started) {
         gme_err_t err = gme_start_track(info->emu, 0);
         info->started = true;
     }
 
-    if(gme_track_ended(info->emu)) {
+    if (gme_track_ended(info->emu)) {
         return 0;
     }
 
@@ -208,7 +211,7 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1getString
     case INFO_TITLE:
         return NewString(env, info->mainTitle);
     case INFO_SUBTUNE_TITLE:
-        if(track_count > 1) {
+        if (track_count > 1) {
             return NewString(env, info->lastTrack->song);
         } else {
             return 0;

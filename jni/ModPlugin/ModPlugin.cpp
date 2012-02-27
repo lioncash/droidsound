@@ -5,7 +5,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include <android/log.h> 
+#include <android/log.h>
 #include <jni.h>
 
 #include "modplug/modplug.h"
@@ -44,7 +44,7 @@ static jstring NewString(JNIEnv *env, const char *str)
 {
     static jchar temp[256];
     jchar *ptr = temp;
-    while(*str) {
+    while (*str) {
         unsigned char c = (unsigned char)*str++;
         *ptr++ = (c < 0x7f && c >= 0x20) || c >= 0xa0 || c == 0xa ? c : '?';
     }
@@ -78,7 +78,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1load(JNIEnv
     ModInfo *info = NULL;
 
 
-    if(mod)
+    if (mod)
     {
         info = new ModInfo();
         info->mod = mod;
@@ -88,8 +88,8 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1load(JNIEnv
         *info->author = 0;
 
         int t = ModPlug_GetModuleType(mod);
-
-        switch(t) 
+        
+        switch(t)
         {
         case MOD_TYPE_MOD:
             info->modType = "MOD";
@@ -111,7 +111,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1load(JNIEnv
         settings.mResamplingMode = MODPLUG_RESAMPLE_FIR;
 
         __android_log_print(ANDROID_LOG_VERBOSE, "ModPlugin", "Type is %d", t);
-        if(t == 1) {
+        if (t == 1) {
             settings.mResamplingMode = MODPLUG_RESAMPLE_NEAREST;
             __android_log_print(ANDROID_LOG_VERBOSE, "ModPlugin", "NEAREST resampling");
         }
@@ -128,7 +128,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1load(JNIEnv
 JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1unload(JNIEnv *env, jobject obj, jlong song)
 {
     ModInfo *info = (ModInfo*)song;
-    if(info->mod) {
+    if (info->mod) {
         ModPlug_Unload(info->mod);
     }
     delete info;
@@ -146,7 +146,7 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1getSoundData
 
     env->ReleaseShortArrayElements(sArray, (jshort*)ptr, 0);
 
-    if(rc == 0) return -1;
+    if (rc == 0) return -1;
 
     return rc / 2;
 }
@@ -184,14 +184,14 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1getString
         int ni = ModPlug_NumInstruments(info->mod);
         int ns = ModPlug_NumSamples(info->mod);
         __android_log_print(ANDROID_LOG_VERBOSE, "ModPlugin", "%d / %d instruments", ni, ns);
-        if(ni > 0) {
-            for(int i = 1; i < ni; i++) {
+        if (ni > 0) {
+            for (int i = 1; i < ni; i++) {
                 ModPlug_InstrumentName(info->mod, i, ptr);
                 ptr += strlen(ptr);
                 *ptr++ = 0xa;
             }
-        } else if(ns > 0) {
-            for(int i = 1; i < ns; i++) {
+        } else if (ns > 0) {
+            for (int i = 1; i < ns; i++) {
                 ModPlug_SampleName(info->mod, i, ptr);
                 ptr += strlen(ptr);
                 *ptr++ = 0xa;
