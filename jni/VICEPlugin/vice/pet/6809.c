@@ -31,6 +31,14 @@
 #include "monitor.h"
 #include "petmem.h"
 
+/* Uncomment the following if you want emulation of the
+   6809 illegal/undocumented opcodes/behaviour. */
+/* #define FULL6809 */
+
+/* Uncomment the following if you want emulation of the
+   6309 CPU. */
+/* #define H6309 */
+
 #define CLK maincpu_clk
 #define CPU_INT_STATUS maincpu_int_status
 #define ALARM_CONTEXT maincpu_alarm_context
@@ -57,8 +65,6 @@
 #define CALLER  e_comp_space
 #define LAST_OPCODE_ADDR iPC
 #define GLOBAL_REGS     h6809_regs
-
-unsigned get_d(void);
 
 h6809_regs_t h6809_regs;
 
@@ -188,18 +194,12 @@ static WORD V;
 #endif /* H6309 */
 
 
-//unsigned long irq_start_time;
-unsigned ea = 0;
-int cpu_quit = 1;
-unsigned int irqs_pending = 0;
-unsigned int firqs_pending = 0;
-unsigned int cc_changed = 0;
+static WORD ea = 0;
+static unsigned int irqs_pending = 0;
+static unsigned int firqs_pending = 0;
+static unsigned int cc_changed = 0;
 
 static WORD *index_regs[4] = { &X, &Y, &U, &S };
-
-extern int dump_cycles_on_success;
-
-extern int trace_enabled;
 
 extern void nmi(void);
 extern void irq(void);
@@ -249,19 +249,6 @@ void release_firq(unsigned int source)
     firqs_pending &= ~(1 << source);
 }
 
-
-
-static inline void check_pc(void)
-{
-    /* TODO */
-}
-
-
-static inline void check_stack(void)
-{
-    /* TODO */
-}
-
 void sim_error(const char *format, ...)
 {
     va_list ap;
@@ -272,206 +259,193 @@ void sim_error(const char *format, ...)
     va_end(ap);
 }
 
-static inline void change_pc(unsigned newPC)
+static inline void change_pc(WORD newPC)
 {
-#if 0
-  /* TODO - will let some RAM execute for trampolines */
-  if ((newPC < 0x1C00) || (newPC > 0xFFFF))
-  {
-	  fprintf (stderr, "m6809-run: invalid PC = %04X, previous was %s\n",
-	  	newPC, monitor_addr_name (PC));
-	  exit (2);
-  }
-
-  if (trace_enabled)
-  {
-		fprintf (stderr, "PC : %s ", monitor_addr_name (PC));
-		fprintf (stderr, "-> %s\n", monitor_addr_name (newPC));
-	}
-#endif
-  PC = newPC;
+    PC = newPC;
 }
 
-static inline unsigned imm_byte(void)
+static inline BYTE imm_byte(void)
 {
-    unsigned val = read8(PC);
+    BYTE val = read8(PC);
+
     PC++;
     return val;
 }
 
-static inline unsigned imm_word(void)
+static inline WORD imm_word(void)
 {
-      unsigned val = read16(PC);
-      PC += 2;
-      return val;
+    WORD val = read16(PC);
+
+    PC += 2;
+    return val;
 }
 
 #define WRMEM(addr, data) write8(addr, data)
 
-static void WRMEM16(unsigned addr, unsigned data)
+static void WRMEM16(WORD addr, WORD data)
 {
     WRMEM(addr, data >> 8);
     CLK++;
-    WRMEM((addr + 1) & 0xffff, data & 0xff);
+    WRMEM(addr + 1, data & 0xff);
 }
 
 #define RDMEM(addr) read8(addr)
 
-static unsigned RDMEM16(unsigned addr)
+static WORD RDMEM16(WORD addr)
 {
-    unsigned val = RDMEM(addr) << 8;
+    WORD val = RDMEM(addr) << 8;
+
     CLK++;
-    val |= RDMEM((addr + 1) & 0xffff);
+    val |= RDMEM(addr + 1);
     return val;
 }
 
 #define write_stack WRMEM
 #define read_stack  RDMEM
 
-static void write_stack16(unsigned addr, unsigned data)
+static void write_stack16(WORD addr, WORD data)
 {
-    write_stack((addr + 1) & 0xffff, data & 0xff);
+    write_stack(addr + 1, data & 0xff);
     write_stack(addr, data >> 8);
 }
 
-static unsigned read_stack16(unsigned addr)
+static unsigned read_stack16(WORD addr)
 {
-    return (read_stack(addr) << 8) | read_stack((addr + 1) & 0xffff);
+    return (read_stack(addr) << 8) | read_stack(addr + 1);
 }
 
 static void direct(void)
 {
-    unsigned val = read8 (PC) | DP;
+    ea = read8(PC) | DP;
     PC++;
-    ea = val;
 }
 
-static void indexed(void)			/* note take 1 extra cycle */
+static void indexed(void)		/* note take 1 extra cycle */
 {
-    unsigned post = imm_byte();
+    BYTE post = imm_byte();
     WORD *R = index_regs[(post >> 5) & 0x3];
 
     if (post & 0x80) {
         switch (post & 0x1f) {
-            case 0x00:
+            case 0x00:	/* ,R+ */
                 ea = *R;
-                *R = (*R + 1) & 0xffff;
+                *R += 1;
                 CLK += 6;
                 break;
-            case 0x01:
+            case 0x01:	/* ,R++ */
                 ea = *R;
-                *R = (*R + 2) & 0xffff;
+                *R += 2;
                 CLK += 7;
                 break;
-            case 0x02:
-                *R = (*R - 1) & 0xffff;
+            case 0x02:	/* ,-R */
+                *R -= 1;
                 ea = *R;
                 CLK += 6;
                 break;
-            case 0x03:
-                *R = (*R - 2) & 0xffff;
+            case 0x03:	/* ,--R */
+                *R -= 2;
                 ea = *R;
                 CLK += 7;
                 break;
-            case 0x04:
+            case 0x04:	/* ,R */
                 ea = *R;
                 CLK += 4;
                 break;
-            case 0x05:
-                ea = (*R + ((INT8)B)) & 0xffff;
+            case 0x05:	/* B,R */
+                ea = *R + (INT8)B;
                 CLK += 5;
                 break;
-            case 0x06:
-                ea = (*R + ((INT8)A)) & 0xffff;
+            case 0x06:	/* A,R */
+                ea = *R + (INT8)A;
                 CLK += 5;
                 break;
-            case 0x08:
-                ea = (*R + ((INT8)imm_byte())) & 0xffff;
+            case 0x08:	/* 8bit,R */
+                ea = *R + (INT8)imm_byte();
                 CLK += 5;
                 break;
-            case 0x09:
-                ea = (*R + imm_word()) & 0xffff;
+            case 0x09:	/* 16bit,R */
+                ea = *R + imm_word();
                 CLK += 8;
                 break;
-            case 0x0b:
-                ea = (*R + get_d()) & 0xffff;
+            case 0x0b:	/* D,R */
+                ea = *R + D;
                 CLK += 8;
                 break;
-            case 0x0c:
+            case 0x0c:	/* 8bit,PC */
                 ea = (INT8)imm_byte();
-                ea = (ea + PC) & 0xffff;
+                ea += PC;
                 CLK += 5;
                 break;
-            case 0x0d:
+            case 0x0d:	/* 16bit,PC */
                 ea = imm_word();
-                ea = (ea + PC) & 0xffff;
+                ea += PC;
                 CLK += 9;
                 break;
-            case 0x11:
+            case 0x11:	/* [,R++] */
                 ea = *R;
-                *R = (*R + 2) & 0xffff;
+                *R += 2;
                 CLK += 7;
                 ea = RDMEM16(ea);
                 CLK += 2;
                 break;
-            case 0x13:
-                *R = (*R - 2) & 0xffff;
+            case 0x13:	/* [,--R] */
+                *R -= 2;
                 ea = *R;
                 CLK += 7;
                 ea = RDMEM16(ea);
                 CLK += 2;
                 break;
-            case 0x14:
+            case 0x14:	/* [,R] */
                 ea = *R;
                 CLK += 4;
                 ea = RDMEM16(ea);
                 CLK += 2;
                 break;
-            case 0x15:
-                ea = (*R + ((INT8)B)) & 0xffff;
+            case 0x15:	/* [B,R] */
+                ea = *R + (INT8)B;
                 CLK += 5;
                 ea = RDMEM16(ea);
                 CLK += 2;
                 break;
-            case 0x16:
-                ea = (*R + ((INT8)A)) & 0xffff;
+            case 0x16:	/* [A,R] */
+                ea = *R + (INT8)A;
                 CLK += 5;
                 ea = RDMEM16(ea);
                 CLK += 2;
                 break;
-            case 0x18:
-                ea = (*R + ((INT8)imm_byte())) & 0xffff;
+            case 0x18:	/* [8bit,R] */
+                ea = *R + (INT8)imm_byte();
                 CLK += 5;
                 ea = RDMEM16(ea);
                 CLK += 2;
                 break;
-            case 0x19:
-                ea = (*R + imm_word()) & 0xffff;
+            case 0x19:	/* [16bit,R] */
+                ea = *R + imm_word();
                 CLK += 8;
                 ea = RDMEM16(ea);
                 CLK += 2;
                 break;
-            case 0x1b:
-                ea = (*R + get_d()) & 0xffff;
+            case 0x1b:	/* [D,R] */
+                ea = *R + D;
                 CLK += 8;
                 ea = RDMEM16(ea);
                 CLK += 2;
                 break;
-            case 0x1c:
+            case 0x1c:	/* [8bit,PC] */
                 ea = (INT8)imm_byte();
-                ea = (ea + PC) & 0xffff;
+                ea += PC;
                 CLK += 5;
                 ea = RDMEM16(ea);
                 CLK += 2;
                 break;
-            case 0x1d:
+            case 0x1d:	/* [16bit,PC] */
                 ea = imm_word();
-                ea = (ea + PC) & 0xffff;
+                ea += PC;
                 CLK += 9;
                 ea = RDMEM16(ea);
                 CLK += 2;
                 break;
-            case 0x1f:
+            case 0x1f:	/* [16bit] */
                 ea = imm_word();
                 CLK += 6;
                 ea = RDMEM16(ea);
@@ -484,203 +458,187 @@ static void indexed(void)			/* note take 1 extra cycle */
         }
     } else {
         if (post & 0x10) {
-            post |= 0xfff0;
+            ea = *R + (post | 0xfff0);
         } else {
-            post &= 0x000f;
+            ea = *R + (post & 0x000f);
         }
-        ea = (*R + post) & 0xffff;
         CLK += 5;
     }
 }
 
 static void extended(void)
 {
-    unsigned val = read16(PC);
+    ea = read16(PC);
     PC += 2;
-    ea = val;
 }
 
 /* external register functions */
 
-unsigned get_a(void)
+static BYTE get_a(void)
 {
     return A;
 }
 
-unsigned get_b(void)
+static BYTE get_b(void)
 {
     return B;
 }
 
-unsigned get_dp(void)
+static BYTE get_dp(void)
 {
     return DP >> 8;
 }
 
-unsigned get_x(void)
+static WORD get_x(void)
 {
     return X;
 }
 
-unsigned get_y(void)
+static WORD get_y(void)
 {
     return Y;
 }
 
-unsigned get_s(void)
+static WORD get_s(void)
 {
     return S;
 }
 
-unsigned get_u(void)
+static WORD get_u(void)
 {
     return U;
 }
 
-unsigned get_pc(void)
+static WORD get_pc(void)
 {
-    return PC & 0xffff;
+    return PC;
 }
 
-unsigned get_d(void)
+static WORD get_d(void)
 {
-    return (A << 8) | B;
+    return D;
 }
 
-unsigned get_flags(void)
+static BYTE get_flags(void)
 {
     return EFI;
 }
 
 #ifdef H6309
-unsigned get_e(void)
+static BYTE get_e(void)
 {
     return E;
 }
 
-unsigned get_f(void)
+static BYTE get_f(void)
 {
     return F;
 }
 
-unsigned get_w(void)
+static WORD get_w(void)
 {
-    return (E << 8) | F;
+    return W;
 }
 
-unsigned get_q(void)
+static DWORD get_q(void)
 {
-    return (get_w () << 16) | get_d ();
+    return Q;
 }
 
-unsigned get_v(void)
+static WORD get_v(void)
 {
     return V;
 }
 
-unsigned get_zero(void)
-{
-    return 0;
-}
-
-unsigned get_md(void)
+static BYTE get_md(void)
 {
     return MD;
 }
 #endif
 
-void set_a(unsigned val)
+static void set_a(BYTE val)
 {
-    A = val & 0xff;
+    A = val;
 }
 
-void set_b(unsigned val)
+static void set_b(BYTE val)
 {
-    B = val & 0xff;
+    B = val;
 }
 
-void set_dp(unsigned val)
+static void set_dp(BYTE val)
 {
-    DP = (val & 0xff) << 8;
+    DP = val << 8;
 }
 
-void set_x(unsigned val)
+static void set_x(WORD val)
 {
-    X = val & 0xffff;
+    X = val;
 }
 
-void set_y(unsigned val)
+static void set_y(WORD val)
 {
-    Y = val & 0xffff;
+    Y = val;
 }
 
-void set_s(unsigned val)
+static void set_s(WORD val)
 {
-    S = val & 0xffff;
-    check_stack();
+    S = val;
 }
 
-void set_u(unsigned val)
+static void set_u(WORD val)
 {
-    U = val & 0xffff;
+    U = val;
 }
 
-void set_pc(unsigned val)
+static void set_pc(WORD val)
 {
-    PC = val & 0xffff;
-    check_pc();
+    PC = val;
 }
 
-void set_d(unsigned val)
+static void set_d(WORD val)
 {
-    A = (val >> 8) & 0xff;
-    B = val & 0xff;
+    D = val;
 }
 
 #ifdef H6309
-void set_e(unsigned val)
+static void set_e(BYTE val)
 {
-    E = val & 0xff;
+    E = val;
 }
 
-void set_f(unsigned val)
+static void set_f(BYTE val)
 {
-    F = val & 0xff;
+    F = val;
 }
 
-void set_w(unsigned val)
+static void set_w(WORD val)
 {
-    E = (val >> 8) & 0xff;
-    F = val & 0xff;
+    W = val;
 }
 
-void set_q(unsigned val)
+static void set_q(DWORD val)
 {
-    set_w((val >> 16) & 0xffff);
-    set_d(val & 0xffff);
+    Q = val;
 }
 
-void set_v(unsigned val)
+static void set_v(WORD val)
 {
-    V = val & 0xff;
+    V = val;
 }
 
-void set_zero(unsigned val)
+static void set_md(BYTE val)
 {
-}
-
-void set_md(unsigned val)
-{
-    MD = val & 0xff;
+    MD = val;
 }
 #endif
 
 
 /* handle condition code register */
 
-unsigned get_cc(void)
+static BYTE get_cc(void)
 {
-    unsigned res = EFI & (E_FLAG | F_FLAG | I_FLAG);
+    BYTE res = EFI & (E_FLAG | F_FLAG | I_FLAG);
 
     if (H & 0x10) {
         res |= H_FLAG;
@@ -700,7 +658,7 @@ unsigned get_cc(void)
     return res;
 }
 
-void set_cc(unsigned arg)
+static void set_cc(BYTE arg)
 {
     EFI = arg & (E_FLAG | F_FLAG | I_FLAG);
     H = (arg & H_FLAG ? 0x10 : 0);
@@ -711,7 +669,7 @@ void set_cc(unsigned arg)
     cc_changed = 1;
 }
 
-void cc_modified(void)
+static void cc_modified(void)
 {
     /* Check for pending interrupts */
     if (firqs_pending && !(EFI & F_FLAG)) {
@@ -722,13 +680,18 @@ void cc_modified(void)
     cc_changed = 0;
 }
 
-unsigned get_reg(unsigned nro)
+/* Undocumented: When the 6809 transfers an 8bit register
+   to a 16bit register the LSB is filled with the 8bit
+   register value and the MSB is filled with 0xff.
+ */
+
+static WORD get_reg(BYTE nro)
 {
-    unsigned val = 0xff;
+    WORD val;
 
     switch (nro) {
         case 0:
-            val = (A << 8) | B;
+            val = D;
             break;
         case 1:
             val = X;
@@ -743,47 +706,45 @@ unsigned get_reg(unsigned nro)
             val = S;
             break;
         case 5:
-            val = PC & 0xffff;
+            val = PC;
             break;
 #ifdef H6309
         case 6:
-            val = (E << 8) | F;
+            val = W;
             break;
         case 7:
             val = V;
             break;
 #endif
         case 8:
-            val = A;
+            val = A & 0xffff;
             break;
         case 9:
-            val = B;
+            val = B & 0xffff;
             break;
         case 10:
-            val = get_cc();
+            val = get_cc() & 0xffff;
             break;
         case 11:
-            val = DP >> 8;
+            val = (DP >> 8) & 0xffff;
             break;
 #ifdef H6309
         case 14:
-            val = E;
+            val = E & 0xffff;
             break;
         case 15:
-            val = F;
+            val = F & 0xffff;
             break;
 #endif
     }
-
     return val;
 }
 
-void set_reg(unsigned nro, unsigned val)
+static void set_reg(BYTE nro, WORD val)
 {
     switch (nro) {
         case 0:
-            A = val >> 8;
-            B = val & 0xff;
+            D = val;
             break;
         case 1:
             X = val;
@@ -799,35 +760,33 @@ void set_reg(unsigned nro, unsigned val)
             break;
         case 5:
             PC = val;
-            check_pc();
             break;
 #ifdef H6309
         case 6:
-            E = val >> 8;
-            F = val & 0xff;
+            W = val;
             break;
         case 7:
             V = val;
             break;
 #endif
         case 8:
-            A = val;
+            A = val & 0xff;
             break;
         case 9:
-            B = val;
+            B = val & 0xff;
             break;
         case 10:
-            set_cc(val);
+            set_cc(val & 0xff);
             break;
         case 11:
-            DP = val << 8;
+            DP = (val & 0xff) << 8;
             break;
 #ifdef H6309
         case 14:
-            E = val;
+            E = val & 0xff;
             break;
         case 15:
-            F = val;
+            F = val & 0xff;
             break;
 #endif
     }
@@ -835,9 +794,9 @@ void set_reg(unsigned nro, unsigned val)
 
 /* 8-Bit Accumulator and Memory Instructions */
 
-static unsigned adc(unsigned arg, unsigned val)
+static BYTE adc(BYTE arg, BYTE val)
 {
-    unsigned res = arg + val + (C != 0);
+    WORD res = arg + val + (C != 0);
 
     C = (res >> 1) & 0x80;
     N = Z = res &= 0xff;
@@ -846,9 +805,9 @@ static unsigned adc(unsigned arg, unsigned val)
     return res;
 }
 
-static unsigned add(unsigned arg, unsigned val)
+static BYTE add(BYTE arg, BYTE val)
 {
-    unsigned res = arg + val;
+    WORD res = arg + val;
 
     C = (res >> 1) & 0x80;
     N = Z = res &= 0xff;
@@ -857,9 +816,9 @@ static unsigned add(unsigned arg, unsigned val)
     return res;
 }
 
-static unsigned and(unsigned arg, unsigned val)
+static BYTE and(BYTE arg, BYTE val)
 {
-    unsigned res = arg & val;
+    BYTE res = arg & val;
 
     N = Z = res;
     OV = 0;
@@ -867,9 +826,9 @@ static unsigned and(unsigned arg, unsigned val)
     return res;
 }
 
-static unsigned asl(unsigned arg)		/* same as lsl */
+static BYTE asl(BYTE arg)		/* same as lsl */
 {
-    unsigned res = arg << 1;
+    WORD res = arg << 1;
 
     C = res & 0x100;
     N = Z = res &= 0xff;
@@ -879,9 +838,9 @@ static unsigned asl(unsigned arg)		/* same as lsl */
     return res;
 }
 
-static unsigned asr(unsigned arg)
+static BYTE asr(BYTE arg)
 {
-    unsigned res = (INT8) arg;
+    WORD res = (INT8)arg;
 
     C = res & 1;
     N = Z = res = (res >> 1) & 0xff;
@@ -890,34 +849,32 @@ static unsigned asr(unsigned arg)
     return res;
 }
 
-static void bit(unsigned arg, unsigned val)
+static void bit(BYTE arg, BYTE val)
 {
-    unsigned res = arg & val;
-
-    N = Z = res;
+    N = Z = arg & val;
     OV = 0;
 }
 
-static unsigned clr(unsigned arg)
+static BYTE clr(BYTE arg)
 {
-    C = N = Z = OV = arg = 0;
+    C = N = Z = OV = 0;
     CLK += 2;
 
-    return arg;
+    return 0;
 }
 
-static void cmp(unsigned arg, unsigned val)
+static void cmp(BYTE arg, BYTE val)
 {
-    unsigned res = arg - val;
+    WORD res = arg - val;
 
     C = res & 0x100;
     N = Z = res &= 0xff;
     OV = (arg ^ val) & (arg ^ res);
 }
 
-static unsigned com(unsigned arg)
+static BYTE com(BYTE arg)
 {
-    unsigned res = arg ^ 0xff;
+    BYTE res = ~arg;
 
     N = Z = res;
     OV = 0;
@@ -929,9 +886,9 @@ static unsigned com(unsigned arg)
 
 static void daa(void)
 {
-    unsigned res = A;
-    unsigned msn = res & 0xf0;
-    unsigned lsn = res & 0x0f;
+    WORD res = A;
+    BYTE msn = res & 0xf0;
+    BYTE lsn = res & 0x0f;
 
     if (lsn > 0x09 || (H & 0x10)) {
         res += 0x06;
@@ -945,14 +902,13 @@ static void daa(void)
 
     C |= (res & 0x100);
     A = N = Z = res &= 0xff;
-    OV = 0;			/* fix this */
 
     CLK += 2;
 }
 
-static unsigned dec(unsigned arg)
+static BYTE dec(BYTE arg)
 {
-    unsigned res = (arg - 1) & 0xff;
+    BYTE res = arg - 1;
 
     N = Z = res;
     OV = arg & ~res;
@@ -961,9 +917,9 @@ static unsigned dec(unsigned arg)
     return res;
 }
 
-unsigned eor(unsigned arg, unsigned val)
+static BYTE eor(BYTE arg, BYTE val)
 {
-    unsigned res = arg ^ val;
+    BYTE res = arg ^ val;
 
     N = Z = res;
     OV = 0;
@@ -973,24 +929,24 @@ unsigned eor(unsigned arg, unsigned val)
 
 static void exg(void)
 {
-    unsigned tmp1 = 0xff;
-    unsigned tmp2 = 0xff;
-    unsigned post = imm_byte ();
+    WORD tmp1 = 0xff;
+    WORD tmp2 = 0xff;
+    BYTE post = imm_byte();
 
     if (((post ^ (post << 4)) & 0x80) == 0) {
         tmp1 = get_reg(post >> 4);
         tmp2 = get_reg(post & 15);
     }
 
-    set_reg (post & 15, tmp1);
-    set_reg (post >> 4, tmp2);
+    set_reg(post & 15, tmp1);
+    set_reg(post >> 4, tmp2);
 
     CLK += 8;
 }
 
-static unsigned inc(unsigned arg)
+static BYTE inc(BYTE arg)
 {
-    unsigned res = (arg + 1) & 0xff;
+    BYTE res = arg + 1;
 
     N = Z = res;
     OV = ~arg & res;
@@ -999,19 +955,17 @@ static unsigned inc(unsigned arg)
     return res;
 }
 
-static unsigned ld(unsigned arg)
+static BYTE ld(BYTE arg)
 {
-    unsigned res = arg;
-
-    N = Z = res;
+    N = Z = arg;
     OV = 0;
 
-    return res;
+    return arg;
 }
 
-static unsigned lsr(unsigned arg)
+static BYTE lsr(BYTE arg)
 {
-    unsigned res = arg >> 1;
+    BYTE res = arg >> 1;
 
     N = 0;
     Z = res;
@@ -1023,18 +977,16 @@ static unsigned lsr(unsigned arg)
 
 static void mul(void)
 {
-    unsigned res = (A * B) & 0xffff;
+    WORD res = A * B;
 
-    Z = res;
+    Z = D = res;
     C = res & 0x80;
-    A = res >> 8;
-    B = res & 0xff;
     CLK += 11;
 }
 
-static unsigned neg(int arg)
+static BYTE neg(BYTE arg)
 {
-    unsigned res = (-arg) & 0xff;
+    BYTE res = ~arg + 1;
 
     C = N = Z = res;
     OV = res & arg;
@@ -1043,9 +995,9 @@ static unsigned neg(int arg)
     return res;
 }
 
-static unsigned or(unsigned arg, unsigned val)
+static BYTE or(BYTE arg, BYTE val)
 {
-    unsigned res = arg | val;
+    BYTE res = arg | val;
 
     N = Z = res;
     OV = 0;
@@ -1053,9 +1005,9 @@ static unsigned or(unsigned arg, unsigned val)
     return res;
 }
 
-static unsigned rol(unsigned arg)
+static BYTE rol(BYTE arg)
 {
-    unsigned res = (arg << 1) + (C != 0);
+    WORD res = (arg << 1) + (C != 0);
 
     C = res & 0x100;
     N = Z = res &= 0xff;
@@ -1065,23 +1017,20 @@ static unsigned rol(unsigned arg)
     return res;
 }
 
-static unsigned ror(unsigned arg)
+static BYTE ror(BYTE arg)
 {
-    unsigned res = arg;
+    BYTE res = (arg >> 1) | ((C != 0) << 7);
 
-    if (C != 0) {
-        res |= 0x100;
-    }
-    C = res & 1;
-    N = Z = res >>= 1;
+    C = arg & 1;
+    N = Z = res;
     CLK += 2;
 
     return res;
 }
 
-static unsigned sbc(unsigned arg, unsigned val)
+static BYTE sbc(BYTE arg, BYTE val)
 {
-    unsigned res = arg - val - (C != 0);
+    WORD res = arg - val - (C != 0);
 
     C = res & 0x100;
     N = Z = res &= 0xff;
@@ -1090,19 +1039,17 @@ static unsigned sbc(unsigned arg, unsigned val)
     return res;
 }
 
-static void st(unsigned arg)
+static void st(BYTE arg)
 {
-    unsigned res = arg;
-
-    N = Z = res;
+    N = Z = arg;
     OV = 0;
 
-    WRMEM (ea, res);
+    WRMEM(ea, arg);
 }
 
-static unsigned sub(unsigned arg, unsigned val)
+static BYTE sub(BYTE arg, BYTE val)
 {
-    unsigned res = arg - val;
+    WORD res = arg - val;
 
     C = res & 0x100;
     N = Z = res &= 0xff;
@@ -1111,19 +1058,17 @@ static unsigned sub(unsigned arg, unsigned val)
     return res;
 }
 
-static void tst(unsigned arg)
+static void tst(BYTE arg)
 {
-    unsigned res = arg;
-
-    N = Z = res;
+    N = Z = arg;
     OV = 0;
     CLK += 2;
 }
 
 static void tfr(void)
 {
-    unsigned tmp1 = 0xff;
-    unsigned post = imm_byte();
+    WORD tmp1 = 0xff;
+    BYTE post = imm_byte();
 
     if (((post ^ (post << 4)) & 0x80) == 0) {
         tmp1 = get_reg (post >> 4);
@@ -1134,30 +1079,28 @@ static void tfr(void)
     CLK += 6;
 }
 
-
 /* 16-Bit Accumulator Instructions */
 
 static void abx(void)
 {
-    X = (X + B) & 0xffff;
+    X += B;
     CLK += 3;
 }
 
-static void addd(unsigned val)
+static void addd(WORD val)
 {
-    unsigned arg = (A << 8) | B;
-    unsigned res = arg + val;
+    DWORD res = D + val;
 
     C = res & 0x10000;
     Z = res &= 0xffff;
-    OV = ((arg ^ res) & (val ^ res)) >> 8;
-    A = N = res >> 8;
-    B = res & 0xff;
+    OV = ((D ^ res) & (val ^ res)) >> 8;
+    N = res >> 8;
+    D = res;
 }
 
-static void cmp16(unsigned arg, unsigned val)
+static void cmp16(WORD arg, WORD val)
 {
-    unsigned res = arg - val;
+    DWORD res = arg - val;
 
     C = res & 0x10000;
     Z = res &= 0xffff;
@@ -1165,265 +1108,241 @@ static void cmp16(unsigned arg, unsigned val)
     OV = ((arg ^ val) & (arg ^ res)) >> 8;
 }
 
-static void ldd(unsigned arg)
+static void ldd(WORD arg)
 {
-    unsigned res = arg;
-
-    Z = res;
-    A = N = res >> 8;
-    B = res & 0xff;
+    Z = D = arg;
+    N = arg >> 8;
     OV = 0;
 }
 
-static unsigned ld16(unsigned arg)
+static WORD ld16(WORD arg)
 {
-    unsigned res = arg;
-
-    Z = res;
-    N = res >> 8;
+    Z = arg;
+    N = arg >> 8;
     OV = 0;
 
-    return res;
+    return arg;
 }
 
 static void sex(void)
 {
-    unsigned res = B;
+    D = (INT8)B;
 
-    Z = res;
-    N = res &= 0x80;
-    if (res != 0) {
-        res = 0xff;
-    }
-    A = res;
+    Z = D;
+    N = D >> 8;
     CLK += 2;
 }
 
 static void std(void)
 {
-    unsigned res = (A << 8) | B;
-
-    Z = res;
-    N = A;
+    Z = D;
+    N = D >> 8;
     OV = 0;
-    WRMEM16(ea, res);
+    WRMEM16(ea, D);
 }
 
-static void st16(unsigned arg)
+static void st16(WORD arg)
 {
-    unsigned res = arg;
-
-    Z = res;
-    N = res >> 8;
+    Z = arg;
+    N = arg >> 8;
     OV = 0;
-    WRMEM16(ea, res);
+    WRMEM16(ea, arg);
 }
 
-static void subd(unsigned val)
+static void subd(WORD val)
 {
-    unsigned arg = (A << 8) | B;
-    unsigned res = arg - val;
+    DWORD res = D - val;
 
     C = res & 0x10000;
     Z = res &= 0xffff;
-    OV = ((arg ^ val) & (arg ^ res)) >> 8;
-    A = N = res >> 8;
-    B = res & 0xff;
+    OV = ((D ^ val) & (D ^ res)) >> 8;
+    N = res >> 8;
+    D = res;
 }
 
 /* stack instructions */
 
 static void pshs(void)
 {
-    unsigned post = imm_byte();
+    BYTE post = imm_byte();
 
     CLK += 5;
 
     if (post & 0x80) {
         CLK += 2;
-        S = (S - 2) & 0xffff;
-        write_stack16(S, PC & 0xffff);
+        S -= 2;
+        write_stack16(S, PC);
     }
     if (post & 0x40) {
         CLK += 2;
-        S = (S - 2) & 0xffff;
+        S -= 2;
         write_stack16(S, U);
     }
     if (post & 0x20) {
         CLK += 2;
-        S = (S - 2) & 0xffff;
+        S -= 2;
         write_stack16(S, Y);
     }
     if (post & 0x10) {
         CLK += 2;
-        S = (S - 2) & 0xffff;
+        S -= 2;
         write_stack16(S, X);
     }
     if (post & 0x08) {
-        CLK += 1;
-        S = (S - 1) & 0xffff;
+        CLK++;
+        S--;
         write_stack(S, DP >> 8);
     }
     if (post & 0x04) {
-        CLK += 1;
-        S = (S - 1) & 0xffff;
+        CLK++;
+        S--;
         write_stack(S, B);
     }
     if (post & 0x02) {
-        CLK += 1;
-        S = (S - 1) & 0xffff;
+        CLK++;
+        S--;
         write_stack(S, A);
     }
     if (post & 0x01) {
-        CLK += 1;
-        S = (S - 1) & 0xffff;
-        write_stack (S, get_cc ());
+        CLK++;
+        S--;
+        write_stack(S, get_cc());
     }
 }
 
 static void pshu(void)
 {
-    unsigned post = imm_byte();
+    BYTE post = imm_byte();
 
     CLK += 5;
 
     if (post & 0x80) {
         CLK += 2;
-        U = (U - 2) & 0xffff;
-        write_stack16(U, PC & 0xffff);
+        U -= 2;
+        write_stack16(U, PC);
     }
     if (post & 0x40) {
         CLK += 2;
-        U = (U - 2) & 0xffff;
+        U -= 2;
         write_stack16(U, S);
     }
     if (post & 0x20) {
         CLK += 2;
-        U = (U - 2) & 0xffff;
+        U -= 2;
         write_stack16(U, Y);
     }
     if (post & 0x10) {
         CLK += 2;
-        U = (U - 2) & 0xffff;
+        U -= 2;
         write_stack16(U, X);
     }
     if (post & 0x08) {
-        CLK += 1;
-        U = (U - 1) & 0xffff;
+        CLK++;
+        U--;
         write_stack(U, DP >> 8);
     }
     if (post & 0x04) {
-        CLK += 1;
-        U = (U - 1) & 0xffff;
+        CLK++;
+        U--;
         write_stack(U, B);
     }
     if (post & 0x02) {
-        CLK += 1;
-        U = (U - 1) & 0xffff;
+        CLK++;
+        U--;
         write_stack(U, A);
     }
     if (post & 0x01) {
-        CLK += 1;
-        U = (U - 1) & 0xffff;
-        write_stack(U, get_cc ());
+        CLK++;
+        U--;
+        write_stack(U, get_cc());
     }
 }
 
 static void puls(void)
 {
-    unsigned post = imm_byte();
+    BYTE post = imm_byte();
 
     CLK += 5;
 
     if (post & 0x01) {
-        CLK += 1;
-        set_cc(read_stack(S));
-        S = (S + 1) & 0xffff;
+        CLK++;
+        set_cc(read_stack(S++));
     }
     if (post & 0x02) {
-        CLK += 1;
-        A = read_stack(S);
-        S = (S + 1) & 0xffff;
+        CLK++;
+        A = read_stack(S++);
     }
     if (post & 0x04) {
-        CLK += 1;
-        B = read_stack(S);
-        S = (S + 1) & 0xffff;
+        CLK++;
+        B = read_stack(S++);
     }
     if (post & 0x08) {
-        CLK += 1;
-        DP = read_stack(S) << 8;
-        S = (S + 1) & 0xffff;
+        CLK++;
+        DP = read_stack(S++) << 8;
     }
     if (post & 0x10) {
         CLK += 2;
         X = read_stack16(S);
-        S = (S + 2) & 0xffff;
+        S += 2;
     }
     if (post & 0x20) {
         CLK += 2;
         Y = read_stack16(S);
-        S = (S + 2) & 0xffff;
+        S += 2;
     }
     if (post & 0x40) {
         CLK += 2;
         U = read_stack16(S);
-        S = (S + 2) & 0xffff;
+        S += 2;
     }
     if (post & 0x80) {
         CLK += 2;
         PC = read_stack16(S);
-        check_pc();
-        S = (S + 2) & 0xffff;
+        S += 2;
     }
 }
 
 static void pulu(void)
 {
-    unsigned post = imm_byte();
+    BYTE post = imm_byte();
 
     CLK += 5;
 
     if (post & 0x01) {
-        CLK += 1;
-        set_cc(read_stack(U));
-        U = (U + 1) & 0xffff;
+        CLK++;
+        set_cc(read_stack(U++));
     }
     if (post & 0x02) {
-        CLK += 1;
-        A = read_stack(U);
-        U = (U + 1) & 0xffff;
+        CLK++;
+        A = read_stack(U++);
     }
     if (post & 0x04) {
-        CLK += 1;
-        B = read_stack(U);
-        U = (U + 1) & 0xffff;
+        CLK++;
+        B = read_stack(U++);
     }
     if (post & 0x08) {
-        CLK += 1;
-        DP = read_stack(U) << 8;
-        U = (U + 1) & 0xffff;
+        CLK++;
+        DP = read_stack(U++) << 8;
     }
     if (post & 0x10) {
         CLK += 2;
         X = read_stack16(U);
-        U = (U + 2) & 0xffff;
+        U += 2;
     }
     if (post & 0x20) {
         CLK += 2;
         Y = read_stack16(U);
-        U = (U + 2) & 0xffff;
+        U += 2;
     }
     if (post & 0x40) {
         CLK += 2;
         S = read_stack16(U);
-        U = (U + 2) & 0xffff;
+        U += 2;
     }
     if (post & 0x80) {
         CLK += 2;
         PC = read_stack16(U);
-        check_pc();
-        U = (U + 2) & 0xffff;
+        U += 2;
     }
 }
 
@@ -1436,8 +1355,8 @@ static void nop(void)
 
 static void jsr(void)
 {
-    S = (S - 2) & 0xffff;
-    write_stack16(S, PC & 0xffff);
+    S -= 2;
+    write_stack16(S, PC);
     change_pc(ea);
 }
 
@@ -1445,54 +1364,45 @@ static void rti(void)
 {
     CLK += 6;
     set_cc(read_stack(S));
-    S = (S + 1) & 0xffff;
+    S++;
 
     if ((EFI & E_FLAG) != 0) {
         CLK += 9;
-        A = read_stack(S);
-        S = (S + 1) & 0xffff;
-        B = read_stack(S);
-        S = (S + 1) & 0xffff;
-        DP = read_stack(S) << 8;
-        S = (S + 1) & 0xffff;
+        A = read_stack(S++);
+        B = read_stack(S++);
+        DP = read_stack(S++) << 8;
         X = read_stack16(S);
-        S = (S + 2) & 0xffff;
+        S += 2;
         Y = read_stack16(S);
-        S = (S + 2) & 0xffff;
+        S += 2;
         U = read_stack16(S);
-        S = (S + 2) & 0xffff;
+        S += 2;
     }
     PC = read_stack16(S);
-    check_pc();
-    S = (S + 2) & 0xffff;
+    S += 2;
 }
 
 static void rts(void)
 {
     CLK += 5;
     PC = read_stack16(S);
-    check_pc();
-    S = (S + 2) & 0xffff;
+    S += 2;
 }
 
 void nmi(void)
 {
     EFI |= E_FLAG;
-    S = (S - 2) & 0xffff;
-    write_stack16(S, PC & 0xffff);
-    S = (S - 2) & 0xffff;
+    S -= 2;
+    write_stack16(S, PC);
+    S -= 2;
     write_stack16(S, U);
-    S = (S - 2) & 0xffff;
+    S -= 2;
     write_stack16(S, Y);
-    S = (S - 2) & 0xffff;
-    write_stack16(S, X);
-    S = (S - 1) & 0xffff;
-    write_stack(S, DP >> 8);
-    S = (S - 1) & 0xffff;
-    write_stack(S, B);
-    S = (S - 1) & 0xffff;
-    write_stack(S, A);
-    S = (S - 1) & 0xffff;
+    S -= 2;
+    write_stack16(S--, X);
+    write_stack(S--, DP >> 8);
+    write_stack(S--, B);
+    write_stack(S--, A);
     write_stack(S, get_cc());
     EFI |= I_FLAG;
 
@@ -1502,21 +1412,17 @@ void nmi(void)
 void irq(void)
 {
     EFI |= E_FLAG;
-    S = (S - 2) & 0xffff;
-    write_stack16(S, PC & 0xffff);
-    S = (S - 2) & 0xffff;
+    S -= 2;
+    write_stack16(S, PC);
+    S -= 2;
     write_stack16(S, U);
-    S = (S - 2) & 0xffff;
+    S -= 2;
     write_stack16(S, Y);
-    S = (S - 2) & 0xffff;
-    write_stack16(S, X);
-    S = (S - 1) & 0xffff;
-    write_stack(S, DP >> 8);
-    S = (S - 1) & 0xffff;
-    write_stack(S, B);
-    S = (S - 1) & 0xffff;
-    write_stack(S, A);
-    S = (S - 1) & 0xffff;
+    S -= 2;
+    write_stack16(S--, X);
+    write_stack(S--, DP >> 8);
+    write_stack(S--, B);
+    write_stack(S--, A);
     write_stack(S, get_cc());
     EFI |= I_FLAG;
 
@@ -1527,10 +1433,9 @@ void irq(void)
 void firq(void)
 {
     EFI &= ~E_FLAG;
-    S = (S - 2) & 0xffff;
-    write_stack16(S, PC & 0xffff);
-    S = (S - 1) & 0xffff;
-    write_stack(S, get_cc ());
+    S -= 2;
+    write_stack16(S--, PC);
+    write_stack(S, get_cc());
     EFI |= (I_FLAG | F_FLAG);
 
     change_pc(read16(0xfff6));
@@ -1542,21 +1447,17 @@ void swi(void)
     CLK += 19;
     //CLK++;        /* /VMA cycle */
     EFI |= E_FLAG;
-    S = (S - 2) & 0xffff;
-    write_stack16(S, PC & 0xffff);
-    S = (S - 2) & 0xffff;
+    S -= 2;
+    write_stack16(S, PC);
+    S -= 2;
     write_stack16(S, U);
-    S = (S - 2) & 0xffff;
+    S -= 2;
     write_stack16(S, Y);
-    S = (S - 2) & 0xffff;
-    write_stack16(S, X);
-    S = (S - 1) & 0xffff;
-    write_stack(S, DP >> 8);
-    S = (S - 1) & 0xffff;
-    write_stack(S, B);
-    S = (S - 1) & 0xffff;
-    write_stack(S, A);
-    S = (S - 1) & 0xffff;
+    S -= 2;
+    write_stack16(S--, X);
+    write_stack(S--, DP >> 8);
+    write_stack(S--, B);
+    write_stack(S--, A);
     write_stack(S, get_cc());
     EFI |= (I_FLAG | F_FLAG);
     //CLK++;        /* /VMA cycle */
@@ -1569,21 +1470,17 @@ void swi2(void)
     CLK += 20;
     //CLK++;        /* /VMA cycle */
     EFI |= E_FLAG;
-    S = (S - 2) & 0xffff;
+    S -= 2;
     write_stack16(S, PC & 0xffff);
-    S = (S - 2) & 0xffff;
+    S -= 2;
     write_stack16(S, U);
-    S = (S - 2) & 0xffff;
+    S -= 2;
     write_stack16(S, Y);
-    S = (S - 2) & 0xffff;
-    write_stack16(S, X);
-    S = (S - 1) & 0xffff;
-    write_stack(S, DP >> 8);
-    S = (S - 1) & 0xffff;
-    write_stack(S, B);
-    S = (S - 1) & 0xffff;
-    write_stack(S, A);
-    S = (S - 1) & 0xffff;
+    S -= 2;
+    write_stack16(S--, X);
+    write_stack(S--, DP >> 8);
+    write_stack(S--, B);
+    write_stack(S--, A);
     write_stack(S, get_cc());
     //CLK++;        /* /VMA cycle */
 
@@ -1595,22 +1492,18 @@ void swi3(void)
     CLK += 20;
     //CLK++;        /* /VMA cycle */
     EFI |= E_FLAG;
-    S = (S - 2) & 0xffff;
+    S -= 2;
     write_stack16(S, PC & 0xffff);
-    S = (S - 2) & 0xffff;
+    S -= 2;
     write_stack16(S, U);
-    S = (S - 2) & 0xffff;
+    S -= 2;
     write_stack16(S, Y);
-    S = (S - 2) & 0xffff;
-    write_stack16(S, X);
-    S = (S - 1) & 0xffff;
-    write_stack(S, DP >> 8);
-    S = (S - 1) & 0xffff;
-    write_stack(S, B);
-    S = (S - 1) & 0xffff;
-    write_stack(S, A);
-    S = (S - 1) & 0xffff;
-    write_stack(S, get_cc ());
+    S -= 2;
+    write_stack16(S--, X);
+    write_stack(S--, DP >> 8);
+    write_stack(S--, B);
+    write_stack(S--, A);
+    write_stack(S, get_cc());
     //CLK++;        /* /VMA cycle */
 
     change_pc(read16(0xfff2));
@@ -1622,21 +1515,17 @@ void trap(void)
     CLK += 20;
     //CLK++;        /* /VMA cycle */
     EFI |= E_FLAG;
-    S = (S - 2) & 0xffff;
+    S -= 2;
     write_stack16(S, PC & 0xffff);
-    S = (S - 2) & 0xffff;
+    S -= 2;
     write_stack16(S, U);
-    S = (S - 2) & 0xffff;
+    S -= 2;
     write_stack16(S, Y);
-    S = (S - 2) & 0xffff;
-    write_stack16(S, X);
-    S = (S - 1) & 0xffff;
-    write_stack(S, DP >> 8);
-    S = (S - 1) & 0xffff;
-    write_stack(S, B);
-    S = (S - 1) & 0xffff;
-    write_stack(S, A);
-    S = (S - 1) & 0xffff;
+    S -= 2;
+    write_stack16(S--, X);
+    write_stack(S--, DP >> 8);
+    write_stack(S--, B);
+    write_stack(S--, A);
     write_stack(S, get_cc());
     //CLK++;        /* /VMA cycle */
 
@@ -1657,7 +1546,7 @@ void sync(void)
 
 static void orcc(void)
 {
-    unsigned tmp = imm_byte();
+    BYTE tmp = imm_byte();
 
     set_cc(get_cc() | tmp);
     CLK += 3;
@@ -1665,7 +1554,7 @@ static void orcc(void)
 
 static void andcc(void)
 {
-    unsigned tmp = imm_byte();
+    BYTE tmp = imm_byte();
 
     set_cc(get_cc() & tmp);
     CLK += 3;
@@ -1726,8 +1615,8 @@ static void long_bsr(void)
 {
     INT16 tmp = (INT16)imm_word();
     ea = PC + tmp;
-    S = (S - 2) & 0xffff;
-    write_stack16(S, PC & 0xffff);
+    S -= 2;
+    write_stack16(S, PC);
     CLK += 9;
     change_pc(ea);
 }
@@ -1736,16 +1625,15 @@ static void bsr(void)
 {
     INT8 tmp = (INT8)imm_byte();
     ea = PC + tmp;
-    S = (S - 2) & 0xffff;
-    write_stack16(S, PC & 0xffff);
+    S -= 2;
+    write_stack16(S, PC);
     CLK += 7;
     change_pc(ea);
 }
 
 
 /* Execute 6809 code for a certain number of cycles. */
-void
-h6809_mainloop (struct interrupt_cpu_status_s *maincpu_int_status, alarm_context_t *maincpu_alarm_context)
+void h6809_mainloop (struct interrupt_cpu_status_s *maincpu_int_status, alarm_context_t *maincpu_alarm_context)
 {
   unsigned opcode;
 
@@ -1858,7 +1746,6 @@ h6809_mainloop (struct interrupt_cpu_status_s *maincpu_int_status, alarm_context
 	  direct ();
 	  CLK += 3;
 	  PC = ea;
-          check_pc ();
 	  break;		/* JMP direct */
 	case 0x0f:
 	  direct ();
@@ -2477,7 +2364,6 @@ h6809_mainloop (struct interrupt_cpu_status_s *maincpu_int_status, alarm_context
 	  indexed ();
 	  CLK += 1;
 	  PC = ea;
-          check_pc ();
 	  break;		/* JMP indexed */
 	case 0x6f:
 	  indexed ();
@@ -2551,7 +2437,6 @@ h6809_mainloop (struct interrupt_cpu_status_s *maincpu_int_status, alarm_context
 	  extended ();
 	  CLK += 4;
 	  PC = ea;
-          check_pc ();
 	  break;		/* JMP extended */
 	case 0x7f:
 	  extended ();
@@ -3151,16 +3036,15 @@ cpu_exit:
    return;
 }
 
-void
-cpu6809_reset (void)
+void cpu6809_reset (void)
 {
-  X = Y = S = U = A = B = DP = 0;
-  H = N = OV = C = 0;
-  Z = 1;
-  EFI = F_FLAG | I_FLAG;
+    X = Y = S = U = A = B = DP = 0;
+    H = N = OV = C = 0;
+    Z = 1;
+    EFI = F_FLAG | I_FLAG;
 #ifdef H6309
-  MD = E = F = V = 0;
+    MD = E = F = 0;
 #endif
 
-  change_pc (read16 (0xfffe));
+    change_pc read16(0xfffe));
 }
