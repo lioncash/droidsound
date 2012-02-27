@@ -35,12 +35,12 @@ static jstring NewString(JNIEnv *env, const char *str)
 
 
 struct GMEInfo {
-     Music_Emu *emu;
-     int currentSong;
-     int trackCount;
-     gme_info_t* lastTrack;
-     char mainTitle[256];
-     bool started;
+    Music_Emu *emu;
+    int currentSong;
+    int trackCount;
+    gme_info_t* lastTrack;
+    char mainTitle[256];
+    bool started;
 };
 
 

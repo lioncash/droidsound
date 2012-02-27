@@ -21,7 +21,7 @@ int samplerate = 44100;
 
 #define INFO_LENGTH 2
 
-/**** END DECLARATIONS ****/
+/**** END OF DECLARATIONS ****/
 
 
 static jstring NewString(JNIEnv *env, const char *str)

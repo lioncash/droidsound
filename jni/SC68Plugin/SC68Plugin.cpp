@@ -55,8 +55,8 @@ struct PlayData {
 };
 
 
-static void write_debug(int level, void * cookie, const char * fmt, va_list list) {
-
+static void write_debug(int level, void * cookie, const char * fmt, va_list list)
+{
     static char temp[1024];
     vsprintf(temp, fmt, list);
     __android_log_print(ANDROID_LOG_VERBOSE, "SC68Debug", temp);
@@ -230,7 +230,8 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getStrin
     
     sc68_music_info_t &info = pd->info;
 
-    switch(what) {
+    switch(what)
+    {
     case INFO_AUTHOR:
         return NewString(env, info.artist);
     case INFO_TITLE:
@@ -255,7 +256,8 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getIntInfo(
     sc68_music_info_t &info = pd->info;
 
 
-    switch(what) {
+    switch(what)
+    {
     case INFO_LENGTH:
         return info.trk.time_ms;
     case INFO_SUBTUNES:

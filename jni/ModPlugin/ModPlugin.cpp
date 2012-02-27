@@ -89,7 +89,8 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1load(JNIEnv
 
         int t = ModPlug_GetModuleType(mod);
 
-        switch(t) {
+        switch(t) 
+        {
         case MOD_TYPE_MOD:
             info->modType = "MOD";
             break;
@@ -127,8 +128,9 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1load(JNIEnv
 JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1unload(JNIEnv *env, jobject obj, jlong song)
 {
     ModInfo *info = (ModInfo*)song;
-    if(info->mod)
+    if(info->mod) {
         ModPlug_Unload(info->mod);
+    }
     delete info;
     info = NULL;
 }

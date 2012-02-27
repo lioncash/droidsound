@@ -283,11 +283,12 @@ JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_UADEPlugin_N_1exit(JNIEnv
 
 int init()
 {
-        char temp[256];
+    char temp[256];
         
-        if(eaglestore == 0) {
-                memset(&state, 0, sizeof state);
-                __android_log_print(ANDROID_LOG_VERBOSE, "UADEPlugin", "baseDir os '%s'", baseDir);
+    if(eaglestore == 0)
+    {
+        memset(&state, 0, sizeof state);
+        __android_log_print(ANDROID_LOG_VERBOSE, "UADEPlugin", "baseDir os '%s'", baseDir);
 
         uadeconf_loaded = uade_load_initial_config(&state, uadeconfname, sizeof(uadeconfname), NULL);
 
@@ -480,6 +481,7 @@ static int wait_token() {
             __android_log_print(ANDROID_LOG_VERBOSE, "UADE", "\nCan not receive events (TOKEN) from uade.\n");
             return 0;
         }
+        
         if (ret == 0) {
             __android_log_print(ANDROID_LOG_VERBOSE, "UADE", "\nEnd of input after reboot.\n");
             return 0;
@@ -503,7 +505,8 @@ JNIEXPORT void Java_com_ssb_droidsound_plugins_UADEPlugin_N_1unload(JNIEnv *env,
         return;
     }
     __android_log_print(ANDROID_LOG_VERBOSE, "UADE", "close3\n");
-        if (uade_send_short_message(UADE_COMMAND_TOKEN, &uadeipc)) {
+    
+    if (uade_send_short_message(UADE_COMMAND_TOKEN, &uadeipc)) {
         __android_log_print(ANDROID_LOG_VERBOSE, "UADE", "\nCan not send token\n");
         return;
     }
@@ -530,7 +533,7 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_UADEPlugin_N_1getSoundDat
         }
     }
 
-    uade_effect_run(&state.effects, dest, (soundPtr - dest)/2);
+    uade_effect_run(&state.effects, dest, (soundPtr - dest) / 2);
     env->ReleaseShortArrayElements(sArray, dest, 0);
 
     return soundPtr - dest;
@@ -572,7 +575,8 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_UADEPlugin_N_1getStrin
 
 JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_UADEPlugin_N_1setOption(JNIEnv *env, jclass cl, jint what, jint val)
 {
-    switch(what) {
+    switch(what)
+    {
     case OPT_FILTER:
         state.config.no_filter = (val ? 0 : 1);
         state.config.no_filter_set = 1;
