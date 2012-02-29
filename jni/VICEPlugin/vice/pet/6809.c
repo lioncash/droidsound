@@ -259,11 +259,6 @@ void sim_error(const char *format, ...)
     va_end(ap);
 }
 
-static inline void change_pc(WORD newPC)
-{
-    PC = newPC;
-}
-
 static inline BYTE imm_byte(void)
 {
     BYTE val = read8(PC);
@@ -284,9 +279,9 @@ static inline WORD imm_word(void)
 
 static void WRMEM16(WORD addr, WORD data)
 {
-    WRMEM(addr, data >> 8);
+    WRMEM(addr, (BYTE)(data >> 8));
     CLK++;
-    WRMEM(addr + 1, data & 0xff);
+    WRMEM((WORD)(addr + 1), (BYTE)(data & 0xff));
 }
 
 #define RDMEM(addr) read8(addr)
@@ -296,7 +291,7 @@ static WORD RDMEM16(WORD addr)
     WORD val = RDMEM(addr) << 8;
 
     CLK++;
-    val |= RDMEM(addr + 1);
+    val |= RDMEM((WORD)(addr + 1));
     return val;
 }
 
@@ -305,13 +300,13 @@ static WORD RDMEM16(WORD addr)
 
 static void write_stack16(WORD addr, WORD data)
 {
-    write_stack(addr + 1, data & 0xff);
-    write_stack(addr, data >> 8);
+    write_stack((WORD)(addr + 1), (BYTE)(data & 0xff));
+    write_stack(addr, (BYTE)(data >> 8));
 }
 
 static unsigned read_stack16(WORD addr)
 {
-    return (read_stack(addr) << 8) | read_stack(addr + 1);
+    return (read_stack(addr) << 8) | read_stack((WORD)(addr + 1));
 }
 
 static void direct(void)
@@ -928,7 +923,7 @@ static void set_reg(BYTE nro, WORD val)
             B = val & 0xff;
             break;
         case 10:
-            set_cc(val & 0xff);
+            set_cc((BYTE)(val & 0xff));
             break;
         case 11:
             DP = (val & 0xff) << 8;
@@ -954,7 +949,7 @@ static BYTE adc(BYTE arg, BYTE val)
     N = Z = res &= 0xff;
     OV = H = arg ^ val ^ res ^ C;
 
-    return res;
+    return (BYTE)res;
 }
 
 static BYTE add(BYTE arg, BYTE val)
@@ -965,7 +960,7 @@ static BYTE add(BYTE arg, BYTE val)
     N = Z = res &= 0xff;
     OV = H = arg ^ val ^ res ^ C;
 
-    return res;
+    return (BYTE)res;
 }
 
 static BYTE and(BYTE arg, BYTE val)
@@ -987,7 +982,7 @@ static BYTE asl(BYTE arg)		/* same as lsl */
     OV = arg ^ res;
     CLK += 2;
 
-    return res;
+    return (BYTE)res;
 }
 
 static BYTE asr(BYTE arg)
@@ -998,7 +993,7 @@ static BYTE asr(BYTE arg)
     N = Z = res = (res >> 1) & 0xff;
     CLK += 2;
 
-    return res;
+    return (BYTE)res;
 }
 
 static void bit(BYTE arg, BYTE val)
@@ -1053,7 +1048,8 @@ static void daa(void)
     }
 
     C |= (res & 0x100);
-    A = N = Z = res &= 0xff;
+    N = Z = res &= 0xff;
+    A = (BYTE)res;
 
     CLK += 2;
 }
@@ -1086,12 +1082,12 @@ static void exg(void)
     BYTE post = imm_byte();
 
     if (((post ^ (post << 4)) & 0x80) == 0) {
-        tmp1 = get_reg(post >> 4);
-        tmp2 = get_reg(post & 15);
+        tmp1 = get_reg((BYTE)(post >> 4));
+        tmp2 = get_reg((BYTE)(post & 15));
     }
 
-    set_reg(post & 15, tmp1);
-    set_reg(post >> 4, tmp2);
+    set_reg((BYTE)(post & 15), tmp1);
+    set_reg((BYTE)(post >> 4), tmp2);
 
     CLK += 8;
 }
@@ -1166,7 +1162,7 @@ static BYTE rol(BYTE arg)
     OV = arg ^ res;
     CLK += 2;
 
-    return res;
+    return (BYTE)res;
 }
 
 static BYTE ror(BYTE arg)
@@ -1188,7 +1184,7 @@ static BYTE sbc(BYTE arg, BYTE val)
     N = Z = res &= 0xff;
     OV = (arg ^ val) & (arg ^ res);
 
-    return res;
+    return (BYTE)res;
 }
 
 static void st(BYTE arg)
@@ -1207,7 +1203,7 @@ static BYTE sub(BYTE arg, BYTE val)
     N = Z = res &= 0xff;
     OV = (arg ^ val) & (arg ^ res);
 
-    return res;
+    return (BYTE)res;
 }
 
 static void tst(BYTE arg)
@@ -1223,10 +1219,10 @@ static void tfr(void)
     BYTE post = imm_byte();
 
     if (((post ^ (post << 4)) & 0x80) == 0) {
-        tmp1 = get_reg (post >> 4);
+        tmp1 = get_reg ((BYTE)(post >> 4));
     }
 
-    set_reg(post & 15, tmp1);
+    set_reg((BYTE)(post & 15), tmp1);
 
     CLK += 6;
 }
@@ -1247,7 +1243,7 @@ static void addd(WORD val)
     Z = res &= 0xffff;
     OV = ((D ^ res) & (val ^ res)) >> 8;
     N = res >> 8;
-    D = res;
+    D = (WORD)res;
 }
 
 static void cmp16(WORD arg, WORD val)
@@ -1309,7 +1305,7 @@ static void subd(WORD val)
     Z = res &= 0xffff;
     OV = ((D ^ val) & (D ^ res)) >> 8;
     N = res >> 8;
-    D = res;
+    D = (WORD)res;
 }
 
 /* stack instructions */
@@ -1343,7 +1339,7 @@ static void pshs(void)
     if (post & 0x08) {
         CLK++;
         S--;
-        write_stack(S, DP >> 8);
+        write_stack(S, (BYTE)(DP >> 8));
     }
     if (post & 0x04) {
         CLK++;
@@ -1391,7 +1387,7 @@ static void pshu(void)
     if (post & 0x08) {
         CLK++;
         U--;
-        write_stack(U, DP >> 8);
+        write_stack(U, (BYTE)(DP >> 8));
     }
     if (post & 0x04) {
         CLK++;
@@ -1509,7 +1505,7 @@ static void jsr(void)
 {
     S -= 2;
     write_stack16(S, PC);
-    change_pc(ea);
+    PC = ea;
 }
 
 static void rti(void)
@@ -1552,13 +1548,13 @@ void nmi(void)
     write_stack16(S, Y);
     S -= 2;
     write_stack16(S--, X);
-    write_stack(S--, DP >> 8);
+    write_stack(S--, (BYTE)(DP >> 8));
     write_stack(S--, B);
     write_stack(S--, A);
     write_stack(S, get_cc());
     EFI |= I_FLAG;
 
-    change_pc(read16(0xfffc));
+    PC = read16(0xfffc);
 }
 
 void irq(void)
@@ -1572,13 +1568,13 @@ void irq(void)
     write_stack16(S, Y);
     S -= 2;
     write_stack16(S--, X);
-    write_stack(S--, DP >> 8);
+    write_stack(S--, (BYTE)(DP >> 8));
     write_stack(S--, B);
     write_stack(S--, A);
     write_stack(S, get_cc());
     EFI |= I_FLAG;
 
-    change_pc(read16(0xfff8));
+    PC = read16(0xfff8);
     irqs_pending = 0;
 }
 
@@ -1590,7 +1586,7 @@ void firq(void)
     write_stack(S, get_cc());
     EFI |= (I_FLAG | F_FLAG);
 
-    change_pc(read16(0xfff6));
+    PC = read16(0xfff6);
     firqs_pending = 0;
 }
 
@@ -1607,14 +1603,14 @@ void swi(void)
     write_stack16(S, Y);
     S -= 2;
     write_stack16(S--, X);
-    write_stack(S--, DP >> 8);
+    write_stack(S--, (BYTE)(DP >> 8));
     write_stack(S--, B);
     write_stack(S--, A);
     write_stack(S, get_cc());
     EFI |= (I_FLAG | F_FLAG);
     //CLK++;        /* /VMA cycle */
 
-    change_pc(read16(0xfffa));
+    PC = read16(0xfffa);
 }
 
 void swi2(void)
@@ -1623,20 +1619,20 @@ void swi2(void)
     //CLK++;        /* /VMA cycle */
     EFI |= E_FLAG;
     S -= 2;
-    write_stack16(S, PC & 0xffff);
+    write_stack16(S, PC);
     S -= 2;
     write_stack16(S, U);
     S -= 2;
     write_stack16(S, Y);
     S -= 2;
     write_stack16(S--, X);
-    write_stack(S--, DP >> 8);
+    write_stack(S--, (BYTE)(DP >> 8));
     write_stack(S--, B);
     write_stack(S--, A);
     write_stack(S, get_cc());
     //CLK++;        /* /VMA cycle */
 
-    change_pc(read16(0xfff4));
+    PC = read16(0xfff4);
 }
 
 void swi3(void)
@@ -1645,20 +1641,20 @@ void swi3(void)
     //CLK++;        /* /VMA cycle */
     EFI |= E_FLAG;
     S -= 2;
-    write_stack16(S, PC & 0xffff);
+    write_stack16(S, PC);
     S -= 2;
     write_stack16(S, U);
     S -= 2;
     write_stack16(S, Y);
     S -= 2;
     write_stack16(S--, X);
-    write_stack(S--, DP >> 8);
+    write_stack(S--, (BYTE)(DP >> 8));
     write_stack(S--, B);
     write_stack(S--, A);
     write_stack(S, get_cc());
     //CLK++;        /* /VMA cycle */
 
-    change_pc(read16(0xfff2));
+    PC = read16(0xfff2);
 }
 
 #ifdef H6309
@@ -1681,7 +1677,7 @@ void trap(void)
     write_stack(S, get_cc());
     //CLK++;        /* /VMA cycle */
 
-    change_pc(read16(0xfff0));
+    PC = read16(0xfff0);
 }
 #endif
 
@@ -1700,7 +1696,7 @@ static void orcc(void)
 {
     BYTE tmp = imm_byte();
 
-    set_cc(get_cc() | tmp);
+    set_cc((BYTE)(get_cc() | tmp));
     CLK += 3;
 }
 
@@ -1708,7 +1704,7 @@ static void andcc(void)
 {
     BYTE tmp = imm_byte();
 
-    set_cc(get_cc() & tmp);
+    set_cc((BYTE)(get_cc() & tmp));
     CLK += 3;
 }
 
@@ -1732,7 +1728,7 @@ static void andcc(void)
 static void bra(void)
 {
     INT8 tmp = (INT8)imm_byte();
-    change_pc(PC + tmp);
+    PC += tmp;
 }
 
 static void branch(unsigned cond)
@@ -1740,7 +1736,7 @@ static void branch(unsigned cond)
     if (cond) {
         bra();
     } else {
-        change_pc(PC + 1);
+        PC++;
     }
 
     CLK += 3;
@@ -1748,8 +1744,9 @@ static void branch(unsigned cond)
 
 static void long_bra(void)
 {
-    INT16 tmp = (INT16)imm_word();
-    change_pc(PC + tmp);
+    WORD tmp = imm_word();
+
+    PC += tmp;
 }
 
 static void long_branch(unsigned cond)
@@ -1758,29 +1755,31 @@ static void long_branch(unsigned cond)
         long_bra();
         CLK += 6;
     } else {
-        change_pc(PC + 2);
+        PC += 2;
         CLK += 5;
     }
 }
 
 static void long_bsr(void)
 {
-    INT16 tmp = (INT16)imm_word();
+    WORD tmp = imm_word();
+
     ea = PC + tmp;
     S -= 2;
     write_stack16(S, PC);
     CLK += 9;
-    change_pc(ea);
+    PC = ea;
 }
 
 static void bsr(void)
 {
     INT8 tmp = (INT8)imm_byte();
+
     ea = PC + tmp;
     S -= 2;
     write_stack16(S, PC);
     CLK += 7;
-    change_pc(ea);
+    PC = ea;
 }
 
 /* Undocumented 6809 specific code */
@@ -1798,6 +1797,20 @@ void ccrs(void)
     set_cc(0);
     C = tmp_c;
     H = tmp_h << 4;
+    /* TODO: cycle count */
+}
+
+void scc(BYTE arg)
+{
+    N = 0x80;
+    Z = OV = 0;
+}
+
+void st_imm(WORD arg)
+{
+    WRMEM(PC++, arg & 0xff);
+    N = 0x80;
+    Z = OV = 0;
     /* TODO: cycle count */
 }
 
@@ -1820,7 +1833,7 @@ void swires(void)
     write_stack(S, get_cc());
     EFI |= (I_FLAG | F_FLAG);
 
-    change_pc(read16(0xfffe));
+    PC = read16(0xfffe);
 }
 #endif
 
@@ -1884,7 +1897,8 @@ static WORD com16(WORD arg)
 {
     WORD res = ~arg;
 
-    N = Z = res;
+    Z = res;
+    N = res >> 8;
     OV = 0;
     C = 1;
     /* TODO: cycle count */
@@ -1909,7 +1923,8 @@ static WORD ror16(WORD arg)
     WORD res = (arg >> 1) | ((C != 0) << 15);
 
     C = arg & 1;
-    N = Z = res;
+    Z = res;
+    N = res >> 8;
     /* TODO: cycle count */
 
     return res;
@@ -1920,7 +1935,8 @@ static WORD asr16(WORD arg)
     DWORD res = (SWORD)arg;
 
     C = res & 1;
-    N = Z = res = (res >> 1) & 0xffff;
+    Z = res = (res >> 1) & 0xffff;
+    N = res >> 8;
     CLK += 2;
 
     return res;
@@ -1931,7 +1947,8 @@ static WORD asl16(WORD arg)		/* same as lsl16 */
     DWORD res = arg << 1;
 
     C = res & 0x10000;
-    N = Z = res &= 0xffff;
+    Z = res &= 0xffff;
+    N = res >> 8;
     OV = (arg ^ res) >> 8;
     /* TODO: cycle count */
 
@@ -1943,7 +1960,8 @@ static WORD rol16(WORD arg)
     DWORD res = (arg << 1) + (C != 0);
 
     C = res & 0x10000;
-    N = Z = res &= 0xffff;
+    Z = res &= 0xffff;
+    N = res >> 8;
     OV = (arg ^ res) >> 8;
     /* TODO: cycle count */
 
@@ -1954,7 +1972,8 @@ static WORD dec16(WORD arg)
 {
     WORD res = arg - 1;
 
-    N = Z = res;
+    Z = res;
+    N = res >> 8;
     OV = (arg & ~res) >> 8;
     /* TODO: cycle count */
 
@@ -1965,7 +1984,8 @@ static WORD inc16(WORD arg)
 {
     WORD res = arg + 1;
 
-    N = Z = res;
+    Z = res;
+    N = res >> 8;
     OV = (~arg & res) >> 8;
     /* TODO: cycle count */
 
@@ -1974,7 +1994,8 @@ static WORD inc16(WORD arg)
 
 static void tst16(WORD arg)
 {
-    N = Z = arg;
+    Z = arg;
+    N = arg >> 8;
     OV = 0;
     /* TODO: cycle count */
 }
@@ -1985,6 +2006,96 @@ static WORD clr16(WORD arg)
     /* TODO: cycle count */
 
     return 0;
+}
+
+static WORD sub16(WORD arg, WORD val)
+{
+    DWORD res = arg - val;
+
+    C = res & 0x10000;
+    Z = res &= 0xffff;
+    N = res >> 8;
+    OV = ((arg ^ val) & (arg ^ res)) >> 8;
+
+    return res;
+}
+
+static WORD sbc16(WORD arg, WORD val)
+{
+    DWORD res = arg - val - (C != 0);
+
+    C = res & 0x10000;
+    Z = res &= 0xffff;
+    N = res >> 8;
+    OV = ((arg ^ val) & (arg ^ res)) >> 8;
+
+    return res;
+}
+
+static WORD and16(WORD arg, WORD val)
+{
+    WORD res = arg & val;
+
+    Z = res;
+    N = res >> 8;
+    OV = 0;
+
+    return res;
+}
+
+static void bit16(WORD arg, WORD val)
+{
+    WORD res = arg & val;
+
+    Z = res;
+    N = res >> 8;
+    OV = 0;
+}
+
+static WORD eor16(WORD arg, WORD val)
+{
+    WORD res = arg ^ val;
+
+    Z = res;
+    N = res >> 8;
+    OV = 0;
+
+    return res;
+}
+
+static WORD adc16(WORD arg, WORD val)
+{
+    DWORD res = arg + val + (C != 0);
+
+    C = (res >> 1) & 0x8000;
+    Z = res &= 0xffff;
+    N = res >> 8;
+    OV = H = (arg ^ val ^ res ^ C) >> 8;
+
+    return res;
+}
+
+static WORD or16(WORD arg, WORD val)
+{
+    WORD res = arg | val;
+
+    Z = res;
+    N = res >> 8;
+    OV = 0;
+
+    return res;
+}
+
+static WORD add16(WORD arg, WORD val)
+{
+    DWORD res = arg + val;
+
+    C = (res >> 1) & 0x8000;
+    Z = res &= 0xffff;
+    N = res >> 8;
+    OV = H = (arg ^ val ^ res ^ C) >> 8;
+
+    return res;
 }
 #endif
 
@@ -2893,72 +3004,334 @@ void h6809_mainloop (struct interrupt_cpu_status_s *maincpu_int_status, alarm_co
                              WRMEM(ea, clr(RDMEM(ea)));
                              break;
 #endif
-#ifdef H6309
-	      case 0x80:	/* SUBW */
-		break;
-	      case 0x81:	/* CMPW */
-		break;
-	      case 0x82:	/* SBCD */
-		break;
+#ifdef FULL6809
+                         case 0x80:	/* SUBA immediate (UNDOC) */
+                             CLK += 2;
+                             A = sub(A, imm_byte());
+                             break;
 #endif
-	      case 0x83:
-		CLK += 5;
-		cmp16 (get_d (), imm_word ());
-		break;
 #ifdef H6309
-	      case 0x84:	/* ANDD */
-		break;
-	      case 0x85:	/* BITD */
-		break;
-	      case 0x86:	/* LDW */
-		break;
-	      case 0x88:	/* EORD */
-		break;
-	      case 0x89:	/* ADCD */
-		break;
-	      case 0x8a:	/* ORD */
-		break;
-	      case 0x8b:	/* ADDW */
-		break;
+                         case 0x80:	/* SUBW immediate */
+                             /* TODO: cycle count */
+                             W = sub16(W, imm_word());
+                             break;
 #endif
-	      case 0x8c:
-		CLK += 5;
-		cmp16 (Y, imm_word ());
-		break;
-	      case 0x8e:
-		CLK += 4;
-		Y = ld16 (imm_word ());
-		break;
+#ifdef FULL6809
+                         case 0x81:	/* CMPA immediate (UNDOC) */
+                             CLK += 2;
+                             cmp(A, imm_byte());
+                             break;
+#endif
 #ifdef H6309
-	      case 0x90:	/* SUBW */
-		break;
-	      case 0x91:	/* CMPW */
-		break;
-	      case 0x92:	/* SBCD */
-		break;
+                         case 0x81:	/* CMPW immediate */
+                             /* TODO: cycle count */
+                             cmp16(W, imm_word());
+                             break;
 #endif
-	      case 0x93:
-		direct ();
-		CLK += 5;
-		cmp16 (get_d (), RDMEM16 (ea));
-		CLK++;
-		break;
-	      case 0x9c:
-		direct ();
-		CLK += 5;
-		cmp16 (Y, RDMEM16 (ea));
-		CLK++;
-		break;
-	      case 0x9e:
-		direct ();
-		CLK += 5;
-		Y = ld16 (RDMEM16 (ea));
-		break;
-	      case 0x9f:
-		direct ();
-		CLK += 5;
-		st16 (Y);
-		break;
+#ifdef FULL6809
+                         case 0x82:	/* SBCA immediate (UNDOC) */
+                             CLK += 2;
+                             A = sbc(A, imm_byte());
+                             break;
+#endif
+#ifdef H6309
+                         case 0x82:	/* SBCD immediate */
+                             /* TODO: cycle count */
+                             D = sbc16(D, imm_word());
+                             break;
+#endif
+                         case 0x83:	/* CMPD immediate */
+                             CLK += 5;
+                             cmp16(D, imm_word());
+                             break;
+#ifdef FULL6809
+                         case 0x84:	/* ANDA immediate (UNDOC) */
+                             CLK += 2;
+                             A = and(A, imm_byte());
+                             break;
+#endif
+#ifdef H6309
+                         case 0x84:	/* ANDD immediate */
+                             /* TODO: cycle count */
+                             D = and16(D, imm_word());
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x85:	/* BITA immediate (UNDOC) */
+                             CLK += 2;
+                             bit(A, imm_byte());
+                             break;
+#endif
+#ifdef H6309
+                         case 0x85:	/* BITD immediate */
+                             /* TODO: cycle count */
+                             bit16(D, imm_word());
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x86:	/* LDA immediate (UNDOC) */
+                             CLK += 2;
+                             A = ld(imm_byte());
+                             break;
+#endif
+#ifdef H6309
+                         case 0x86:	/* LDW immediate */
+                             /* TODO: cycle count */
+                             W = ld16(imm_word());
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x87:	/* SCC immediate (UNDOC) */
+                             /* TODO: cycle count */
+                             scc(imm_byte());
+                             break;
+                         case 0x88:	/* EORA immediate (UNDOC) */
+                             CLK += 2;
+                             A = eor(A, imm_byte());
+                             break;
+#endif
+#ifdef H6309
+                         case 0x88:	/* EORD immediate */
+                             /* TODO: cycle count */
+                             D = eor16(D, imm_word());
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x89:	/* ADCA immediate (UNDOC) */
+                             CLK += 2;
+                             A = adc(A, imm_byte());
+                             break;
+#endif
+#ifdef H6309
+                         case 0x89:	/* ADCD immediate */
+                             /* TODO: cycle count */
+                             D = adc16(D, imm_word());
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x8a:	/* ORA immediate (UNDOC) */
+                             CLK += 2;
+                             A = or(A, imm_byte());
+                             break;
+#endif
+#ifdef H6309
+                         case 0x8a:	/* ORD immediate */
+                             /* TODO: cycle count */
+                             D = or16(D, imm_word());
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x8b:	/* ADDA immediate (UNDOC) */
+                             CLK += 2;
+                             A = add(A, imm_byte());
+                             break;
+#endif
+#ifdef H6309
+                         case 0x8b:	/* ADDW immediate */
+                             /* TODO: cycle count */
+                             W = add16(W, imm_word());
+                             break;
+#endif
+                         case 0x8c:	/* CMPY immediate */
+                             CLK += 5;
+                             cmp16(Y, imm_word());
+                             break;
+#ifdef FULL6809
+                         case 0x8d:	/* BSR (UNDOC) */
+                             bsr();
+                             break;
+#endif
+                         case 0x8e:	/* LDY immediate (UNDOC) */
+                             CLK += 4;
+                             Y = ld16(imm_word());
+                             break;
+#ifdef FULL6809
+                         case 0x8f:	/* STX immediate (UNDOC) */
+                             /* TODO: cycle count */
+                             st_imm(X);
+                             break;
+                         case 0x90:	/* SUBA direct (UNDOC) */
+                             direct();
+                             CLK += 4;
+                             A = sub(A, RDMEM(ea));
+                             break;
+#endif
+#ifdef H6309
+                         case 0x90:	/* SUBW direct */
+                             direct();
+                             /* TODO: cycle count */
+                             W = sub16(W, RDMEM16(ea));                             
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x91:	/* CMPA direct (UNDOC) */
+                             direct();
+                             CLK += 4;
+                             cmp(A, RDMEM(ea));
+                             break;
+#endif
+#ifdef H6309
+                         case 0x91:	/* CMPW direct */
+                             direct();
+                             /* TODO: cycle count */
+                             cmp16(W, RDMEM16(ea));
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x92:	/* SBCA direct (UNDOC) */
+                             direct();
+                             CLK += 4;
+                             A = sbc(A, RDMEM(ea));
+                             break;
+#endif
+#ifdef H6309
+                         case 0x92:	/* SBCD direct */
+                             direct();
+                             /* TODO: cycle count */
+                             D = sbc16(D, RDMEM16(ea));
+                             break;
+#endif
+                         case 0x93:	/* CMPD direct */
+                             direct();
+                             CLK += 5;
+                             cmp16(D, RDMEM16(ea));
+                             CLK++;
+                             break;
+#ifdef FULL6809
+                         case 0x94:	/* ANDA direct (UNDOC) */
+                             direct();
+                             CLK += 4;
+                             A = and(A, RDMEM(ea));
+                             break;
+#endif
+#ifdef H6309
+                         case 0x94:	/* ANDD direct */
+                             direct();
+                             /* TODO: cycle count */
+                             D = and16(D, RDMEM16(ea));
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x95:	/* BITA direct (UNDOC) */
+                             direct();
+                             CLK += 4;
+                             bit(A, RDMEM(ea));
+                             break;
+#endif
+#ifdef H6309
+                         case 0x95:	/* BITD direct */
+                             direct();
+                             /* TODO: cycle count */
+                             bit16(D, RDMEM16(ea));
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x96:	/* LDA direct (UNDOC) */
+                             direct();
+                             CLK += 4;
+                             A = ld(RDMEM(ea));
+                             break;
+#endif
+#ifdef H6309
+                         case 0x96:	/* LDW direct */
+                             direct();
+                             /* TODO: cycle count */
+                             W = ld16(RDMEM16(ea));
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x97:	/* STA direct (UNDOC) */
+                             direct();
+                             CLK += 4;
+                             st(A);
+                             break;
+#endif
+#ifdef H6309
+                         case 0x97:	/* STW direct */
+                             direct();
+                             /* TODO: cycle count */
+                             st16(W);
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x98:	/* EORA direct (UNDOC) */
+                             direct();
+                             CLK += 4;
+                             A = eor(A, RDMEM(ea));
+                             break;
+#endif
+#ifdef H6309
+                         case 0x98:	/* EORD direct */
+                             direct();
+                             /* TODO: cycle count */
+                             D = eor16(D, RDMEM16(ea));
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x99:	/* ADCA direct (UNDOC) */
+                             direct();
+                             CLK += 4;
+                             A = adc(A, RDMEM(ea));
+                             break;
+#endif
+#ifdef H6309
+                         case 0x99:	/* ADCD direct */
+                             direct();
+                             /* TODO: cycle count */
+                             D = adc16(D, RDMEM16(ea));
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x9a:	/* ORA direct (UNDOC) */
+                             direct();
+                             CLK += 4;
+                             A = or(A, RDMEM(ea));
+                             break;
+#endif
+#ifdef H6309
+                         case 0x9a:	/* ORD direct */
+                             direct();
+                             /* TODO: cycle count */
+                             D = or16(D, RDMEM16(ea));
+                             break;
+#endif
+#ifdef FULL6809
+                         case 0x9b:	/* ADDA direct (UNDOC) */
+                             direct();
+                             CLK += 4;
+                             A = add(A, RDMEM(ea));
+                             break;
+#endif
+#ifdef H6309
+                         case 0x9b:	/* ADDW direct */
+                             direct();
+                             /* TODO: cycle count */
+                             W = add16(W, RDMEM16(ea));
+                             break;
+#endif
+                         case 0x9c:	/* CMPY direct */
+                             direct();
+                             CLK += 5;
+                             cmp16(Y, RDMEM16(ea));
+                             CLK++;
+                             break;
+#ifdef FULL6809
+                         case 0x9d:	/* JSR direct (undoc) */
+                             direct();
+                             CLK += 7;
+                             jsr();
+                             break;
+#endif
+                         case 0x9e:	/* LDY direct */
+                             direct();
+                             CLK += 5;
+                             Y = ld16(RDMEM16(ea));
+                             break;
+                         case 0x9f:	/* STY direct */
+                             direct();
+                             CLK += 5;
+                             st16(Y);
+                             break;
 	      case 0xa3:
 		CLK++;
 		indexed ();
@@ -4056,13 +4429,14 @@ cpu_exit:
 
 void cpu6809_reset (void)
 {
-    X = Y = S = U = A = B = DP = 0;
+    X = Y = S = U = DP = 0;
     H = N = OV = C = 0;
+    A = B = 0;
     Z = 1;
     EFI = F_FLAG | I_FLAG;
 #ifdef H6309
     MD = E = F = 0;
 #endif
 
-    change_pc(read16(0xfffe));
+    PC = read16(0xfffe);
 }
