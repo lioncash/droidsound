@@ -68,7 +68,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
     // If no channels are present/recognized
     if (vgmStream->channels <= 0)
     {
-        // Close down the stream
+        __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "No audio channels detected in file. Closing stream");
         close_vgmstream(vgmStream);
         vgmStream = NULL;
         return -1;
