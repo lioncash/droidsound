@@ -54,14 +54,14 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1loadF
     {
         return 0;
     }
-    
-    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File is playable");
 
     if (!vgmStream)
     {
         __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "Failed to open file");
         return 1;
     }
+    
+    __android_log_print(ANDROID_LOG_VERBOSE, "VGMStreamPlugin", "File is playable");
 
     env->ReleaseStringUTFChars(fname, s);
 
