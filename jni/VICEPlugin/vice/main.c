@@ -7,7 +7,7 @@
  *  Vesa-Matti Puro <vmp@lut.fi>
  *  Jarkko Sonninen <sonninen@lut.fi>
  *  Jouko Valta <jopi@stekt.oulu.fi>
- *  Andr� Fachat <a.fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <a.fachat@physik.tu-chemnitz.de>
  *  Andreas Boose <viceteam@t-online.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -112,12 +112,10 @@ int main_program(int argc, char **argv)
 
     archdep_init(&argc, argv);
 
-#ifndef __riscos
     if (atexit(main_exit) < 0) {
         archdep_startup_log_error("atexit");
         return -1;
     }
-#endif
 
     maincpu_early_init();
     machine_setup_context();
@@ -227,4 +225,3 @@ int main_program(int argc, char **argv)
 
     return 0;
 }
-

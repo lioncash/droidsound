@@ -1,9 +1,8 @@
 /*
- * cbm2iec.c - IEC bus handling for the CBM2.
+ * formel64.h - Cartridge handling, Formel64 cart.
  *
  * Written by
- *  Daniel Sladic <sladic@eecg.toronto.edu>
- *  Andre Fachat <fachat@physik.tu-chemnitz.de>
+ *  groepaz <groepaz@gmx.net>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -25,40 +24,30 @@
  *
  */
 
-#include "vice.h"
+#ifndef VICE_FORMEL64_H
+#define VICE_FORMEL64_H
 
 #include <stdio.h>
 
-#include "cbm2iec.h"
-#include "iecbus.h"
-#include "iecdrive.h"
 #include "types.h"
 
+struct snapshot_s;
+struct export_s;
 
-void cbm2iec_init(void)
-{
-}
+extern BYTE formel64_romh_read(WORD addr);
+extern BYTE formel64_romh_read_hirom(WORD addr);
+extern int formel64_romh_phi1_read(WORD addr, BYTE *value);
+extern int formel64_romh_phi2_read(WORD addr, BYTE *value);
+extern int formel64_peek_mem(struct export_s *export, WORD addr, BYTE *value);
 
-void iec_update_ports(void)
-{
-    /* Not used for now.  */
-}
+extern void formel64_config_init(void);
+extern void formel64_reset(void);
+extern void formel64_config_setup(BYTE *rawcart);
+extern int formel64_bin_attach(const char *filename, BYTE *rawcart);
+extern int formel64_crt_attach(FILE *fd, BYTE *rawcart);
+extern void formel64_detach(void);
 
-void iec_update_ports_embedded(void)
-{
-    iec_update_ports();
-}
+extern int formel64_snapshot_write_module(struct snapshot_s *s);
+extern int formel64_snapshot_read_module(struct snapshot_s *s);
 
-iecbus_t *iecbus_drive_port(void)
-{
-    return NULL;
-}
-
-void parallel_cable_drive_write(int type, BYTE data, int handshake, unsigned int dnr)
-{
-}
-
-int iec_available_busses(void)
-{
-    return IEC_BUS_IEEE;
-}
+#endif

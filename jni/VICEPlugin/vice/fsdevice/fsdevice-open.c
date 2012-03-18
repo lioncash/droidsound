@@ -9,7 +9,7 @@
  *  Jarkko Sonninen <sonninen@lut.fi>
  *  Jouko Valta <jopi@stekt.oulu.fi>
  *  Olaf Seibert <rhialto@mbfys.kun.nl>
- *  André Fachat <a.fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <a.fachat@physik.tu-chemnitz.de>
  *  Ettore Perazzoli <ettore@comm2000.it>
  *  pottendo <pottendo@gmx.net>
  *
@@ -369,9 +369,6 @@ int fsdevice_open(vdrive_t *vdrive, const BYTE *name, unsigned int length,
         goto out;
     }
 
-#ifdef __riscos
-    archdep_set_drive_leds(vdrive->unit - 8, 1);
-#endif
     fsdevice_error(vdrive, CBMDOS_IPE_OK);
 
 out:

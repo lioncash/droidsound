@@ -86,8 +86,11 @@
 
 /* Parallel cables available.  */
 #define DRIVE_PC_NONE     0
-#define DRIVE_PC_STANDARD 1
-#define DRIVE_PC_DD3      2
+#define DRIVE_PC_STANDARD 1  /* speed-dos userport cable */
+#define DRIVE_PC_DD3      2  /* dolphin-dos 3 userport cable */
+#define DRIVE_PC_FORMEL64 3  /* formel 64 cartridge */
+
+#define DRIVE_PC_NUM 4
 
 /* ------------------------------------------------------------------------- */
 
@@ -284,4 +287,3 @@ extern void drive_setup_context(void);
 extern int drive_resources_type_init(unsigned int default_type);
 
 #endif
-
