@@ -58,15 +58,6 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getFra
 
 /*
  * Class:     com_ssb_droidsound_plugins_VGMStreamPlugin
- * Method:    N_seekTo
- * Signature: (JI)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1seekTo
-  (JNIEnv *, jobject, jlong, jint);
-
-
-/*
- * Class:     com_ssb_droidsound_plugins_VGMStreamPlugin
  * Method:    N_getStringInfo
  * Signature: (JI)Ljava/lang/String;
  */

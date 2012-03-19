@@ -138,18 +138,12 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getSou
     return size;
 }
 
+
 JNIEXPORT jint Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1getFrameRate(JNIEnv *env, jobject obj, jlong song)
 {
     VGMSTREAM *vgm = (VGMSTREAM*)song;
 
     return vgm->sample_rate;
-}
-
-
-JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1seekTo(JNIEnv *, jobject, jlong, jint)
-{
-    /* To be implemented */
-    return false;
 }
 
 
