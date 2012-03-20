@@ -7,7 +7,7 @@
  * Based on old code by
  *  Daniel Sladic <sladic@eecg.toronto.edu>
  *  Ettore Perazzoli <ettore@comm2000.it>
- *  André Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *  Teemu Rantanen <tvr@cs.hut.fi>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -163,6 +163,8 @@ int drive_init(void)
     if (driverom_load_images() < 0) {
         resources_set_int("Drive8Type", DRIVE_TYPE_NONE);
         resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
+        resources_set_int("Drive10Type", DRIVE_TYPE_NONE);
+        resources_set_int("Drive11Type", DRIVE_TYPE_NONE);
         return -1;
     }
 

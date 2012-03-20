@@ -2,7 +2,7 @@
  * fdc.c - 1001/8x50 FDC emulation
  *
  * Written by
- *  Andre' Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -755,7 +755,7 @@ int fdc_attach_image(disk_image_t *image, unsigned int unit)
                 image, unit);
 #endif
 
-    if (unit != 8 && unit != 9)
+    if (unit < 8 || unit >= 8 + DRIVE_NUM)
         return -1;
 
     if (drive_check_dual(fdc[0].drive_type)) {
@@ -819,7 +819,7 @@ int fdc_detach_image(disk_image_t *image, unsigned int unit)
                 image, unit);
 #endif
 
-    if (image == NULL || (unit != 8 && unit != 9))
+    if (image == NULL || unit < 8 || unit >= (8+DRIVE_NUM))
         return -1;
 
     if (drive_check_dual(fdc[0].drive_type)) {
@@ -980,4 +980,3 @@ int fdc_snapshot_read_module(snapshot_t *p, int fnum)
 
     return 0;
 }
-
