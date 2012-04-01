@@ -137,6 +137,7 @@ LOCAL_SRC_FILES := \
     overrides/maincpu.c \
     overrides/mouse.c \
     overrides/monitor/monitor.c \
+    overrides/monitor/monitor_network.c \
     overrides/serial.c \
     overrides/sounddrv/sounddummy.c \
     overrides/vicii/vicii-draw.c \
@@ -154,6 +155,7 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH) \
     $(LOCAL_PATH)/vice/c64dtv \
     $(LOCAL_PATH)/vice/drive \
     $(LOCAL_PATH)/vice/imagecontents \
+    $(LOCAL_PATH)/vice/monitor \
     $(LOCAL_PATH)/vice/raster \
     $(LOCAL_PATH)/vice/sid \
     $(LOCAL_PATH)/vice/tape \
