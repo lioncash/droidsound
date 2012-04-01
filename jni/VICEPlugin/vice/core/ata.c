@@ -31,6 +31,11 @@
 #include <sys/types.h>
 #endif
 
+/* VAC++ has off_t in sys/stat.h */
+#ifdef __IBMC__
+#include <sys/stat.h>
+#endif
+
 #include <stdio.h>
 #include <string.h>
 
@@ -53,8 +58,8 @@
 #define ATA_DRQ 0x08
 #define ATA_ERR 0x01
 #define ATA_COPYRIGHT "KAJTAR ZSOLT (SOCI/SINGULAR)"
-#define ATA_SERIAL_NUMBER &"$Date:: 2011-12-23 01:59:13 #$"[8]
-#define ATA_REVISION &"$Revision:: 25058    $"[12]
+#define ATA_SERIAL_NUMBER &"$Date::                      $"[8]
+#define ATA_REVISION &"$Revision::          $"[12]
 
 #ifdef ATA_DEBUG
 #define debug(_x_) log_message _x_
