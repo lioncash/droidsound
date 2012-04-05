@@ -248,7 +248,8 @@ public class CollectionFragment extends Fragment {
 						android.R.layout.simple_list_item_2,
 						null,
 						new String[] { "title", "composer" },
-						new int[] { android.R.id.text1, android.R.id.text2 }
+						new int[] { android.R.id.text1, android.R.id.text2 },
+						0
 				);
 				searchView.setSuggestionsAdapter(ca);
 				new AsyncQueryResult(c, ca).executeOnExecutor(AsyncTask.SERIAL_EXECUTOR);

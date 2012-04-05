@@ -25,7 +25,6 @@ Thumbs.db
 *.lib
 *.sbr
 classes/
-libs/
 obj/
 gen/
 .idea/

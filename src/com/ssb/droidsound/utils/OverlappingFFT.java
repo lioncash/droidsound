@@ -96,8 +96,8 @@ public class OverlappingFFT {
 	/** Current index within accumulation buffer */
 	private int fftSamplesIdx;
 
-	/** Number of second level resamplings performed. */
-	private int secondLevelLatch;
+	///** Number of second level resamplings performed. */
+	//private int secondLevelLatch;
 
 	/** Cache for the 3rd FFT */
 	private short[] thirdFft = new short[512];
@@ -175,7 +175,7 @@ public class OverlappingFFT {
 
 		if (true) { //++ secondLevelLatch == 4) {
 			resample2oct(resampler[1], fftSamples[1], fftSamples[2]);
-			secondLevelLatch = 0;
+			//secondLevelLatch = 0;
 			thirdFft = new short[512];
 			FFT.fft(fftSamples[2], thirdFft);
 

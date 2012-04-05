@@ -33,7 +33,7 @@ class CollectionViewAdapter extends CursorAdapter {
 	private final ICursorFactory cursorFactory;
 
 	public CollectionViewAdapter(Context context, ICursorFactory cursorFactory) {
-		super(context, null);
+		super(context, null, false);
 		this.cursorFactory = cursorFactory;
 		requery();
 	}

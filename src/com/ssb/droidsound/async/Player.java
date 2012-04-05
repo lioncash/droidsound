@@ -221,15 +221,15 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 		AudioTrack audioTrack = new AudioTrack(
 				AudioManager.STREAM_MUSIC,
 				plugin.getFrameRate(),
-				AudioFormat.CHANNEL_CONFIGURATION_STEREO,
+				AudioFormat.CHANNEL_OUT_STEREO,
 				AudioFormat.ENCODING_PCM_16BIT,
 				plugin.getFrameRate() * 4,
 				AudioTrack.MODE_STREAM);
-		
+
 		// Let plugin set the playback rate if the plugin overrides getFrameRate().
 		// If not overridden, the playback rate will default to 44100Hz
 		audioTrack.setPlaybackRate(plugin.getFrameRate());
-		
+
         Intent sessionOpen = new Intent(AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION);
         sessionOpen.putExtra(AudioEffect.EXTRA_AUDIO_SESSION, audioTrack.getAudioSessionId());
         sessionOpen.putExtra(AudioEffect.EXTRA_PACKAGE_NAME, Application.packageName());

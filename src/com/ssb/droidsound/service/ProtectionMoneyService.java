@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.graphics.BitmapFactory;
 import android.os.Binder;
 import android.os.IBinder;
 
@@ -35,8 +36,10 @@ public class ProtectionMoneyService extends Service {
 	public class LocalBinder extends Binder {
 		public void setOngoingNotification(String text) {
 			if (text != null) {
-				Notification n = new Notification(R.drawable.droidsound64x64, "DroidSound", System.currentTimeMillis());
-				n.flags |= Notification.FLAG_ONGOING_EVENT;
+				Notification.Builder nb = new Notification.Builder(ProtectionMoneyService.this);
+				nb.setLargeIcon(BitmapFactory.decodeResource(getResources(), R.drawable.droidsound64x64));
+				nb.setContentTitle("DroidSound");
+				nb.setOngoing(true);
 
 				Log.i(TAG, "Waving white flag which says: %s", text);
 				PendingIntent p = PendingIntent.getActivity(
@@ -45,8 +48,9 @@ public class ProtectionMoneyService extends Service {
 						new Intent(ProtectionMoneyService.this, PlayerActivity.class),
 						0
 				);
-				n.setLatestEventInfo(ProtectionMoneyService.this, "DroidSound", text, p);
-				startForeground(NOTIFY_ID, n);
+				nb.setContentInfo(text);
+				nb.setContentIntent(p);
+				startForeground(NOTIFY_ID, nb.getNotification());
 			} else {
 				Log.i(TAG, "Hiding white flag.");
 				stopForeground(true);

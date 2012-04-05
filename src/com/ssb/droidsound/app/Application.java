@@ -98,7 +98,9 @@ public class Application extends android.app.Application {
 
 		setupModsDir();
 
-		PreferenceManager.setDefaultValues(this, R.layout.preferences, false);
+		PreferenceManager.setDefaultValues(this, R.layout.preferences_about, false);
+		PreferenceManager.setDefaultValues(this, R.layout.preferences_audio, false);
+		PreferenceManager.setDefaultValues(this, R.layout.preferences_database, false);
 		SharedPreferences prefs = getAppPreferences();
 		Map<String, ?> prefsMap = prefs.getAll();
 
