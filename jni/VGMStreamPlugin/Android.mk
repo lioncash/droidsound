@@ -178,6 +178,7 @@ LOCAL_SRC_FILES := \
     vgmstream/meta/ps2_gbts.c \
     vgmstream/meta/ps2_gcm.c \
     vgmstream/meta/ps2_hgc1.c \
+    vgmstream/meta/ps2_hsf.c \
     vgmstream/meta/ps2_iab.c \
     vgmstream/meta/ps2_ikm.c \
     vgmstream/meta/ps2_ild.c \
