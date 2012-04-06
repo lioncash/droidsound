@@ -1,0 +1,16 @@
+<preference-headers xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <header
+        android:fragment="com.ssb.droidsound.activity.SettingsActivity$AudioFragment"
+        android:summary="Plugins and default song length"
+        android:title="Audio settings" />
+    <header
+        android:fragment="com.ssb.droidsound.activity.SettingsActivity$DatabaseFragment"
+        android:summary="Rescan database"
+        android:title="Music index settings" />
+    <header
+        android:fragment="com.ssb.droidsound.activity.SettingsActivity$AboutFragment"
+        android:summary="Credits and information"
+        android:title="About DroidSound" />
+
+</preference-headers>

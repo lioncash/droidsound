@@ -1,0 +1,12 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="rescan_full"
+        android:summary="Clear database first, then scan all files"
+        android:title="Full rebuild of index" />
+
+    <Preference
+        android:key="rescan_pref"
+        android:summary="Scan sdcard for changes and update database"
+        android:title="Refresh index" />
+</PreferenceScreen>
