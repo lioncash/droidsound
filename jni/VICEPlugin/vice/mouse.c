@@ -789,5 +789,5 @@ BYTE mouse_get_y(void)
 	DBG(("mouse_get_y: invalid mouse_type"));
 	break;
     }
-    return 0xff;
 }
+    return 0xff;
