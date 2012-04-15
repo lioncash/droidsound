@@ -36,7 +36,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 
 	private static final String TAG = Player.class.getSimpleName();
 
-	private final SongDatabase db; /* fixme: get rid of this! */
+	private final SongDatabase db; /* FIXME: Get rid of this! */
 	private final DroidSoundPlugin plugin;
 	private final FilesEntry song;
 	private final String f1;
@@ -90,7 +90,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 		if (fft.get() == null) {
 			OverlappingFFT offt = new OverlappingFFT();
 			int fr = plugin.getFrameRate();
-			/* if the plugin is not yet ready, we'll just pass some default */
+			/* If the plugin is not yet ready, we'll just pass some default */
 			if (fr == 0) {
 				fr = 44100;
 			}

@@ -76,9 +76,10 @@ public class VisualizationInfoView extends SurfaceView {
 		}
 	}
 
+	private final Paint fftPaint = new Paint();
+	
 	@Override
 	protected void onDraw(Canvas canvas) {
-		Paint fftPaint = new Paint();
 		int width = getWidth();
 		int height = getHeight();
 		float fh = noteLabel.getFontMetrics().ascent + noteLabel.getFontMetrics().descent;

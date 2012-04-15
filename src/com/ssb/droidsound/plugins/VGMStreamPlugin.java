@@ -18,8 +18,11 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 		System.loadLibrary("vgmstream");
 	}
 
-	/* These are the supported extensions so far. I can guarantee more will come in the future. */
-	/* Most of the formats need to be tested before being actually added to the list            */
+	/* 
+	 * These are the supported extensions so far. I can guarantee more will come in the future.
+	 * Most of the formats need to be tested before being added to the list
+	 *             
+	 **/
 
 	/* Status of extensions in terms of stability:
 	 *

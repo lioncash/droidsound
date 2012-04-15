@@ -223,7 +223,7 @@ public class UADEPlugin extends DroidSoundPlugin {
 		}
 
 		String modMagic = new String(module, 0x438, 4, ISO88591);
-		/* magic sequences taken from modplugin's load_mod.cpp.
+		/* Magic sequences taken from modplugin's load_mod.cpp.
 		 * There are still some unrecognized MOD files that have no magic
 		 * signature, presumably the very first soundtracker formats. */
 		if (modMagic.matches("M\\.K\\.|M!K!|M&K!|N\\.T\\.|CD81|OKTA|FLT[4-9]|[2-9]CHN|[12][0-9]CH|3[0-2]CH|TDZ[4-9]|16CN|32CN")) {
