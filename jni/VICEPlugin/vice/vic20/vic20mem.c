@@ -3,7 +3,7 @@
  *
  * Written by
  *  Ettore Perazzoli <ettore@comm2000.it>
- *  André Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *  Daniel Kahlin <daniel@kahlin.net>
  *
  * Multiple memory configuration support originally by
@@ -93,6 +93,9 @@ read_func_ptr_t *_mem_read_tab_ptr;
 store_func_ptr_t *_mem_write_tab_ptr;
 BYTE **_mem_read_base_tab_ptr;
 int *mem_read_limit_tab_ptr;
+
+/* Current watchpoint state. 1 = watchpoints active, 0 = no watchpoints */
+static int watchpoints_active = 0;
 
 /* ------------------------------------------------------------------------- */
 
@@ -549,7 +552,7 @@ void mem_initialize_memory(void)
         _mem_write_tab_watch[i] = store_watch;
     }
 
-    mem_toggle_watchpoints(0, NULL);
+    mem_toggle_watchpoints(watchpoints_active, NULL);
 }
 
 void mem_toggle_watchpoints(int flag, void *context)
@@ -561,6 +564,7 @@ void mem_toggle_watchpoints(int flag, void *context)
         _mem_read_tab_ptr = _mem_read_tab_nowatch;
         _mem_write_tab_ptr = _mem_write_tab_nowatch;
     }
+    watchpoints_active = flag;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -753,4 +757,3 @@ int mem_patch_kernal(void)
 
     return 0;
 }
-
