@@ -34,7 +34,8 @@ static jstring NewString(JNIEnv *env, const char *str)
 }
 
 
-struct GMEInfo {
+struct GMEInfo
+{
     Music_Emu *emu;
     int currentSong;
     int trackCount;
@@ -208,24 +209,24 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1getString
     
     switch(what)
     {
-    case INFO_TITLE:
-        return NewString(env, info->mainTitle);
-    case INFO_SUBTUNE_TITLE:
-        if (track_count > 1) {
-            return NewString(env, info->lastTrack->song);
-        } else {
-            return 0;
-        }
-    case INFO_AUTHOR:
-        return NewString(env, info->lastTrack->author);
-    case INFO_COPYRIGHT:
-        return NewString(env, info->lastTrack->copyright);
-    case INFO_TYPE:
-        return NewString(env, info->lastTrack->system);
-    case INFO_GAME:
-        return NewString(env, info->lastTrack->game);
-    case INFO_COMMENT:
-        return NewString(env, info->lastTrack->comment);
+        case INFO_TITLE:
+            return NewString(env, info->mainTitle);
+        case INFO_SUBTUNE_TITLE:
+            if (track_count > 1) {
+                return NewString(env, info->lastTrack->song);
+            } else {
+                return 0;
+            }
+        case INFO_AUTHOR:
+            return NewString(env, info->lastTrack->author);
+        case INFO_COPYRIGHT:
+            return NewString(env, info->lastTrack->copyright);
+        case INFO_TYPE:
+            return NewString(env, info->lastTrack->system);
+        case INFO_GAME:
+            return NewString(env, info->lastTrack->game);
+        case INFO_COMMENT:
+            return NewString(env, info->lastTrack->comment);
     }
     return 0;
 }
@@ -236,12 +237,12 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_GMEPlugin_N_1getIntInfo(J
     GMEInfo *info = (GMEInfo*)song;
     switch(what)
     {
-    case INFO_LENGTH:
-        return info->lastTrack->length;
-    case INFO_SUBTUNES:
-        return info->trackCount;
-    case INFO_STARTTUNE:
-        return 0;
+        case INFO_LENGTH:
+            return info->lastTrack->length;
+        case INFO_SUBTUNES:
+            return info->trackCount;
+        case INFO_STARTTUNE:
+            return 0;
     }
     return -1;
 }

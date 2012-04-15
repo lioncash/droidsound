@@ -46,7 +46,8 @@ static jstring NewString(JNIEnv *env, const char *str)
 }
 
 
-struct PlayData {
+struct PlayData
+{
     sc68_t *sc68;
     sc68_music_info_t info;
     int currentTrack;
@@ -69,15 +70,16 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1load(JNIEn
     memset(&init68, 0, sizeof(init68));
 
     init68.msg_handler = (sc68_msg_t)write_debug;
+    
 #ifdef _DEBUG
     init68.debug = vfprintf;
     init68.debug_cookie = stderr;
 #endif
 
-
     __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "INIT");
 
-    if (sc68_init(&init68) != 0) {
+    if (sc68_init(&init68) != 0)
+    {
         __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "!!!!!!!!! INIT FAILED");
         return 0;
     }
@@ -94,7 +96,8 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1load(JNIEn
 
     __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "SIZE %d ARRAYLEN %d", size, alen);
 
-    if (sc68_verify_mem(ptr, size) < 0) {
+    if (sc68_verify_mem(ptr, size) < 0)
+    {
         env->ReleaseByteArrayElements(bArray, ptr, 0);
         sc68_destroy(sc68);
         sc68_shutdown();
@@ -102,7 +105,8 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1load(JNIEn
     }
 
     __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "STEP");
-    if (sc68_load_mem(sc68, ptr, size)) {
+    if (sc68_load_mem(sc68, ptr, size))
+    {
         env->ReleaseByteArrayElements(bArray, ptr, 0);
         sc68_destroy(sc68);
         sc68_shutdown();
@@ -115,7 +119,8 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1load(JNIEn
     pd->trackChanged = false;
 
     sc68_play(pd->sc68, 0, 0);
-    if (sc68_process(pd->sc68, NULL, 0) < 0) {
+    if (sc68_process(pd->sc68, NULL, 0) < 0)
+    {
         env->ReleaseByteArrayElements(bArray, ptr, 0);
         free(pd);
         sc68_destroy(sc68);
@@ -125,7 +130,8 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1load(JNIEn
 
     pd->defaultTrack = sc68_play(pd->sc68, -1, 0);
 
-    if (pd->defaultTrack == 0) {
+    if (pd->defaultTrack == 0)
+    {
         pd->defaultTrack = 1;
     }
 
@@ -143,14 +149,18 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getSoundDat
     PlayData *pd = (PlayData*)song;
     const char *err = "";
     
-    while (NULL != (err = sc68_error_get(pd->sc68))) {
+    while (NULL != (err = sc68_error_get(pd->sc68)))
+    {
         __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "ERROR:%s", err);
     }
 
     /* Set track number : command line is prior to config force-track */
-    if (pd->currentTrack < 0) {
+    if (pd->currentTrack < 0)
+    {
         pd->currentTrack = 0;
-        if (sc68_play(pd->sc68, pd->currentTrack, 0)) {
+        
+        if (sc68_play(pd->sc68, pd->currentTrack, 0))
+        {
             return -1;
         }
     }
@@ -160,7 +170,8 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getSoundDat
     jint n = size/2;
     int code = sc68_process(pd->sc68, ptr, &n);
 
-    if (code) {
+    if (code)
+    {
         __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "CODE: 0x%x", code);
     }
 
@@ -168,16 +179,19 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getSoundDat
 
     env->ReleaseShortArrayElements(sArray, (jshort*)ptr, 0);
 
-    if (!pd->trackChanged && (code & SC68_CHANGE)) {
+    if (!pd->trackChanged && (code & SC68_CHANGE))
+    {
         __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "Ending track");
         return -1;
     }
 
     pd->trackChanged = false;
 
-    if (code == SC68_ERROR) {
+    if (code == SC68_ERROR)
+    {
         return -1;
     }
+    
     return size;
 }
 
@@ -212,10 +226,13 @@ JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1setTune
     PlayData *pd = (PlayData*)song;
     
     pd->currentTrack = tune+1;
-    if (sc68_play(pd->sc68, pd->currentTrack, 0)) {
+    
+    if (sc68_play(pd->sc68, pd->currentTrack, 0))
+    {
         pd->currentTrack = -1;
         return false;
     }
+    
     pd->trackChanged = true;
     return true;
 }
@@ -233,14 +250,14 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getStrin
 
     switch(what)
     {
-    case INFO_AUTHOR:
-        return NewString(env, info.artist);
-    case INFO_TITLE:
-        return NewString(env, info.title);
-    case 51:
-        return NewString(env, pd->info.trk.hw);
-    case 52:
-        return NewString(env, pd->info.replay);
+        case INFO_AUTHOR:
+            return NewString(env, info.artist);
+        case INFO_TITLE:
+            return NewString(env, info.title);
+        case 51:
+            return NewString(env, pd->info.trk.hw);
+        case 52:
+            return NewString(env, pd->info.replay);
     }
     return 0;
 }
@@ -252,21 +269,21 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getIntInfo(
     int track = pd->currentTrack;
     
     if (track < 0) track = 1;
-    if (!sc68_music_info(pd->sc68, &pd->info, track, 0)) {
-    }
+    if (!sc68_music_info(pd->sc68, &pd->info, track, 0)) {}
+    
     sc68_music_info_t &info = pd->info;
 
 
     switch(what)
     {
-    case INFO_LENGTH:
-        return info.trk.time_ms;
-    case INFO_SUBTUNES:
-        return info.tracks;
-    case INFO_STARTTUNE:
-        return pd->defaultTrack-1;
-    case 50:
-        return (pd->info.trk.amiga << 2) | (pd->info.trk.ste << 1) | (pd->info.trk.ym);
+        case INFO_LENGTH:
+            return info.trk.time_ms;
+        case INFO_SUBTUNES:
+            return info.tracks;
+        case INFO_STARTTUNE:
+            return pd->defaultTrack-1;
+        case 50:
+            return (pd->info.trk.amiga << 2) | (pd->info.trk.ste << 1) | (pd->info.trk.ym);
     }
     return -1;
 }
@@ -295,7 +312,8 @@ JNIEXPORT jbyteArray JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1unice
     int ssize = env->GetArrayLength(src);
     int size = unice68_get_depacked_size(sptr, NULL);
     
-        if (size <= 0) {
+        if (size <= 0)
+        {
             return NULL;
         }
 
@@ -306,7 +324,8 @@ JNIEXPORT jbyteArray JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1unice
         env->ReleaseByteArrayElements(src, sptr, 0);
         env->ReleaseByteArrayElements(dest, dptr, 0);
         
-        if (res != 0) {
+        if (res != 0)
+        {
             dest = NULL;
         }
         
