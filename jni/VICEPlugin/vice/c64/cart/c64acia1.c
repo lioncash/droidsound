@@ -2,7 +2,7 @@
  * c64acia1.c - Definitions for a 6551 ACIA interface
  *
  * Written by
- *  Andre' Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -264,7 +264,7 @@ int acia1_set_mode(int mode)
 static const resource_int_t resources_i[] = {
     { "Acia1Enable", 0, RES_EVENT_STRICT, 0,
       &acia_enabled, set_acia_enabled, NULL },
-    { "Acia1Base", 0xffff, RES_EVENT_STRICT, 0xffff,
+    { "Acia1Base", 0xffff, RES_EVENT_STRICT, int_to_void_ptr(0xffff),
       &acia_base, set_acia_base, NULL },
     { NULL }
 };
