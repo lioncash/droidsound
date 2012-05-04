@@ -233,6 +233,7 @@ LOCAL_SRC_FILES := \
     vgmstream/meta/ps2_xa30.c \
     vgmstream/meta/ps2_xau.c \
     vgmstream/meta/ps3_cps.c \
+    vgmstream/meta/ps3_ivag.c \
     vgmstream/meta/ps3_klbs.c \
     vgmstream/meta/ps3_msf.c \
     vgmstream/meta/ps3_past.c \
