@@ -6,6 +6,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.telephony.PhoneStateListener;
+import android.telephony.TelephonyManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -209,6 +211,34 @@ public class PlayingFragment extends Fragment {
 
 	private ImageButton forwardButton;
 
+	private final PhoneStateListener phoneStateListener = new PhoneStateListener() {
+		@Override
+		public void onCallStateChanged(int state, String incomingNumber) {
+			/* Somebody is phoning? */
+			if (state != TelephonyManager.CALL_STATE_IDLE) {
+				try {
+					Application.playPause(false);
+					playButton(true);
+				} catch (Exception e) {
+				}
+			}
+		}
+	};
+
+	private final BroadcastReceiver headsetConnectedReceiver = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			/* Unplugged? */
+			if (intent.getIntExtra("state", 0) == 0) {
+				try {
+					Application.playPause(false);
+					playButton(true);
+				} catch (Exception e) {
+				}
+			}
+		}
+	};
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -216,6 +246,10 @@ public class PlayingFragment extends Fragment {
 		getActivity().getApplicationContext().registerReceiver(songLoadingReceiver, new IntentFilter(Player.ACTION_LOADING_SONG));
 		getActivity().getApplicationContext().registerReceiver(advancingReceiver, new IntentFilter(Player.ACTION_ADVANCING));
 		getActivity().getApplicationContext().registerReceiver(songUnloadingReceiver, new IntentFilter(Player.ACTION_UNLOADING_SONG));
+		getActivity().getApplicationContext().registerReceiver(headsetConnectedReceiver, new IntentFilter(Intent.ACTION_HEADSET_PLUG));
+
+		TelephonyManager tm = (TelephonyManager) getActivity().getSystemService(Context.TELEPHONY_SERVICE);
+		tm.listen(phoneStateListener, TelephonyManager.CALL_STATE_OFFHOOK|TelephonyManager.CALL_STATE_RINGING);
 	}
 
 	@Override
@@ -225,6 +259,10 @@ public class PlayingFragment extends Fragment {
 		getActivity().getApplicationContext().unregisterReceiver(songLoadingReceiver);
 		getActivity().getApplicationContext().unregisterReceiver(advancingReceiver);
 		getActivity().getApplicationContext().unregisterReceiver(songUnloadingReceiver);
+		getActivity().getApplicationContext().unregisterReceiver(headsetConnectedReceiver);
+
+		TelephonyManager tm = (TelephonyManager) getActivity().getSystemService(Context.TELEPHONY_SERVICE);
+		tm.listen(phoneStateListener, TelephonyManager.CALL_STATE_IDLE);
 	}
 
 	@Override
