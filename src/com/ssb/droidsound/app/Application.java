@@ -98,9 +98,11 @@ public class Application extends android.app.Application {
 
 		setupModsDir();
 
-		PreferenceManager.setDefaultValues(this, R.layout.preferences_about, false);
-		PreferenceManager.setDefaultValues(this, R.layout.preferences_audio, false);
-		PreferenceManager.setDefaultValues(this, R.layout.preferences_database, false);
+		/* Thanks to awesome android design, we can only set one screen before
+		 * _has_set_default_values.xml springs into existence. Fuck this android crap. */
+		//PreferenceManager.setDefaultValues(this, R.xml.preferences_about, false);
+		PreferenceManager.setDefaultValues(this, R.xml.preferences_audio, false);
+		//PreferenceManager.setDefaultValues(this, R.xml.preferences_database, false);
 		SharedPreferences prefs = getAppPreferences();
 		Map<String, ?> prefsMap = prefs.getAll();
 

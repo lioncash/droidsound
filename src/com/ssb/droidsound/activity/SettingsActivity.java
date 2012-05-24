@@ -45,7 +45,7 @@ public class SettingsActivity extends PreferenceActivity {
 		@Override
 		public void onCreate(Bundle savedInstanceState) {
 			super.onCreate(savedInstanceState);
-			addPreferencesFromResource(R.layout.preferences_audio);
+			addPreferencesFromResource(R.xml.preferences_audio);
 
 			for (int i = 0; i < getPreferenceScreen().getPreferenceCount(); i++) {
 				Preference p = getPreferenceScreen().getPreference(i);
@@ -78,7 +78,7 @@ public class SettingsActivity extends PreferenceActivity {
 		@Override
 		public void onCreate(Bundle savedInstanceState) {
 			super.onCreate(savedInstanceState);
-			addPreferencesFromResource(R.layout.preferences_database);
+			addPreferencesFromResource(R.xml.preferences_database);
 
 			Preference pref = findPreference("rescan_pref");
 			pref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
@@ -96,7 +96,7 @@ public class SettingsActivity extends PreferenceActivity {
 		@Override
 		public void onCreate(Bundle savedInstanceState) {
 			super.onCreate(savedInstanceState);
-			addPreferencesFromResource(R.layout.preferences_about);
+			addPreferencesFromResource(R.xml.preferences_about);
 
 			PreferenceCategory pc = new PreferenceCategory(getActivity());
 			pc.setTitle(R.string.app_name);
