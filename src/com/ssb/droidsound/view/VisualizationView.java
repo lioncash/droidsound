@@ -90,21 +90,23 @@ public class VisualizationView extends SurfaceView {
 	}
 
 	private long updateFftData() {
-		while (true) {
-			long ctm = System.currentTimeMillis();
-			OverlappingFFT.Data data = queue.peek();
-			if (data == null) {
-				return 100;
-			}
-			if (data.getTime() > ctm) {
-				return data.getTime() - ctm;
-			}
+		synchronized (queue) {
+			while (true) {
+				long ctm = System.currentTimeMillis();
+				OverlappingFFT.Data data = queue.peek();
+				if (data == null) {
+					return 100;
+				}
+				if (data.getTime() > ctm) {
+					return data.getTime() - ctm;
+				}
 
-			data = queue.poll();
-			if (data != null) {
-				buf[data.getIndex()] = data.getFft();
-				if (data.getIndex() == 0) {
-					updateFftData(data.getFrameRate() / 2);
+				data = queue.poll();
+				if (data != null) {
+					buf[data.getIndex()] = data.getFft();
+					if (data.getIndex() == 0) {
+						updateFftData(data.getFrameRate() / 2);
+					}
 				}
 			}
 		}
@@ -164,7 +166,6 @@ public class VisualizationView extends SurfaceView {
 				x += 1;
 			}
 
-			/* 60 dB correlates with 1 << 20 above (in 3 dB units because of no sqrt). */
 			fft[i] = lenSqMax / (1 << 20);
 		}
 	}

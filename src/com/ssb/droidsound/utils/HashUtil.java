@@ -13,9 +13,8 @@ public class HashUtil {
 		}
 	}
 
-	public synchronized static byte[] md5(byte[] data) {
-		MD5.update(data);
-		return MD5.digest();
+	public static byte[] md5(byte[] data) {
+		return md5(data, 0, data.length);
 	}
 
 	public synchronized static byte[] md5(byte[] data, int start, int length) {
