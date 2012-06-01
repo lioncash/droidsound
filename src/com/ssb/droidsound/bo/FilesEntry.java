@@ -23,16 +23,13 @@ public class FilesEntry {
 		MAIN_TO_AUX.put("MUS", "STR");
 	}
 
-	private final long id;
-
 	private final Uri url;
 	private final String format;
 	private final String title;
 	private final String composer;
 	private final int date;
 
-	public FilesEntry(long id, Uri url, String format, String title, String composer, int date) {
-		this.id = id;
+	public FilesEntry(Uri url, String format, String title, String composer, int date) {
 		this.url = url;
 		this.format = format;
 		this.title = title;
@@ -97,10 +94,6 @@ public class FilesEntry {
 		}
 
 		return null;
-	}
-
-	public long getId() {
-		return id;
 	}
 
 	public Uri getUrl() {

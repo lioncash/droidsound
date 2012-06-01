@@ -3,8 +3,8 @@ package com.ssb.droidsound.bo;
 import java.io.File;
 
 public class SongFileData {
-	public final File file;
-	public final byte[] data;
+	private final File file;
+	private final byte[] data;
 
 	public SongFileData(File file, byte[] data) {
 		this.file = file;

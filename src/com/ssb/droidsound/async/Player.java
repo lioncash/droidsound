@@ -10,6 +10,7 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.media.audiofx.AudioEffect;
+import android.net.Uri;
 import android.os.AsyncTask;
 
 import com.ssb.droidsound.app.Application;
@@ -77,10 +78,6 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 		this.data2 = data2;
 	}
 
-	public Long getFileId() {
-		return song.getId();
-	}
-
 	/**
 	 * Return FFT data accumulated by player.
 	 *
@@ -146,6 +143,10 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 		return subsongs.get();
 	}
 
+	public Uri getPlayingSongUri() {
+		return song.getUrl();
+	}
+
 	/**
 	 * Tell native code to switch to a different subsong. The
 	 * subsong range is player and tune specific, but the value
@@ -186,7 +187,6 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 		intent.putExtra("plugin.seekable", plugin.canSeek());
 		intent.putExtra("plugin.detailedInfo", plugin.getDetailedInfo());
 		intent.putExtra("subsong.length", subsongLengthMs.get() / 1000);
-		intent.putExtra("file.id", song.getId());
 		intent.putExtra("file.subsongs", subsongs.get());
 		intent.putExtra("file.defaultSubsong", defaultSubsong.get());
 		intent.putExtra("file.title", song.getTitle());

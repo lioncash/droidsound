@@ -176,7 +176,7 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 	 */
 	private void insertPlaylist(long rowId, File f) {
 		ContentValues values = new ContentValues();
-		Playlist pl = new Playlist(rowId, f);
+		Playlist pl = new Playlist(f);
 
 		int i = 0;
 		for (FilesEntry sf : pl.getSongs()) {
@@ -334,7 +334,7 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 		db.beginTransaction();
 		db.execSQL("PRAGMA foreign_keys=ON");
 		for (long id : delFiles) {
-			db.delete("files", "_id = ?", new String[] { String.valueOf(id) } );
+			db.delete("files", BaseColumns._ID + " = ?", new String[] { String.valueOf(id) } );
 		}
 		db.execSQL("PRAGMA foreign_keys=OFF");
 

@@ -21,6 +21,8 @@ public class FastListFragment extends ListFragment {
 		public Cursor getCursor();
 	}
 
+	protected static final String TAG = FastListFragment.class.getSimpleName();
+
 	protected static SongDatabase.Sort getSorting() {
 		SharedPreferences prefs = Application.getAppPreferences();
 		String sorting = prefs.getString("sorting", "TITLE");
@@ -43,6 +45,7 @@ public class FastListFragment extends ListFragment {
 		public void onReceive(Context c, Intent i) {
 			if (i.getIntExtra("progress", 0) == 100) {
 				CollectionViewAdapter listAdapter = (CollectionViewAdapter) getListAdapter();
+				Log.i(TAG, "Scan terminated, requerying all cursors...");
 				if (listAdapter != null) {
 					listAdapter.requery();
 				}
