@@ -100,18 +100,6 @@ public class OverlappingFFT {
 	/** Current index within accumulation buffer */
 	private int fftSamplesIdx;
 
-	///** Number of second level resamplings performed. */
-	//private int secondLevelLatch;
-
-	///** Cache for the 3rd FFT */
-	//private short[] thirdFft = new short[512];
-
-	///** Number of third level resamplings performed. */
-	//private int thirdLevelLatch;
-
-	///** Cache for the 4th FFT */
-	//private short[] fourthFft = new short[512];
-
 	/** Audio output rate */
 	private int frameRate;
 
@@ -198,23 +186,18 @@ public class OverlappingFFT {
 			queue.add(new Data(frameRate, time - 1000 * 2048 / frameRate, 1, secondFft));
 		}
 
-		if (true) { //++ secondLevelLatch == 4) {
-			//secondLevelLatch = 0;
-			resample2oct(resampler[1], fftSamples[1], fftSamples[0].length >> 2, fftSamples[2]);
-			short[] thirdFft = new short[512];
-			FFT.fft(fftSamples[2], thirdFft);
-			synchronized (queue) {
-				queue.add(new Data(frameRate, time - 1000 * 8192 / frameRate, 2, thirdFft));
-			}
+		resample2oct(resampler[1], fftSamples[1], fftSamples[0].length >> 2, fftSamples[2]);
+		short[] thirdFft = new short[512];
+		FFT.fft(fftSamples[2], thirdFft);
+		synchronized (queue) {
+			queue.add(new Data(frameRate, time - 1000 * 8192 / frameRate, 2, thirdFft));
+		}
 
-			/*if (++ thirdLevelLatch == 4) {
-				thirdLevelLatch = 0;
-				resample2oct(resampler[2], fftSamples[2], fftSamples[3]);
-				fourthFft = new short[512];
-				FFT.fft(fftSamples[3], fourthFft);
-
-				queue.add(new Data(frameRate, time - 1000 * 32768 / frameRate, 3, fourthFft));
-			}*/
+		resample2oct(resampler[2], fftSamples[2], fftSamples[0].length >> 4, fftSamples[3]);
+		short[] fourthFft = new short[512];
+		FFT.fft(fftSamples[3], fourthFft);
+		synchronized (queue) {
+			queue.add(new Data(frameRate, time - 1000 * 32768 / frameRate, 3, fourthFft));
 		}
 	}
 
