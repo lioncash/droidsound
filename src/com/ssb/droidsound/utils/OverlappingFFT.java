@@ -189,6 +189,7 @@ public class OverlappingFFT {
 		resample2oct(resampler[1], fftSamples[1], fftSamples[0].length >> 2, fftSamples[2]);
 		short[] thirdFft = new short[512];
 		FFT.fft(fftSamples[2], thirdFft);
+		//propagate(secondFft, thirdFft);
 		synchronized (queue) {
 			queue.add(new Data(frameRate, time - 1000 * 8192 / frameRate, 2, thirdFft));
 		}
@@ -196,9 +197,36 @@ public class OverlappingFFT {
 		resample2oct(resampler[2], fftSamples[2], fftSamples[0].length >> 4, fftSamples[3]);
 		short[] fourthFft = new short[512];
 		FFT.fft(fftSamples[3], fourthFft);
+		propagate(thirdFft, fourthFft);
 		synchronized (queue) {
-			queue.add(new Data(frameRate, time - 1000 * 32768 / frameRate, 3, fourthFft));
+			queue.add(new Data(frameRate, time - 1000 * 8192 / frameRate, 3, fourthFft));
 		}
+	}
+
+	private static void propagate(short[] fastUpdating, short[] slowUpdating) {
+		/* do a little filtering hack to increase change rate in the lowest freq fft */
+		for (int i = 0; i < slowUpdating.length; i += 8) {
+			double fast = power(fastUpdating[i >> 2], fastUpdating[(i >> 2) + 1]);
+			double slow1 = power(slowUpdating[i + 0], slowUpdating[i + 1]);
+			double slow2 = power(slowUpdating[i + 2], slowUpdating[i + 3]);
+			double slow3 = power(slowUpdating[i + 4], slowUpdating[i + 5]);
+			double slow4 = power(slowUpdating[i + 6], slowUpdating[i + 7]);
+			double slow = (slow1 + slow2 + slow3 + slow4) * 0.25;
+
+			slowUpdating[i + 0] = (short) (slow1 - slow + fast);
+			slowUpdating[i + 1] = 0;
+			slowUpdating[i + 2] = (short) (slow2 - slow + fast);
+			slowUpdating[i + 3] = 0;
+			slowUpdating[i + 4] = (short) (slow3 - slow + fast);
+			slowUpdating[i + 5] = 0;
+			slowUpdating[i + 6] = (short) (slow4 - slow + fast);
+			slowUpdating[i + 7] = 0;
+		}
+
+	}
+
+	private static double power(short p1, short p2) {
+		return Math.sqrt((double) p1 * p1 + (double) p2 * p2);
 	}
 
 	public Queue<Data> getQueue() {
