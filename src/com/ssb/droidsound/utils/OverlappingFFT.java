@@ -129,8 +129,7 @@ public class OverlappingFFT {
 	 */
 	public void feed(short[] samples, int posInSamples, int lengthInSamples) {
 		/* Estimated time when the current head of audio buffer will play back */
-		long time = System.currentTimeMillis() + bufferingMs + 1000 * (posInSamples - lengthInSamples) / 2 / frameRate;
-
+		long time = System.currentTimeMillis() + bufferingMs;
 		for (int i = posInSamples; i < posInSamples + lengthInSamples; i += 2) {
 			int mono = samples[i] + samples[i + 1];
 			//mono = (int) (Math.sin(x) * 65535 / 4);
@@ -138,7 +137,7 @@ public class OverlappingFFT {
 
 			fftSamples[0][fftSamplesIdx] = (short) (mono >> 1);
 			if (++ fftSamplesIdx == fftSamples[0].length) {
-				runFfts(time);
+				runFfts(time + 1000 * (i - posInSamples - lengthInSamples) / 2 / frameRate);
 				fftSamplesIdx = 0;
 			}
 		}
