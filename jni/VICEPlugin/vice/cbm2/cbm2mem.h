@@ -2,7 +2,7 @@
  * cbm2mem.h - CBM-II memory handling.
  *
  * Written by
- *  André Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -48,7 +48,6 @@ extern BYTE mem_chargen_rom[CBM2_CHARGEN_ROM_SIZE];
 extern void cbm2mem_set_bank_exec(int val);
 extern void cbm2mem_set_bank_ind(int val);
 extern int cbm2_set_model(const char *model, void *extra);
-extern const char *cbm2_get_model(void);
 
 extern int cbm2_init_ok;
 
@@ -72,4 +71,3 @@ extern void colorram_store(WORD addr, BYTE value);
 extern BYTE colorram_read(WORD addr);
 
 #endif
-

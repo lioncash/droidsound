@@ -3,7 +3,7 @@
  *
  * Written by
  *  Andreas Boose <viceteam@t-online.de>
- *  André Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -88,12 +88,6 @@ int cbm2_set_model(const char *model, void *extra)
         return 0;
     }
     return -1;
-}
-
-/* FIXME: remove this (only used in os/2 port */
-const char *cbm2_get_model()
-{
-    return modtab[cbm2_model].model;
 }
 
 /* ------------------------------------------------------------------------- */
