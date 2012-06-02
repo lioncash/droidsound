@@ -305,7 +305,6 @@ public class SongDatabase {
 		c.close();
 
 		return new FilesEntry(
-				childId,
 				Uri.parse(url),
 				format,
 				title,
@@ -324,10 +323,9 @@ public class SongDatabase {
 
 		List<Playlist> pl = new ArrayList<Playlist>();
 		while (c.moveToNext()) {
-			long id = c.getLong(0);
 			String name = c.getString(1);
 			File f = new File(Application.getModsDirectory(), name);
-			pl.add(new Playlist(id, f));
+			pl.add(new Playlist(f));
 		}
 
 		return pl;

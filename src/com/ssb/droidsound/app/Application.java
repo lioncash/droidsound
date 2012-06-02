@@ -17,6 +17,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.AssetManager;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
 import android.os.IBinder;
@@ -82,12 +83,12 @@ public class Application extends android.app.Application {
 		return songDatabase;
 	}
 
-	public static Long getCurrentlyPlayingSongId() {
+	public static Uri getCurrentlyPlayingSongUri() {
 		if (player == null) {
 			return null;
 		}
 
-		return player.getFileId();
+		return player.getPlayingSongUri();
 	}
 
 	@Override

@@ -8,6 +8,7 @@ import android.app.FragmentManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
@@ -60,9 +61,13 @@ class CollectionViewAdapter extends CursorAdapter {
 		final String composer = cursor.getString(SongDatabase.COL_COMPOSER);
 		final int date = cursor.getInt(SongDatabase.COL_DATE);
 
-		Long currentSongId = Application.getCurrentlyPlayingSongId();
-		playingView.setVisibility(currentSongId != null && currentSongId.equals(childId)
-				? View.VISIBLE : View.GONE);
+		if (type == SongDatabase.TYPE_FILE) {
+			final Uri currentUri = Application.getCurrentlyPlayingSongUri();
+			final Uri uri = Uri.parse(cursor.getString(SongDatabase.COL_URL));
+			playingView.setVisibility(uri.equals(currentUri) ? View.VISIBLE : View.GONE);
+		} else {
+			playingView.setVisibility(View.GONE);
+		}
 
 		final int icon;
 		switch (type) {
@@ -112,35 +117,42 @@ class CollectionViewAdapter extends CursorAdapter {
 				menu.setHeaderTitle(title);
 
 				int parentType = 0;
+				String parentTitle = null;
 				if (parentId != null) {
 					Cursor pc = Application.getSongDatabase().getFileById(parentId);
 					pc.moveToFirst();
 					parentType = pc.getInt(SongDatabase.COL_TYPE);
+					parentTitle = pc.getString(SongDatabase.COL_TITLE);
 					pc.close();
 				}
 
 				/* Add to playlist: X */
 				if (parentType != SongDatabase.TYPE_PLAYLIST && type == SongDatabase.TYPE_FILE) {
 					String fav = context.getString(R.string.add_to_playlist);
+					int id = 1;
 					for (Playlist pl : Application.getSongDatabase().getPlaylistsList()) {
-						int id = (int) pl.getId();
-						menu.add(CollectionFragment.MENU_GROUP_ADD_TO_PLAYLIST, intChildId, id, fav + " " + pl.getTitle());
+						menu.add(CollectionFragment.MENU_GROUP_ADD_TO_PLAYLIST, intChildId, id ++, fav + " " + pl.getTitle());
 					}
 				}
 
 				/* Remove from playlist */
-				if (parentId != null) {
-					if (parentType == SongDatabase.TYPE_PLAYLIST) {
-						menu.add(CollectionFragment.MENU_GROUP_REMOVE_FROM_PLAYLIST, intChildId, (int) (long) parentId, R.string.remove_from_playlist);
+				if (parentType == SongDatabase.TYPE_PLAYLIST) {
+					int id = 1;
+					for (Playlist pl : Application.getSongDatabase().getPlaylistsList()) {
+						if (pl.getTitle().equals(parentTitle)) {
+							menu.add(CollectionFragment.MENU_GROUP_REMOVE_FROM_PLAYLIST, intChildId, id, R.string.remove_from_playlist);
+						}
+						id ++;
 					}
 				}
 
 				/* Delete file (not contained in zip) */
-				FilesEntry sf = Application.getSongDatabase().getSongFile(childId);
 				if (parentType != SongDatabase.TYPE_PLAYLIST
-						&& type == SongDatabase.TYPE_FILE
-						&& "file".equals(sf.getUrl().getScheme())) {
-					menu.add(CollectionFragment.MENU_GROUP_DELETE, intChildId, Menu.NONE, R.string.delete);
+						&& type == SongDatabase.TYPE_FILE) {
+					FilesEntry sf = Application.getSongDatabase().getSongFile(childId);
+					if ("file".equals(sf.getUrl().getScheme())) {
+						menu.add(CollectionFragment.MENU_GROUP_DELETE, intChildId, Menu.NONE, R.string.delete);
+					}
 				}
 				if (type == SongDatabase.TYPE_ZIP) {
 					menu.add(CollectionFragment.MENU_GROUP_DELETE, intChildId, Menu.NONE, R.string.delete_zip);

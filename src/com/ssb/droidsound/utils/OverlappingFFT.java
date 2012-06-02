@@ -100,18 +100,6 @@ public class OverlappingFFT {
 	/** Current index within accumulation buffer */
 	private int fftSamplesIdx;
 
-	///** Number of second level resamplings performed. */
-	//private int secondLevelLatch;
-
-	///** Cache for the 3rd FFT */
-	//private short[] thirdFft = new short[512];
-
-	///** Number of third level resamplings performed. */
-	//private int thirdLevelLatch;
-
-	///** Cache for the 4th FFT */
-	//private short[] fourthFft = new short[512];
-
 	/** Audio output rate */
 	private int frameRate;
 
@@ -129,8 +117,7 @@ public class OverlappingFFT {
 	 */
 	public void feed(short[] samples, int posInSamples, int lengthInSamples) {
 		/* Estimated time when the current head of audio buffer will play back */
-		long time = System.currentTimeMillis() + bufferingMs + 1000 * (posInSamples - lengthInSamples) / 2 / frameRate;
-
+		long time = System.currentTimeMillis() + bufferingMs;
 		for (int i = posInSamples; i < posInSamples + lengthInSamples; i += 2) {
 			int mono = samples[i] + samples[i + 1];
 			//mono = (int) (Math.sin(x) * 65535 / 4);
@@ -138,7 +125,7 @@ public class OverlappingFFT {
 
 			fftSamples[0][fftSamplesIdx] = (short) (mono >> 1);
 			if (++ fftSamplesIdx == fftSamples[0].length) {
-				runFfts(time);
+				runFfts(time + 1000 * (i - posInSamples - lengthInSamples) / 2 / frameRate);
 				fftSamplesIdx = 0;
 			}
 		}
@@ -199,24 +186,47 @@ public class OverlappingFFT {
 			queue.add(new Data(frameRate, time - 1000 * 2048 / frameRate, 1, secondFft));
 		}
 
-		if (true) { //++ secondLevelLatch == 4) {
-			//secondLevelLatch = 0;
-			resample2oct(resampler[1], fftSamples[1], fftSamples[0].length >> 2, fftSamples[2]);
-			short[] thirdFft = new short[512];
-			FFT.fft(fftSamples[2], thirdFft);
-			synchronized (queue) {
-				queue.add(new Data(frameRate, time - 1000 * 8192 / frameRate, 2, thirdFft));
-			}
-
-			/*if (++ thirdLevelLatch == 4) {
-				thirdLevelLatch = 0;
-				resample2oct(resampler[2], fftSamples[2], fftSamples[3]);
-				fourthFft = new short[512];
-				FFT.fft(fftSamples[3], fourthFft);
-
-				queue.add(new Data(frameRate, time - 1000 * 32768 / frameRate, 3, fourthFft));
-			}*/
+		resample2oct(resampler[1], fftSamples[1], fftSamples[0].length >> 2, fftSamples[2]);
+		short[] thirdFft = new short[512];
+		FFT.fft(fftSamples[2], thirdFft);
+		//propagate(secondFft, thirdFft);
+		synchronized (queue) {
+			queue.add(new Data(frameRate, time - 1000 * 8192 / frameRate, 2, thirdFft));
 		}
+
+		resample2oct(resampler[2], fftSamples[2], fftSamples[0].length >> 4, fftSamples[3]);
+		short[] fourthFft = new short[512];
+		FFT.fft(fftSamples[3], fourthFft);
+		propagate(thirdFft, fourthFft);
+		synchronized (queue) {
+			queue.add(new Data(frameRate, time - 1000 * 8192 / frameRate, 3, fourthFft));
+		}
+	}
+
+	private static void propagate(short[] fastUpdating, short[] slowUpdating) {
+		/* do a little filtering hack to increase change rate in the lowest freq fft */
+		for (int i = 0; i < slowUpdating.length; i += 8) {
+			double fast = power(fastUpdating[i >> 2], fastUpdating[(i >> 2) + 1]);
+			double slow1 = power(slowUpdating[i + 0], slowUpdating[i + 1]);
+			double slow2 = power(slowUpdating[i + 2], slowUpdating[i + 3]);
+			double slow3 = power(slowUpdating[i + 4], slowUpdating[i + 5]);
+			double slow4 = power(slowUpdating[i + 6], slowUpdating[i + 7]);
+			double slow = (slow1 + slow2 + slow3 + slow4) * 0.25;
+
+			slowUpdating[i + 0] = (short) (slow1 - slow + fast);
+			slowUpdating[i + 1] = 0;
+			slowUpdating[i + 2] = (short) (slow2 - slow + fast);
+			slowUpdating[i + 3] = 0;
+			slowUpdating[i + 4] = (short) (slow3 - slow + fast);
+			slowUpdating[i + 5] = 0;
+			slowUpdating[i + 6] = (short) (slow4 - slow + fast);
+			slowUpdating[i + 7] = 0;
+		}
+
+	}
+
+	private static double power(short p1, short p2) {
+		return Math.sqrt((double) p1 * p1 + (double) p2 * p2);
 	}
 
 	public Queue<Data> getQueue() {

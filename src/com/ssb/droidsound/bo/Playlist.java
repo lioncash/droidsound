@@ -24,14 +24,12 @@ public class Playlist {
 	private static final Charset UTF8 = Charset.forName("UTF-8");
 	private static final int VERSION = 1;
 
-	private final long id;
 	private final File file;
 	private final List<FilesEntry> songs;
 
 	private String title;
 
-	public Playlist(long id, File file) {
-		this.id = id;
+	public Playlist(File file) {
 		this.file = file;
 
 		title = file.getName();
@@ -91,7 +89,6 @@ public class Playlist {
 	private static FilesEntry deserialize(JSONObject obj) throws JSONException {
 		if (obj.has("version") && obj.getInt("version") == VERSION) {
 			return new FilesEntry(
-					0,
 					Uri.parse(obj.getString("url")),
 					(obj.has("format") ? obj.getString("format") : null),
 					(obj.has("title") ? obj.getString("title") : null),
@@ -101,10 +98,6 @@ public class Playlist {
 		} else {
 			return null;
 		}
-	}
-
-	public long getId() {
-		return id;
 	}
 
 	public String getTitle() {

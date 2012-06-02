@@ -4,7 +4,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-
+/**
+ * The play queue for player, created when user selects a file to play
+ * in a directory.
+ *
+ * @author alankila
+ */
 public class PlayQueue {
 	private final List<FilesEntry> musicListInOriginalOrder = new ArrayList<FilesEntry>();
 	private final List<FilesEntry> musicList = new ArrayList<FilesEntry>();

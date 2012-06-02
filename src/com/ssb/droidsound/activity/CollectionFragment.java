@@ -81,8 +81,9 @@ public class CollectionFragment extends Fragment {
 
 		switch (item.getGroupId()) {
 		case MENU_GROUP_ADD_TO_PLAYLIST: {
+			int id = 1;
 			for (Playlist pl : Application.getSongDatabase().getPlaylistsList()) {
-				if ((int) pl.getId() == item.getOrder()) {
+				if (id ++ == item.getOrder()) {
 					/* Avoid adding a file twice. */
 					if (! pl.getSongs().contains(sf)) {
 						pl.getSongs().add(sf);
@@ -97,7 +98,8 @@ public class CollectionFragment extends Fragment {
 
 		case MENU_GROUP_REMOVE_FROM_PLAYLIST: {
 			for (Playlist pl : Application.getSongDatabase().getPlaylistsList()) {
-				if ((int) pl.getId() == item.getOrder()) {
+				int id = 1;
+				if (id ++ == item.getOrder()) {
 					pl.getSongs().remove(sf);
 					pl.persist();
 					Application.getSongDatabase().scan(false);
@@ -149,7 +151,7 @@ public class CollectionFragment extends Fragment {
 				@Override
 				public void onClick(DialogInterface dialog, int whichButton) {
 					String v = nameField.getText().toString();
-					Playlist p = new Playlist(0, new File(Application.getModsDirectory(), v + ".plist"));
+					Playlist p = new Playlist(new File(Application.getModsDirectory(), v + ".plist"));
 					p.persist();
 					Application.getSongDatabase().scan(false);
 				}
@@ -171,10 +173,10 @@ public class CollectionFragment extends Fragment {
 
 	private final BroadcastReceiver searchReceiver = new BroadcastReceiver() {
 		@Override
-		public void onReceive(Context c, Intent i) {
-			int progress = i.getIntExtra("progress", 0);
+		public void onReceive(Context context, Intent intent) {
+			int progress = intent.getIntExtra("progress", 0);
 			progressPercentageView.setText(String.format("%d%%", progress));
-			progressContainerView.setVisibility(i.getBooleanExtra("scanning", false) ? View.VISIBLE : View.GONE);
+			progressContainerView.setVisibility(intent.getBooleanExtra("scanning", false) ? View.VISIBLE : View.GONE);
 		}
 	};
 

@@ -23,7 +23,7 @@ public class VisualizationView extends SurfaceView {
 
 	private Queue<OverlappingFFT.Data> queue;
 
-	private final short[][] buf = new short[3][512];
+	private final short[][] buf = new short[4][512];
 
 	private final Paint white;
 	private final Paint fftPaint;
