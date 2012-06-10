@@ -21,7 +21,7 @@ public class SexyPSFPlugin extends DroidSoundPlugin {
         System.loadLibrary("sexypsf");
     }
     
-    private static String fromData(byte [] data, int start, int len) throws UnsupportedEncodingException {
+    private static String fromData(byte[] data, int start, int len) throws UnsupportedEncodingException {
         int i = start;
         for(; i<start+len; i++) {
             if(data[i] == 0) {
@@ -32,7 +32,7 @@ public class SexyPSFPlugin extends DroidSoundPlugin {
         return new String(data, start, i-start, "ISO-8859-1").trim();
     }
     
-    private Map<String, String> getTags(byte [] module, int size) {
+    private Map<String, String> getTags(byte[] module, int size) {
         ByteBuffer src = ByteBuffer.wrap(module, 0, size);      
         src.order(ByteOrder.LITTLE_ENDIAN);     
         byte[] id = new byte[4];
@@ -53,23 +53,23 @@ public class SexyPSFPlugin extends DroidSoundPlugin {
             
             if(src.remaining() >= 5) {
                 
-                byte [] tagHeader = new byte[5];        
+                byte[] tagHeader = new byte[5];        
                 src.get(tagHeader);
                 
                 if(new String(tagHeader).equals("[TAG]")) {
                     
-                    byte [] tagData = new byte [ size - comprLen - resLen - 21];
+                    byte[] tagData = new byte[ size - comprLen - resLen - 21];
                     src.get(tagData);
                     
                     try {
                         String tags = new String(tagData, "ISO-8859-1").trim();
                         
-                        String [] lines = tags.split("\n");
+                        String[] lines = tags.split("\n");
                         
                         HashMap<String, String> tagMap = new HashMap<String, String>();
                         
                         for(String line : lines) {
-                            String parts [] = line.split("=");
+                            String[] parts = line.split("=");
                             tagMap.put(parts[0], parts[1]);
                         }
                         return tagMap;
@@ -91,7 +91,6 @@ public class SexyPSFPlugin extends DroidSoundPlugin {
     
     @Override
     protected boolean load(String name, byte[] module) {
-        // TODO Auto-generated method stub
         return false;
     }
     
@@ -122,12 +121,10 @@ public class SexyPSFPlugin extends DroidSoundPlugin {
         return true;
     }
     
-    
     @Override
     public int getSoundData(short[] dest) {
         return N_getSoundData(songFile, dest, dest.length);
     }
-    
     
     @Override
     public void unload() {
@@ -137,12 +134,10 @@ public class SexyPSFPlugin extends DroidSoundPlugin {
             info = null;  
     }
     
-    
     @Override
     public void setOption(String string, Object val) {
         /* No options yet */
     }
-    
     
     @Override
     public String getVersion() {
@@ -151,13 +146,15 @@ public class SexyPSFPlugin extends DroidSoundPlugin {
     
     @Override
     public String[] getDetailedInfo() {
-        String[] info = new String[6];
+        String[] info = new String[8];
         info[0] = "Format:";
         info[1] = "PSF (Playstation 1)";
-        info[2] = "Game:";
-        info[3] = N_getStringInfo(songFile, INFO_GAME);
-        info[4] = "Copyright:";
-        info[5] = N_getStringInfo(songFile, INFO_COPYRIGHT);
+        info[2] = "";
+        info[3] = "Game:";
+        info[4] = N_getStringInfo(songFile, INFO_GAME);
+        info[5] = "";
+        info[6] = "Copyright:";
+        info[7] = N_getStringInfo(songFile, INFO_COPYRIGHT);
         return info;
     }
     
@@ -166,7 +163,7 @@ public class SexyPSFPlugin extends DroidSoundPlugin {
         
         if(info != null) {
             if(what == INFO_LENGTH) {
-                String [] parts = info[what].split("=");
+                String[] parts = info[what].split("=");
                 int secs = 0;
                 if(parts != null && parts.length == 2)
                     secs = Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
@@ -184,7 +181,7 @@ public class SexyPSFPlugin extends DroidSoundPlugin {
         byte[] id = new byte[4];
         src.get(id);
         
-        info = new String [128];
+        info = new String[128];
          
         Map<String, String> tagMap = getTags(module, module.length);
         if(tagMap != null) {
@@ -195,7 +192,6 @@ public class SexyPSFPlugin extends DroidSoundPlugin {
             info[INFO_LENGTH] = tagMap.get("length");
             return new MusicInfo();
         }
-        
         return null;
     }
 
