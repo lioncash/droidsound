@@ -35,13 +35,11 @@ public class SexyPSFPlugin extends DroidSoundPlugin {
     private Map<String, String> getTags(byte[] module, int size) {
         ByteBuffer src = ByteBuffer.wrap(module, 0, size);      
         src.order(ByteOrder.LITTLE_ENDIAN);     
+       
         byte[] id = new byte[4];
         src.get(id);
         
-        //for(int i=0; i<128; i++)
-        //  info[i] = null;
-        
-         info = new String [128];
+        info = new String [128];
         
         if(id[0] == 'P' && id[1] == 'S' && id[2] == 'F' && id[3] == 1) {
             
