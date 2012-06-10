@@ -42,8 +42,10 @@
 
 static jstring NewString(JNIEnv *env, const char *str)
 {
-    static jchar temp[256];
-    jchar *ptr = temp;
+    static jchar *temp, *ptr;
+    
+    temp = (jchar *) malloc((strlen(str) + 1) * sizeof(jchar));
+    ptr = temp;
     
     while (*str)
     {
@@ -52,6 +54,9 @@ static jstring NewString(JNIEnv *env, const char *str)
     }
     
     jstring j = env->NewString(temp, ptr - temp);
+    
+    free(temp);
+    
     return j;
 }
 
@@ -188,33 +193,31 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_ModPlugin_N_1getString
             break;
         case INFO_INSTRUMENTS:
         {
-            char instruments[16384];
+            char instruments[2048];
+           
             char *ptr = instruments;
-            int ni = ModPlug_NumInstruments(info->mod);
-            int ns = ModPlug_NumSamples(info->mod);
-            __android_log_print(ANDROID_LOG_VERBOSE, "ModPlugin", "%d / %d instruments", ni, ns);
+            char *instEnd = instruments + sizeof(instruments) - 48;
+            *ptr = 0;
             
-            if (ni > 0)
+            int ns = ModPlug_NumSamples(info->mod);
+            __android_log_print(ANDROID_LOG_VERBOSE, "ModPlugin", "%d instruments", ns);
+            
+            if(ns > 0)
             {
-                for (int i = 1; i < ni; i++)
+                for(int i = 1; i < ns; i++)
                 {
-                    ModPlug_InstrumentName(info->mod, i, ptr);
-                    ptr += strlen(ptr);
+                    int l = ModPlug_SampleName(info->mod, i, ptr);
+
+                    /*__android_log_print(ANDROID_LOG_VERBOSE, "ModPlugin", "%p %p %d", ptr, instEnd, strlen(ptr)); */
+                    ptr += l;
+                    if(ptr >= instEnd)
+                        break;
                     *ptr++ = 0xa;
-                }
-            } 
-            else if (ns > 0)
-            {
-                for (int i = 1; i < ns; i++)
-                {
-                    ModPlug_SampleName(info->mod, i, ptr);
-                    ptr += strlen(ptr);
-                    *ptr++ = 0xa;
+                    *ptr = 0;
                 }
             }
-            
-            *ptr = 0;
-            return NewString(env, instruments);
+            //__android_log_print(ANDROID_LOG_VERBOSE, "ModPlugin", "ILEN %d", strlen(instruments));
+            return  NewString(env, instruments);
         }
         break;
     }

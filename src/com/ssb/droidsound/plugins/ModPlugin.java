@@ -133,11 +133,11 @@ public class ModPlugin extends DroidSoundPlugin {
 		return null;
 	}
 
-	native private long N_load(byte [] module, int size);
+	native private long N_load(byte[] module, int size);
 	native private void N_unload(long song);
 
 	// Expects Stereo, 44.1Khz, signed, big-endian shorts
-	native private int N_getSoundData(long song, short [] dest, int size);
+	native private int N_getSoundData(long song, short[] dest, int size);
 	native private boolean N_seekTo(long song, int seconds);
 	native private boolean N_setTune(long song, int tune);
 	native private String N_getStringInfo(long song, int what);

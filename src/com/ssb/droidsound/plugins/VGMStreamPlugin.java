@@ -149,7 +149,7 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 	native private void N_unload(long song);
 
 	// Expects Stereo, 44.1Khz, signed, big-endian shorts
-	native private int N_getSoundData(long song, short [] dest, int size);
+	native private int N_getSoundData(long song, short[] dest, int size);
 	native private String N_getStringInfo(long song, int what);
 	native private int N_getIntInfo(long song, int what);
 

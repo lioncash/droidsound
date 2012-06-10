@@ -21,6 +21,7 @@ include $(X)/GMEPlugin/Android.mk
 include $(X)/HivelyPlugin/Android.mk
 include $(X)/ModPlugin/Android.mk
 include $(X)/SC68Plugin/Android.mk
+include $(X)/SexyPSFPlugin/Android.mk
 include $(X)/UADEPlugin/Android.mk
 include $(X)/VGMStreamPlugin/Android.mk
 include $(X)/VICEPlugin/Android.mk

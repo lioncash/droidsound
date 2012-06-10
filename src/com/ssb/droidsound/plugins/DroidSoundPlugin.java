@@ -5,6 +5,9 @@ import java.util.List;
 
 import com.ssb.droidsound.utils.HashUtil;
 
+// TODO: This could be improved by providing an explanation
+// on what each method is supposed to do. 
+// This would help people out when porting plugins.
 public abstract class DroidSoundPlugin {
 	public static class MusicInfo {
 		public String title;
@@ -22,6 +25,7 @@ public abstract class DroidSoundPlugin {
 			new VICEPlugin(),
 			new GMEPlugin(),
 			new SC68Plugin(),
+			new SexyPSFPlugin(),
 			new VGMStreamPlugin(),
 			new UADEPlugin(),
 			new ModPlugin(),

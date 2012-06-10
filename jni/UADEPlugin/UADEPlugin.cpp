@@ -380,13 +380,21 @@ int release_read_mutex(void **m)
 
 static jstring NewString(JNIEnv *env, const char *str)
 {
-    static jchar temp[256];
-    jchar *ptr = temp;
-    while (*str) {
+    static jchar *temp, *ptr;
+    
+    temp = (jchar *) malloc((strlen(str) + 1) * sizeof(jchar));
+    ptr = temp;
+    
+    while (*str)
+    {
         unsigned char c = (unsigned char)*str++;
         *ptr++ = (c < 0x7f && c >= 0x20) || c >= 0xa0 ? c : '?';
     }
+    
     jstring j = env->NewString(temp, ptr - temp);
+    
+    free(temp);
+    
     return j;
 }
 

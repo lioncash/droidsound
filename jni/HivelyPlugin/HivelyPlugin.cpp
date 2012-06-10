@@ -22,16 +22,21 @@ extern "C" {
 
 static jstring NewString(JNIEnv *env, const char *str)
 {
-	static jchar temp[256];
-	jchar *ptr = temp;
+	static jchar *temp, *ptr;
+    
+    temp = (jchar *) malloc((strlen(str) + 1) * sizeof(jchar));
+	ptr = temp;
 
 	while (*str)
     {
 		unsigned char c = (unsigned char)*str++;
-		*ptr++ = (c < 0x7f && c >= 0x20) || c >= 0xa0 ? c : '?';
+		*ptr++ = (c < 0x7f && c >= 0x20) || c >= 0xa0 || c == 0xa ? c : '?';
 	}
 
 	jstring j = env->NewString(temp, ptr - temp);
+    
+    free(temp);
+    
 	return j;
 }
 
