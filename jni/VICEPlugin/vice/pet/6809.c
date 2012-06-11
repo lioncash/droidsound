@@ -703,6 +703,8 @@ static WORD get_pc(void)
     return PC;
 }
 
+#if 0
+/* unused ? */
 static WORD get_d(void)
 {
     return D;
@@ -712,6 +714,7 @@ static BYTE get_flags(void)
 {
     return EFI;
 }
+#endif
 
 #ifdef H6309
 static BYTE get_e(void)
@@ -785,10 +788,13 @@ static void set_pc(WORD val)
     PC = val;
 }
 
+#if 0
+/* unused ? */
 static void set_d(WORD val)
 {
     D = val;
 }
+#endif
 
 #ifdef H6309
 static void set_e(BYTE val)
@@ -1548,7 +1554,7 @@ static void pulu(void)
 ***  DER FOR 6702 dongle.  ***
 ***                        ***
 *****************************/
-static inline int ignore_dongle_check_1()
+static inline int ignore_dongle_check_1(void)
 {
     extern int spet_bank;
     extern BYTE mem_ram[];
@@ -1601,7 +1607,7 @@ static inline int ignore_dongle_check_1()
     return 0;
 }
 
-static inline int ignore_dongle_check_2()
+static inline int ignore_dongle_check_2(void)
 {
     extern int spet_bank;
     extern BYTE mem_ram[];
@@ -6006,7 +6012,7 @@ void h6809_mainloop (struct interrupt_cpu_status_s *maincpu_int_status, alarm_co
 
     } while (1);
 
-cpu_exit:
+/* cpu_exit: */
    return;
 }
 

@@ -139,8 +139,15 @@ extern int yydebug;
 
 static char *last_cmd = NULL;
 int exit_mon = 0;
-int mon_console_close_on_leaving = 1;
-
+/* flag used by the single-stepping commands to prevent switching forth and back
+ * to the emulator window when stepping a single instruction. note that this is
+ * different from what keep_monitor_open does :)
+ */
+static int mon_console_suspend_on_leaving = 1;
+/* flag used by the eXit command. it will force the monitor to close regardless
+ * of keep_monitor_open.
+ */
+static int mon_console_close_on_leaving = 0;
 
 int sidefx;
 RADIXTYPE default_radix;
@@ -584,6 +591,29 @@ void mon_jump(MON_ADDR addr)
     (monitor_cpu_for_memspace[addr_memspace(addr)]->mon_register_set_val)(addr_memspace(addr), e_PC,
                                             (WORD)(addr_location(addr)));
     exit_mon = 1;
+}
+
+void mon_go(void)
+{
+    exit_mon = 1;
+}
+
+void mon_exit(void)
+{
+    exit_mon = 1;
+    mon_console_close_on_leaving = 1;
+}
+
+/* If we want 'quit' for OS/2 I couldn't leave the emulator by calling exit(0)
+   So I decided to skip this (I think it's unnecessary for OS/2 */
+void mon_quit(void)
+{
+#ifdef OS2
+    /* same as "quit" */
+    exit_mon = 1;
+#else
+    exit_mon = 2;
+#endif
 }
 
 void mon_keyboard_feed(const char *string)
@@ -1799,7 +1829,7 @@ void mon_instructions_step(int count)
     exit_mon = 1;
 
     if (instruction_count == 1) {
-        mon_console_close_on_leaving = 0;
+        mon_console_suspend_on_leaving = 0;
     }
 
     monitor_mask[default_memspace] |= MI_STEP;
@@ -1817,7 +1847,7 @@ void mon_instructions_next(int count)
     exit_mon = 1;
 
     if (instruction_count == 1) {
-        mon_console_close_on_leaving = 0;
+        mon_console_suspend_on_leaving = 0;
     }
 
     monitor_mask[default_memspace] |= MI_STEP;
@@ -2188,21 +2218,13 @@ static void monitor_open(void)
 {
     unsigned int dnr;
 
-    mon_console_close_on_leaving = 1;
+    mon_console_suspend_on_leaving = 1;
+    mon_console_close_on_leaving = 0;
 
     if (monitor_is_remote()) {
         static console_t console_log_remote = { 80, 25, 0, 0 };
         console_log = &console_log_remote;
     } else {
-#if 0
-        if (mon_console_close_on_leaving) {
-            console_log = uimon_window_open();
-            uimon_set_interface(mon_interfaces, NUM_MEMSPACES);
-        } else {
-            console_log = uimon_window_resume();
-            mon_console_close_on_leaving = 1;
-        }
-#endif
         if (console_log) {
             console_log = uimon_window_resume();
         } else {
@@ -2216,12 +2238,6 @@ static void monitor_open(void)
         exit_mon = 1;
         monitor_trap_triggered = FALSE;
         return;
-    }
-
-    if ((console_log->console_can_stay_open == 1) && (keep_monitor_open == 1)) {
-        mon_console_close_on_leaving = 0;
-    } else {
-        mon_console_close_on_leaving = 1;
     }
 
     if ( monitor_is_remote() ) {
@@ -2302,6 +2318,9 @@ static void monitor_close(int check)
     exit_mon--;
 
     if (check && exit_mon) {
+        if ( ! monitor_is_remote() ) {
+            uimon_window_close();
+        }
         exit(0);
     }
 
@@ -2311,30 +2330,27 @@ static void monitor_close(int check)
         signals_pipe_unset();
     }
 
-    /*
-        if there is no log, or if the console can not stay open when the emulation
-        runs, close the console.
-    */
-    if ((console_log == NULL) ||
-        (console_log->console_can_stay_open == 0) ||
-        (keep_monitor_open == 0)
-    ) {
-        mon_console_close_on_leaving = 1;
-    }
-
     if ( ! monitor_is_remote() ) {
-        if (mon_console_close_on_leaving) {
-            uimon_window_close();
-        } else {
-            uimon_window_suspend();
+        if (mon_console_suspend_on_leaving) {
+            /*
+                if there is no log, or if the console can not stay open when the emulation
+                runs, close the console. otherwise suspend the window.
+            */
+            if ((console_log == NULL) ||
+                (mon_console_close_on_leaving == 1) ||
+                (console_log->console_can_stay_open == 0) ||
+                (keep_monitor_open == 0)) {
+                uimon_window_close();
+            } else {
+                uimon_window_suspend();
+            }
         }
     }
 
-    if (mon_console_close_on_leaving) {
+    if (mon_console_suspend_on_leaving) {
         console_log = NULL;
     }
 }
-
 
 void monitor_startup(MEMSPACE mem)
 {
