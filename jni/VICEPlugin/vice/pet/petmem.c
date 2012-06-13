@@ -3,7 +3,7 @@
  *
  * Written by
  *  Ettore Perazzoli <ettore@comm2000.it>
- *  Andr? Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *  Andreas Boose <viceteam@t-online.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -447,7 +447,7 @@ static int efe0_dump(void)
         int sh = shift[i];
         int lm = leftmost[i];
 
-        mon_out("%d %3d: $%02x  %", i, mask, sh);
+        mon_out("%d %3d: $%02x  %%", i, mask, sh);
 
         for (j = 7, maskj = 1<<j; j >= 0; j--, maskj >>= 1) {
             if (maskj > lm) {
