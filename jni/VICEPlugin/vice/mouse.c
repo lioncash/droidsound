@@ -96,7 +96,7 @@ void mouse_set_input(int port)
       interpolated towards the real position using MOUSE_MAX_DIFF for the axis
       with the largest delta
 */
-#define MOUSE_MAX_DIFF  16
+#define MOUSE_MAX_DIFF  31
 
 static int last_mouse_x = 0;
 static int last_mouse_y = 0;
@@ -789,5 +789,5 @@ BYTE mouse_get_y(void)
 	DBG(("mouse_get_y: invalid mouse_type"));
 	break;
     }
-}
     return 0xff;
+}
