@@ -3,7 +3,7 @@
  *
  * Written by
  *  Ettore Perazzoli <ettore@comm2000.it>
- *  André Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *  Andreas Boose <viceteam@t-online.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -70,10 +70,12 @@ int pet_snapshot_write(const char *name, int save_roms, int save_disks,
     sound_snapshot_prepare();
 
     if (maincpu_snapshot_write_module(s) < 0
+        || cpu6809_snapshot_write_module(s) < 0
         || pet_snapshot_write_module(s, save_roms) < 0
         || crtc_snapshot_write_module(s) < 0
         || pia1_snapshot_write_module(s) < 0
         || pia2_snapshot_write_module(s) < 0
+        || petdww_snapshot_write_module(s) < 0
         || viacore_snapshot_write_module(machine_context.via, s) < 0
         || drive_snapshot_write_module(s, save_disks, save_roms) < 0
         || event_snapshot_write_module(s, event_mode) < 0
@@ -114,10 +116,12 @@ int pet_snapshot_read(const char *name, int event_mode)
 
     if (ef
         || maincpu_snapshot_read_module(s) < 0
+        || cpu6809_snapshot_read_module(s) < 0
         || pet_snapshot_read_module(s) < 0
         || crtc_snapshot_read_module(s) < 0
         || pia1_snapshot_read_module(s) < 0
         || pia2_snapshot_read_module(s) < 0
+        || petdww_snapshot_read_module(s) < 0
         || viacore_snapshot_read_module(machine_context.via, s) < 0
         || drive_snapshot_read_module(s) < 0
         || event_snapshot_read_module(s, event_mode) < 0
@@ -141,4 +145,3 @@ int pet_snapshot_read(const char *name, int event_mode)
 
     return ef;
 }
-
