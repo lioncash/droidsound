@@ -34,7 +34,10 @@ struct drive_context_s;
 typedef void (*pc8477_motor_on_callback_t)(void *data, int signal);
 typedef struct pc8477_s pc8477_t;
 
+/* FIXME: whats the deal with the different prefixes? */
 extern void pc8477d_init(struct drive_context_s *drv);
+extern void pc8477_shutdown(pc8477_t *drv);
+
 extern void pc8477_setup_context(struct drive_context_s *drv);
 extern void pc8477d_store(struct drive_context_s *drv, WORD addr, BYTE byte);
 extern BYTE pc8477d_read(struct drive_context_s *drv, WORD addr);
@@ -45,4 +48,3 @@ extern int pc8477_attach_image(struct disk_image_s *image, unsigned int unit);
 extern int pc8477_detach_image(struct disk_image_s *image, unsigned int unit);
 
 #endif 
-
