@@ -2,7 +2,7 @@
  * vic20-resources.c
  *
  * Written by
- *  André Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *  Andreas Boose <viceteam@t-online.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -45,9 +45,6 @@
 
 #define KBD_INDEX_VIC20_SYM 0
 #define KBD_INDEX_VIC20_POS 1
-
-
-static int romset_firmware[3];
 
 /* What sync factor between the CPU and the drive?  If equal to
    `MACHINE_SYNC_PAL', the same as PAL machines.  If equal to
@@ -156,15 +153,6 @@ static int set_sync_factor(int val, void *param)
     return 0;
 }
 
-static int set_romset_firmware(int val, void *param)
-{
-    unsigned int num = vice_ptr_to_uint(param);
-
-    romset_firmware[num] = val;
-
-    return 0;
-}
-
 static const resource_string_t resources_string[] =
 {
     { "ChargenName", "chargen", RES_EVENT_NO, NULL,
@@ -186,12 +174,6 @@ static const resource_int_t resources_int[] =
 {
     { "MachineVideoStandard", MACHINE_SYNC_PAL, RES_EVENT_SAME, NULL,
       &sync_factor, set_sync_factor, NULL },
-    { "RomsetChargenName", 0, RES_EVENT_NO, NULL,
-      &romset_firmware[0], set_romset_firmware, (void *)0 },
-    { "RomsetKernalName", 0, RES_EVENT_NO, NULL,
-      &romset_firmware[1], set_romset_firmware, (void *)1 },
-    { "RomsetBasicName", 0, RES_EVENT_NO, NULL,
-      &romset_firmware[2], set_romset_firmware, (void *)2 },
     { "RAMBlock0", 0, RES_EVENT_SAME, NULL,
       &ram_block_0_enabled, set_ram_block_0_enabled, NULL },
     { "RAMBlock1", 0, RES_EVENT_SAME, NULL,
@@ -225,4 +207,3 @@ void vic20_resources_shutdown(void)
     lib_free(machine_keymap_file_list[0]);
     lib_free(machine_keymap_file_list[1]);
 }
-
