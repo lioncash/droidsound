@@ -72,6 +72,8 @@ short *soundPtr = NULL;
 
 enum uade_control_state ctrlstate = UADE_S_STATE;
 
+#define MAX_LEN 256
+
 static int run_client()
 {
     if (ctrlstate == UADE_S_STATE)
@@ -175,23 +177,23 @@ static int run_client()
             break;
 
         case UADE_REPLY_FORMATNAME:
-            uade_check_fix_string(um, 128);
+            uade_check_fix_string(um, MAX_LEN);
             __android_log_print(ANDROID_LOG_VERBOSE, "UADE", "Format name: %s\n", (char*) um->data);
             strcpy(current_format, (char *)um->data);
             break;
 
         case UADE_REPLY_MODULENAME:
-            uade_check_fix_string(um, 128);
+            uade_check_fix_string(um, MAX_LEN);
             __android_log_print(ANDROID_LOG_VERBOSE, "UADE", "Module name: %s\n", (char*) um->data);
             break;
 
         case UADE_REPLY_MSG:
-            uade_check_fix_string(um, 128);
+            uade_check_fix_string(um, MAX_LEN);
             __android_log_print(ANDROID_LOG_VERBOSE, "UADE", "Message: %s\n", (char *) um->data);
             break;
 
         case UADE_REPLY_PLAYERNAME:
-            uade_check_fix_string(um, 128);
+            uade_check_fix_string(um, MAX_LEN);
             __android_log_print(ANDROID_LOG_VERBOSE, "UADE", "Player name: %s\n", (char*) um->data);
             strcpy(current_format, (char *)um->data);
             break;
