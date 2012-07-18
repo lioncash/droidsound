@@ -3,7 +3,7 @@
  * Version 1.07 + stereo sid support
  *
  * Written by
- *  Lasse ™”rni <loorni@student.oulu.fi>
+ *  Lasse ??rni <loorni@student.oulu.fi>
  *  Andreas Matthies <andreas.matthies@gmx.net>
  *
  * Based on the DirectSound driver by
@@ -532,11 +532,11 @@ static sound_device_t wmm_device =
     wmm_close,
     wmm_suspend,
     wmm_resume,
-    0
+    0,
+    2
 };
 
 int sound_init_wmm_device(void)
 {
     return sound_register_device(&wmm_device);
 }
-

@@ -317,8 +317,8 @@ static int dart_init(const char *param, int *speed,
         return 1;
     }
 
-    //log_message(LOG_DEFAULT, "sounddart.c: %3i buffers   %6i bytes (suggested by dart)", MixSetupParms.ulNumBuffers, MixSetupParms.ulBufferSize);
-    //log_message(LOG_DEFAULT, "sounddart.c: %3i buffers   %6i bytes (wanted by vice)", *fragnr, *fragsize*sizeof(SWORD));
+    //log_message(LOG_DEFAULT, "sounddart.c: %3i buffers ? %6i bytes (suggested by dart)", MixSetupParms.ulNumBuffers, MixSetupParms.ulBufferSize);
+    //log_message(LOG_DEFAULT, "sounddart.c: %3i buffers ? %6i bytes (wanted by vice)", *fragnr, *fragsize*sizeof(SWORD));
 
     /*  After the mixer device is set up to use DART, the application
      instructs the device to allocate memory by sending the MCI_BUFFER
@@ -357,12 +357,12 @@ static int dart_init(const char *param, int *speed,
     if (*fragnr  !=BufferParms.ulNumBuffers)
     {
         *fragnr   = BufferParms.ulNumBuffers;
-        log_message(dlog, "got %3i buffers   %6i bytes.", BufferParms.ulNumBuffers, BufferParms.ulBufferSize);
+        log_message(dlog, "got %3i buffers ? %6i bytes.", BufferParms.ulNumBuffers, BufferParms.ulBufferSize);
     }
     if (*fragsize!=BufferParms.ulBufferSize/sizeof(SWORD))
     {
         *fragsize = BufferParms.ulBufferSize/sizeof(SWORD);
-        log_message(dlog, "got %3i buffers   %6i bytes.", BufferParms.ulNumBuffers, BufferParms.ulBufferSize);
+        log_message(dlog, "got %3i buffers ? %6i bytes.", BufferParms.ulNumBuffers, BufferParms.ulBufferSize);
     }
 
     // SECURITY for *fragnr <2 ????
@@ -629,7 +629,8 @@ static sound_device_t dart_device =
     dart_close,        // dart_close
     dart_suspend,      // dart_suspend
     dart_resume,       // dart_resume
-    1
+    1,
+    2
 };
 
 /*
@@ -730,4 +731,3 @@ int sound_init_dart2_device(void)
 // } MCI_MIX_BUFFER;
 
 // typedef MCI_MIX_BUFFER *PMCI_MIX_BUFFER
-
