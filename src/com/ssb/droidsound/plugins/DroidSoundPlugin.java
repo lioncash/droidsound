@@ -6,7 +6,7 @@ import java.util.List;
 import com.ssb.droidsound.utils.HashUtil;
 
 // TODO: This could be improved by providing an explanation
-// on what each method is supposed to do. 
+// on what each method is supposed to do.
 // This would help people out when porting plugins.
 public abstract class DroidSoundPlugin {
 	public static class MusicInfo {

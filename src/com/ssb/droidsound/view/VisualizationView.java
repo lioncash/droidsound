@@ -10,6 +10,7 @@ import android.util.AttributeSet;
 import android.view.SurfaceView;
 
 import com.ssb.droidsound.utils.Color;
+import com.ssb.droidsound.utils.Log;
 import com.ssb.droidsound.utils.OverlappingFFT;
 
 public class VisualizationView extends SurfaceView {
@@ -62,6 +63,7 @@ public class VisualizationView extends SurfaceView {
 	@Override
 	protected void onDraw(Canvas canvas) {
 		if (queue == null) {
+			Log.i("VisualizationView", "Stop updates");
 			return;
 		}
 
@@ -92,11 +94,13 @@ public class VisualizationView extends SurfaceView {
 	private long updateFftData() {
 		synchronized (queue) {
 			while (true) {
-				long ctm = System.currentTimeMillis();
 				OverlappingFFT.Data data = queue.peek();
 				if (data == null) {
+					Log.i("VisualizationView", "Data underrun. Retry in 100 ms.");
 					return 100;
 				}
+
+				long ctm = System.currentTimeMillis();
 				if (data.getTime() > ctm) {
 					return data.getTime() - ctm;
 				}

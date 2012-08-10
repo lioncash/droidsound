@@ -25,8 +25,6 @@ public class UADEPlugin extends DroidSoundPlugin {
 			Unzipper.unzipAsset("eagleplayers.zip", pluginDir);
 		}
 
-		N_init(pluginDir.getPath());
-
 		if (extensions.size() == 0) {
 			extensions.add("CUST");
 			extensions.add("CUS");
@@ -115,6 +113,8 @@ public class UADEPlugin extends DroidSoundPlugin {
 			throw new RuntimeException(ioe);
 		}
 
+		File pluginDir = Application.getPluginDataDirectory(UADEPlugin.class);
+		N_init(pluginDir.getPath());
 		currentSong = N_loadFile(new File(tmpDir, f1).getPath());
 		return currentSong != 0;
 	}
@@ -125,6 +125,7 @@ public class UADEPlugin extends DroidSoundPlugin {
 			return;
 		}
 		N_unload(currentSong);
+		N_exit();
 		currentSong = 0;
 	}
 

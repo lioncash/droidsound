@@ -92,7 +92,9 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 	@Override
 	protected Void doInBackground(Void... ignored) {
 		try {
+			Log.i(TAG, "Starts.");
 			doScan(Application.getModsDirectory());
+			Log.i(TAG, "Ends.");
 		} catch (IOException e) {
 			Log.w(TAG, "Unable to finish scan", e);
 		}
