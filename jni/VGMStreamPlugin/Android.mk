@@ -161,6 +161,7 @@ LOCAL_SRC_FILES := \
     vgmstream/meta/psx_fag.c \
     vgmstream/meta/psx_gms.c \
     vgmstream/meta/psx_str_mgav.c \
+    vgmstream/meta/ps2_2pfs.c \
     vgmstream/meta/ps2_adm.c \
     vgmstream/meta/ps2_ads.c \
     vgmstream/meta/ps2_adsc.c \
