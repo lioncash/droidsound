@@ -55,6 +55,7 @@ LOCAL_SRC_FILES := \
     vgmstream/layout/ps2_iab_blocked.c \
     vgmstream/layout/ps2_strlr_blocked.c \
     vgmstream/layout/psx_mgav_blocked.c \
+    vgmstream/layout/scd_int_layout.c \
     vgmstream/layout/str_snds_blocked.c \
     vgmstream/layout/thp_blocked.c \
     vgmstream/layout/tra_blocked.c \
@@ -296,10 +297,9 @@ LOCAL_SRC_FILES := \
 
     
 LOCAL_C_INCLUDES := \
-$(LOCAL_PATH) \
-$(LOCAL_PATH)/coding \
-$(LOCAL_PATH)/layout \
-$(LOCAL_PATH)/meta
+    $(LOCAL_PATH) \
+    $(LOCAL_PATH)/coding \
+    $(LOCAL_PATH)/layout \
+    $(LOCAL_PATH)/meta
 
 include $(BUILD_SHARED_LIBRARY)
-
