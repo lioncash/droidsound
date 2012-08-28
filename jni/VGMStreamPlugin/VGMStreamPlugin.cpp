@@ -166,7 +166,6 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1get
             sprintf(text, "%d", vgm->channels);
             char* codingType = text;
             return NewString(env, codingType);
-            break;
         }
         // Shows the number of channels in the file
         case 51:
@@ -174,8 +173,7 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1get
             char text[7];
             sprintf(text, "%d", vgm->sample_rate);
             char* sRate = text;
-            return NewString(env, sRate);
-            break;   
+            return NewString(env, sRate); 
         }
         // Shows the total samples that are to be played
         case 52:
@@ -184,7 +182,6 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1get
             sprintf(text, "%d", get_vgmstream_play_samples(loop_count, 0, 0, vgm));
             char *totalSamples = text;
             return NewString(env, totalSamples);
-            break;
         }
         // Shows the frame size of the stream
         case 53:
@@ -193,7 +190,6 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1get
             sprintf(text, "%d", get_vgmstream_frame_size(vgm));
             char *frameSize = text;
             return NewString(env, frameSize);
-            break;
         }
         // Shows the total samples per frame
         case 54:
@@ -202,7 +198,6 @@ JNIEXPORT jstring JNICALL Java_com_ssb_droidsound_plugins_VGMStreamPlugin_N_1get
             sprintf(text, "%d", get_vgmstream_samples_per_frame(vgm));
             char *samplesPerFrame = text;
             return NewString(env, samplesPerFrame);
-            break;
         }
     }
     return 0;
