@@ -339,22 +339,23 @@ typedef enum {
     meta_DC_ASD,            /* Miss Moonligh */
     meta_NAOMI_SPSD,        /* Guilty Gear X */
     
-    meta_RSD2VAG,           /* RSD2VAG */
+    meta_RSD2VAG,           /* RSD2VAG  */
     meta_RSD2PCMB,          /* RSD2PCMB */
     meta_RSD2XADP,          /* RSD2XADP */
-    meta_RSD3VAG,           /* RSD3VAG */
+    meta_RSD3VAG,           /* RSD3VAG  */
     meta_RSD3GADP,          /* RSD3GADP */
-    meta_RSD3PCM,           /* RSD3PCM */
+    meta_RSD3PCM,           /* RSD3PCM  */
     meta_RSD3PCMB,          /* RSD3PCMB */
     meta_RSD4PCMB,          /* RSD4PCMB */
-    meta_RSD4PCM,           /* RSD4PCM */
+    meta_RSD4PCM,           /* RSD4PCM  */
     meta_RSD4RADP,          /* RSD4RADP */
-    meta_RSD4VAG,           /* RSD4VAG */
-    meta_RSD6VAG,           /* RSD6VAG */
+    meta_RSD4VAG,           /* RSD4VAG  */
+    meta_RSD6VAG,           /* RSD6VAG  */
     meta_RSD6WADP,          /* RSD6WADP */
     meta_RSD6XADP,          /* RSD6XADP */
     meta_RSD6RADP,          /* RSD6RADP */
-
+    meta_RSD6OOGV,          /* RSD6OOGV */
+    
     meta_PS2_ASS,           /* ASS */
     meta_PS2_SEG,           /* Eragon */
     meta_XBOX_SEG,
@@ -570,7 +571,7 @@ typedef struct {
     int adpcm_scale;            /* For MS ADPCM */
 
     struct g72x_state g72x_state; /* state for G.721 decoder, sort of big but we
-                               might as well keep it around */
+                                   * might as well keep it around */
 
 #ifdef DEBUG
     int samples_done;
