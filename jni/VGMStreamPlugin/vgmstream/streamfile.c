@@ -149,7 +149,7 @@ static off_t get_offset_stdio(STDIOSTREAMFILE *streamFile)
 
 static void get_name_stdio(STDIOSTREAMFILE *streamfile, char *buffer, size_t length)
 {
-    strcpy(buffer, streamfile->name, length);
+    strncpy(buffer, streamfile->name, length);
     buffer[length - 1] = '\0';
 }
 
