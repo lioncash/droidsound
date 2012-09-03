@@ -1,10 +1,8 @@
 /*
- * mon_assemble.c - The VICE built-in monitor, 6502 assembler module.
+ * mon_assembleR65C02.c - The VICE built-in monitor, R65C02 assembler module.
  *
  * Written by
- *  Daniel Sladic <sladic@eecg.toronto.edu>
- *  Ettore Perazzoli <ettore@comm2000.it>
- *  Andreas Boose <viceteam@t-online.de>
+ *  Marco van den Heuvel <blackystardust68@yahoo.com>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -46,6 +44,7 @@ static int mon_assemble_instr(const char *opcode_name, asm_mode_addr_info_t oper
 {
     WORD operand_value = operand.param;
     WORD operand_mode = operand.addr_mode;
+    BYTE operand_extra_value = operand.addr_submode;
     BYTE i = 0, opcode = 0;
     int len, branch_offset;
     bool found = FALSE;
@@ -60,7 +59,23 @@ static int mon_assemble_instr(const char *opcode_name, asm_mode_addr_info_t oper
 
         opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(i, 0, 0);
         if (!strcasecmp(opinfo->mnemonic, opcode_name)) {
-            if (opinfo->addr_mode == operand_mode) {
+
+            /* Special case: ZERO PAGE RELATIVE mode needs special handling. */
+            if (opinfo->addr_mode == ASM_ADDR_MODE_ZERO_PAGE_RELATIVE
+                && operand_mode == ASM_ADDR_MODE_DOUBLE) {
+                branch_offset = operand_value - loc - 3;
+                if (branch_offset > 127 || branch_offset < -128) {
+                    mon_out("Branch offset too large.\n");
+                    return -1;
+                }
+                operand_value = (operand_extra_value & 0xff) | ((branch_offset & 0xff) << 8);
+                opcode = i;
+                operand_mode = ASM_ADDR_MODE_ZERO_PAGE_RELATIVE;
+                found = TRUE;
+                break;
+            }
+
+            if (opinfo->addr_mode == operand_mode && found == FALSE) {
                 opcode = i;
                 found = TRUE;
                 break;
@@ -102,6 +117,7 @@ static int mon_assemble_instr(const char *opcode_name, asm_mode_addr_info_t oper
                 found = TRUE;
                 break;
             }
+
             /* It's safe to assume ABSOLUTE if ZERO_PAGE not yet found since
              * ZERO_PAGE versions always precede ABSOLUTE versions if they
              * exist.
@@ -140,11 +156,13 @@ static int mon_assemble_instr(const char *opcode_name, asm_mode_addr_info_t oper
 
     /* EP 98.08.23 use correct memspace for assembling.  */
     mon_set_mem_val(mem, loc, opcode);
-    if (len >= 2)
+    if (len >= 2) {
         mon_set_mem_val(mem, (WORD)(loc + 1), (BYTE)(operand_value & 0xff));
-    if (len >= 3)
+    }
+    if (len >= 3) {
         mon_set_mem_val(mem, (WORD)(loc + 2),
                         (BYTE)((operand_value >> 8) & 0xff));
+    }
 
     if (len >= 0) {
         mon_inc_addr_location(&asm_mode_addr, len);
@@ -155,7 +173,7 @@ static int mon_assemble_instr(const char *opcode_name, asm_mode_addr_info_t oper
     return len;
 }
 
-void mon_assemble6502_init(monitor_cpu_type_t *monitor_cpu_type)
+void mon_assembleR65C02_init(monitor_cpu_type_t *monitor_cpu_type)
 {
     monitor_cpu_type->mon_assemble_instr = mon_assemble_instr;
 }

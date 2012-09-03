@@ -69,10 +69,10 @@ translate_t string_table[] = {
 /* fr */ {IDGS_CANNOT_CREATE_IMAGE_FR, "Impossible de cr?er le fichier image!"},
 /* hu */ {IDGS_CANNOT_CREATE_IMAGE_HU, "Nem siker?lt a k?pm?s f?jlt l?trehozni!"},
 /* it */ {IDGS_CANNOT_CREATE_IMAGE_IT, "Non ? possibile creare il file immagine!"},
-/* ko */ {IDGS_CANNOT_CREATE_IMAGE_KO, "????? ?????? ??????? ???????!"},
+/* ko */ {IDGS_CANNOT_CREATE_IMAGE_KO, ""},
 /* nl */ {IDGS_CANNOT_CREATE_IMAGE_NL, "Kan bestand niet maken!"},
 /* pl */ {IDGS_CANNOT_CREATE_IMAGE_PL, "Nie mo?na utworzy? pliku obrazu!"},
-/* ru */ {IDGS_CANNOT_CREATE_IMAGE_RU, "?? ??????? ??????? ???? ??????!"},
+/* ru */ {IDGS_CANNOT_CREATE_IMAGE_RU, ""},
 /* sv */ {IDGS_CANNOT_CREATE_IMAGE_SV, "Kan inte skapa avbildningsfil!"},
 /* tr */ {IDGS_CANNOT_CREATE_IMAGE_TR, "Imaj dosyas? yarat?lamad?!"},
 #endif
@@ -924,7 +924,7 @@ translate_t string_table[] = {
 /* ko */ {IDGS_NO_FILENAME_KO, ""},  /* fuzzy */
 /* nl */ {IDGS_NO_FILENAME_NL, "Geen bestandsnaam!"},
 /* pl */ {IDGS_NO_FILENAME_PL, "Brak nazwy pliku!"},
-/* ru */ {IDGS_NO_FILENAME_RU, "??? ????? ?????!"},
+/* ru */ {IDGS_NO_FILENAME_RU, ""},
 /* sv */ {IDGS_NO_FILENAME_SV, "Filnamn saknas!"},
 /* tr */ {IDGS_NO_FILENAME_TR, "Dosya ismi yok!"},
 #endif
@@ -1229,7 +1229,7 @@ translate_t string_table[] = {
 /* it */ {IDGS_MON_CPUHISTORY_DESCRIPTION_IT, "Mostra gli ultimi <contatore> comandi eseguiti."},
 /* ko */ {IDGS_MON_CPUHISTORY_DESCRIPTION_KO, ""},  /* fuzzy */
 /* nl */ {IDGS_MON_CPUHISTORY_DESCRIPTION_NL, "Toon <hoeveelheid> laatst uitgevoerde commandos."},
-/* pl */ {IDGS_MON_CPUHISTORY_DESCRIPTION_PL, "Pokazuje <ilo??> ostatnio wykonanych polece?."},
+/* pl */ {IDGS_MON_CPUHISTORY_DESCRIPTION_PL, "Pokazuje <ilo> ostatnio wykonanych polece?."},
 /* ru */ {IDGS_MON_CPUHISTORY_DESCRIPTION_RU, "Show <count> last executed commands."},
 /* sv */ {IDGS_MON_CPUHISTORY_DESCRIPTION_SV, "Visa <antal> senast exekverade kommandon."},
 /* tr */ {IDGS_MON_CPUHISTORY_DESCRIPTION_TR, "<adet> son ?al??t?r?lan komutlar? g?ster."},
@@ -2647,10 +2647,10 @@ translate_t string_table[] = {
 /* fr */ {IDGS_P_DIRECTORY_FR, "<R?pertoire>"},
 /* hu */ {IDGS_P_DIRECTORY_HU, ""},  /* fuzzy */
 /* it */ {IDGS_P_DIRECTORY_IT, "<Directory>"},
-/* ko */ {IDGS_P_DIRECTORY_KO, "<??????>"},
+/* ko */ {IDGS_P_DIRECTORY_KO, "<>"},
 /* nl */ {IDGS_P_DIRECTORY_NL, "<Directory>"},
 /* pl */ {IDGS_P_DIRECTORY_PL, "<Katalog>"},
-/* ru */ {IDGS_P_DIRECTORY_RU, "<?????>"},
+/* ru */ {IDGS_P_DIRECTORY_RU, "<>"},
 /* sv */ {IDGS_P_DIRECTORY_SV, "<Katalog>"},
 /* tr */ {IDGS_P_DIRECTORY_TR, "<Dizin>"},
 #endif
@@ -3413,10 +3413,10 @@ translate_t string_table[] = {
 /* fr */ {IDCLS_P_NAME_FR, "<Nom>"},
 /* hu */ {IDCLS_P_NAME_HU, "<N?v>"},
 /* it */ {IDCLS_P_NAME_IT, "<Nome>"},
-/* ko */ {IDCLS_P_NAME_KO, "<???>"},
+/* ko */ {IDCLS_P_NAME_KO, "<>"},
 /* nl */ {IDCLS_P_NAME_NL, "<Naam>"},
 /* pl */ {IDCLS_P_NAME_PL, "<Nazwa>"},
-/* ru */ {IDCLS_P_NAME_RU, "<???>"},
+/* ru */ {IDCLS_P_NAME_RU, "<>"},
 /* sv */ {IDCLS_P_NAME_SV, "<Namn>"},
 /* tr */ {IDCLS_P_NAME_TR, "<?sim>"},
 #endif
@@ -3753,7 +3753,7 @@ translate_t string_table[] = {
 /* fr */ {IDCLS_P_REVISION_FR, "<R?vision>"},
 /* hu */ {IDCLS_P_REVISION_HU, "<V?ltozatsz?m>"},
 /* it */ {IDCLS_P_REVISION_IT, "<Revisione>"},
-/* ko */ {IDCLS_P_REVISION_KO, "<????>"},
+/* ko */ {IDCLS_P_REVISION_KO, "<>"},
 /* nl */ {IDCLS_P_REVISION_NL, "<Revisie>"},
 /* pl */ {IDCLS_P_REVISION_PL, "<Poprawka>"},
 /* ru */ {IDCLS_P_REVISION_RU, "<Revision>"},
@@ -3860,7 +3860,7 @@ translate_t string_table[] = {
 /* fr */ {IDCLS_P_NUMBER_FR, ""},  /* fuzzy */
 /* hu */ {IDCLS_P_NUMBER_HU, ""},  /* fuzzy */
 /* it */ {IDCLS_P_NUMBER_IT, "<numero>"},
-/* ko */ {IDCLS_P_NUMBER_KO, "<????>"},
+/* ko */ {IDCLS_P_NUMBER_KO, "<>"},
 /* nl */ {IDCLS_P_NUMBER_NL, "<nummer>"},
 /* pl */ {IDCLS_P_NUMBER_PL, "<numer>"},
 /* ru */ {IDCLS_P_NUMBER_RU, "<number>"},
@@ -4120,10 +4120,10 @@ translate_t string_table[] = {
 /* fr */ {IDCLS_P_MODEL_FR, "<Mod?le>"},
 /* hu */ {IDCLS_P_MODEL_HU, "<Modell>"},
 /* it */ {IDCLS_P_MODEL_IT, "<Modello>"},
-/* ko */ {IDCLS_P_MODEL_KO, "<????>"},
+/* ko */ {IDCLS_P_MODEL_KO, "<>"},
 /* nl */ {IDCLS_P_MODEL_NL, "<Model>"},
 /* pl */ {IDCLS_P_MODEL_PL, "<Model>"},
-/* ru */ {IDCLS_P_MODEL_RU, "<??????>"},
+/* ru */ {IDCLS_P_MODEL_RU, "<>"},
 /* sv */ {IDCLS_P_MODEL_SV, "<Modell>"},
 /* tr */ {IDCLS_P_MODEL_TR, "<Model>"},
 #endif
@@ -4625,7 +4625,7 @@ translate_t string_table[] = {
 /* ko */ {IDCLS_P_SIZE_IN_KB_KO, ""},  /* fuzzy */
 /* nl */ {IDCLS_P_SIZE_IN_KB_NL, "<grootte in KB>"},
 /* pl */ {IDCLS_P_SIZE_IN_KB_PL, "<rozmiar w KB>"},
-/* ru */ {IDCLS_P_SIZE_IN_KB_RU, "<?????? ? ??>"},
+/* ru */ {IDCLS_P_SIZE_IN_KB_RU, "<>"},
 /* sv */ {IDCLS_P_SIZE_IN_KB_SV, "<storlek i KB>"},
 /* tr */ {IDCLS_P_SIZE_IN_KB_TR, "<KB cinsinden boyut>"},
 #endif
@@ -6851,7 +6851,7 @@ translate_t string_table[] = {
 /* fr */ {IDCLS_SMART_ATTACH_CART_FR, ""},  /* fuzzy */
 /* hu */ {IDCLS_SMART_ATTACH_CART_HU, ""},  /* fuzzy */
 /* it */ {IDCLS_SMART_ATTACH_CART_IT, "Seleziona una cartuccia"},
-/* ko */ {IDCLS_SMART_ATTACH_CART_KO, "?????? ??????? ?????-????? ???"},
+/* ko */ {IDCLS_SMART_ATTACH_CART_KO, ""},
 /* nl */ {IDCLS_SMART_ATTACH_CART_NL, "Slim-koppel cartridge bestand"},
 /* pl */ {IDCLS_SMART_ATTACH_CART_PL, "Inteligentnie zamontuj obraz kartrid?a"},
 /* ru */ {IDCLS_SMART_ATTACH_CART_RU, "Smart-attach cartridge image"},
@@ -6886,9 +6886,9 @@ translate_t string_table[] = {
 /* fr */ {IDCLS_P_VALUE_FR, ""},  /* fuzzy */
 /* hu */ {IDCLS_P_VALUE_HU, ""},  /* fuzzy */
 /* it */ {IDCLS_P_VALUE_IT, "<valore>"},
-/* ko */ {IDCLS_P_VALUE_KO, "<???>"},
+/* ko */ {IDCLS_P_VALUE_KO, "<>"},
 /* nl */ {IDCLS_P_VALUE_NL, "<waarde>"},
-/* pl */ {IDCLS_P_VALUE_PL, "<warto??>"},
+/* pl */ {IDCLS_P_VALUE_PL, "<warto>"},
 /* ru */ {IDCLS_P_VALUE_RU, "<value>"},
 /* sv */ {IDCLS_P_VALUE_SV, "<v?rde>"},
 /* tr */ {IDCLS_P_VALUE_TR, "<de?er>"},
@@ -7620,7 +7620,7 @@ translate_t string_table[] = {
 /* fr */ {IDCLS_P_TYPE_FR, "<type>"},
 /* hu */ {IDCLS_P_TYPE_HU, "<T?pus>"},
 /* it */ {IDCLS_P_TYPE_IT, "<Tipo>"},
-/* ko */ {IDCLS_P_TYPE_KO, "<????>"},
+/* ko */ {IDCLS_P_TYPE_KO, "<>"},
 /* nl */ {IDCLS_P_TYPE_NL, "<Soort>"},
 /* pl */ {IDCLS_P_TYPE_PL, "<Typ>"},
 /* ru */ {IDCLS_P_TYPE_RU, "<Type>"},
@@ -9702,7 +9702,7 @@ translate_t string_table[] = {
 /* it */ {IDCLS_P_AMOUNT_IT, "<numero>"},
 /* ko */ {IDCLS_P_AMOUNT_KO, ""},  /* fuzzy */
 /* nl */ {IDCLS_P_AMOUNT_NL, "<hoeveelheid>"},
-/* pl */ {IDCLS_P_AMOUNT_PL, "<ilo??>"},
+/* pl */ {IDCLS_P_AMOUNT_PL, "<ilo>"},
 /* ru */ {IDCLS_P_AMOUNT_RU, ""},  /* fuzzy */
 /* sv */ {IDCLS_P_AMOUNT_SV, "<antal>"},
 /* tr */ {IDCLS_P_AMOUNT_TR, "<adet>"},
@@ -9897,7 +9897,7 @@ translate_t string_table[] = {
 /* fr */ {IDCLS_P_BASE_ADDRESS_FR, ""},  /* fuzzy */
 /* hu */ {IDCLS_P_BASE_ADDRESS_HU, ""},  /* fuzzy */
 /* it */ {IDCLS_P_BASE_ADDRESS_IT, "<Indirizzo base>"},
-/* ko */ {IDCLS_P_BASE_ADDRESS_KO, "<????? ???>"},
+/* ko */ {IDCLS_P_BASE_ADDRESS_KO, "<>"},
 /* nl */ {IDCLS_P_BASE_ADDRESS_NL, "<Basisadres>"},
 /* pl */ {IDCLS_P_BASE_ADDRESS_PL, "<Adres bazowy>"},
 /* ru */ {IDCLS_P_BASE_ADDRESS_RU, ""},  /* fuzzy */
@@ -10851,7 +10851,7 @@ translate_t string_table[] = {
 /* fr */ {IDCLS_P_MODE_FR, ""},  /* fuzzy */
 /* hu */ {IDCLS_P_MODE_HU, ""},  /* fuzzy */
 /* it */ {IDCLS_P_MODE_IT, "<Modalit?>"},
-/* ko */ {IDCLS_P_MODE_KO, "<????>"},
+/* ko */ {IDCLS_P_MODE_KO, "<>"},
 /* nl */ {IDCLS_P_MODE_NL, "<Modus>"},
 /* pl */ {IDCLS_P_MODE_PL, "<Tryb>"},
 /* ru */ {IDCLS_P_MODE_RU, "<Mode>"},
@@ -11612,7 +11612,7 @@ translate_t string_table[] = {
 /* ko */ {IDCLS_P_FILE_KO, ""},  /* fuzzy */
 /* nl */ {IDCLS_P_FILE_NL, "<bestandsnaam>"},
 /* pl */ {IDCLS_P_FILE_PL, "<filename>"},
-/* ru */ {IDCLS_P_FILE_RU, "<??? ?????>"},
+/* ru */ {IDCLS_P_FILE_RU, "<>"},
 /* sv */ {IDCLS_P_FILE_SV, "<filnamn>"},
 /* tr */ {IDCLS_P_FILE_TR, "<dosyaismi>"},
 #endif
@@ -12036,7 +12036,7 @@ translate_t string_table[] = {
 /* it */ {IDCLS_SET_SAMPLE_RATE_VALUE_HZ_IT, "Imposta la velocit? di campionamento audio a <valore> Hz"},
 /* ko */ {IDCLS_SET_SAMPLE_RATE_VALUE_HZ_KO, ""},  /* fuzzy */
 /* nl */ {IDCLS_SET_SAMPLE_RATE_VALUE_HZ_NL, "Zet de geluid sample rate naar <waarde> Hz"},
-/* pl */ {IDCLS_SET_SAMPLE_RATE_VALUE_HZ_PL, "Ustaw pr?bkowanie sampli na <warto??> Hz"},
+/* pl */ {IDCLS_SET_SAMPLE_RATE_VALUE_HZ_PL, "Ustaw pr?bkowanie sampli na <warto> Hz"},
 /* ru */ {IDCLS_SET_SAMPLE_RATE_VALUE_HZ_RU, ""},  /* fuzzy */
 /* sv */ {IDCLS_SET_SAMPLE_RATE_VALUE_HZ_SV, "S?tt ljudsamplingshastighet till <v?rde> Hz"},
 /* tr */ {IDCLS_SET_SAMPLE_RATE_VALUE_HZ_TR, "Ses ?rnekleme h?z?n? <de?er> Hz olarak ayarla"},
@@ -12053,7 +12053,7 @@ translate_t string_table[] = {
 /* it */ {IDCLS_SET_SOUND_BUFFER_SIZE_MSEC_IT, "Imposta la dimensione del buffer audio a <valore> msec"},
 /* ko */ {IDCLS_SET_SOUND_BUFFER_SIZE_MSEC_KO, ""},  /* fuzzy */
 /* nl */ {IDCLS_SET_SOUND_BUFFER_SIZE_MSEC_NL, "Zet de geluidsbuffergrootte naar <waarde> msec"},
-/* pl */ {IDCLS_SET_SOUND_BUFFER_SIZE_MSEC_PL, "Ustaw rozmiar bufora d?wi?ku na <warto??> ms"},
+/* pl */ {IDCLS_SET_SOUND_BUFFER_SIZE_MSEC_PL, "Ustaw rozmiar bufora d?wi?ku na <warto> ms"},
 /* ru */ {IDCLS_SET_SOUND_BUFFER_SIZE_MSEC_RU, ""},  /* fuzzy */
 /* sv */ {IDCLS_SET_SOUND_BUFFER_SIZE_MSEC_SV, "S?tt ljudbuffertstorlek till <v?rde> ms"},
 /* tr */ {IDCLS_SET_SOUND_BUFFER_SIZE_MSEC_TR, "Ses arabellek boyutunu <de?er> milisaniye olarak ayarla"},
@@ -12238,10 +12238,10 @@ translate_t string_table[] = {
 /* fr */ {IDCLS_P_PATH_FR, ""},  /* fuzzy */
 /* hu */ {IDCLS_P_PATH_HU, ""},  /* fuzzy */
 /* it */ {IDCLS_P_PATH_IT, "<Percorso>"},
-/* ko */ {IDCLS_P_PATH_KO, "<??>"},
+/* ko */ {IDCLS_P_PATH_KO, "<>"},
 /* nl */ {IDCLS_P_PATH_NL, "<Pad>"},
 /* pl */ {IDCLS_P_PATH_PL, "<?cie?ka>"},
-/* ru */ {IDCLS_P_PATH_RU, "<????>"},
+/* ru */ {IDCLS_P_PATH_RU, "<>"},
 /* sv */ {IDCLS_P_PATH_SV, "<S?kv?g>"},
 /* tr */ {IDCLS_P_PATH_TR, "<Yol>"},
 #endif
@@ -12325,7 +12325,7 @@ translate_t string_table[] = {
 /* it */ {IDCLS_UPDATE_EVERY_VALUE_FRAMES_IT, "Aggiorna ogni <valore> frame (`0' per automatico)"},
 /* ko */ {IDCLS_UPDATE_EVERY_VALUE_FRAMES_KO, ""},  /* fuzzy */
 /* nl */ {IDCLS_UPDATE_EVERY_VALUE_FRAMES_NL, "Elke <waarde> beeld vernieuwen (`0' voor automatisch)"},
-/* pl */ {IDCLS_UPDATE_EVERY_VALUE_FRAMES_PL, "Aktualizuj co <warto??> klatek (`0' - automatycznie)"},
+/* pl */ {IDCLS_UPDATE_EVERY_VALUE_FRAMES_PL, "Aktualizuj co <warto> klatek (`0' - automatycznie)"},
 /* ru */ {IDCLS_UPDATE_EVERY_VALUE_FRAMES_RU, ""},  /* fuzzy */
 /* sv */ {IDCLS_UPDATE_EVERY_VALUE_FRAMES_SV, "Uppdatera varje <v?rde> ramar (\"0\" f?r automatiskt)"},
 /* tr */ {IDCLS_UPDATE_EVERY_VALUE_FRAMES_TR, "Her <de?er> framede bir g?ncelle (otomatik i?in `0')"},
