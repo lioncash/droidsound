@@ -119,7 +119,7 @@ public class VGMStreamPlugin extends DroidSoundPlugin {
 
 	@Override
 	public String getVersion() {
-		return "vgmstream revision 996";
+		return "vgmstream revision 1000";
 	}
 
 	@Override
