@@ -1,10 +1,8 @@
 /*
- * ps2mouse.h - PS/2 mouse on userport emulation
+ * userport_rtc.h: Generic userport rtc device emulation.
  *
  * Written by
- *  Hannu Nuotio <hannu.nuotio@tut.fi>
- * Based on code by
- *  Andreas Boose <viceteam@t-online.de> 
+ *  Marco van den Heuvel <viceteam@t-online.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -26,32 +24,18 @@
  *
  */
 
-#ifndef VICE_PS2MOUSE_H
-#define VICE_PS2MOUSE_H
+#ifndef VICE_USERPORT_RTC_H
+#define VICE_USERPORT_RTC_H
 
 #include "types.h"
 
-extern void ps2mouse_reset(void);
+extern int userport_rtc_enable;
 
-extern BYTE ps2mouse_read(void);
-extern void ps2mouse_store(BYTE value);
+extern void userport_rtc_store(BYTE value);
+extern BYTE userport_rtc_read(BYTE orig);
 
-extern int ps2mouse_resources_init(void);
-extern int ps2mouse_cmdline_options_init(void);
-
-extern int ps2mouse_enabled;
-
-extern int mouse_resources_init(void);
-extern int mouse_cmdline_options_init(void);
-extern void mouse_init(void);
-extern void mouse_shutdown(void);
-
-extern void mouse_button_left(int pressed);
-extern void mouse_button_right(int pressed);
-
-extern BYTE mouse_get_x(void);
-extern BYTE mouse_get_y(void);
-
-extern int _mouse_enabled;
+extern int userport_rtc_resources_init(void);
+extern int userport_rtc_cmdline_options_init(void);
+extern void userport_rtc_resources_shutdown(void);
 
 #endif

@@ -1,10 +1,8 @@
 /*
- * ps2mouse.h - PS/2 mouse on userport emulation
+ * ds12c887rtc.h
  *
  * Written by
- *  Hannu Nuotio <hannu.nuotio@tut.fi>
- * Based on code by
- *  Andreas Boose <viceteam@t-online.de> 
+ *  Marco van den Heuvel <viceteam@t-online.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -26,32 +24,27 @@
  *
  */
 
-#ifndef VICE_PS2MOUSE_H
-#define VICE_PS2MOUSE_H
+#ifndef VICE_DS12C887RTC_H
+#define VICE_DS12C887RTC_H
 
 #include "types.h"
+#include "sound.h"
 
-extern void ps2mouse_reset(void);
+extern int ds12c887rtc_cart_enabled(void);
 
-extern BYTE ps2mouse_read(void);
-extern void ps2mouse_store(BYTE value);
+extern void ds12c887rtc_reset(void);
 
-extern int ps2mouse_resources_init(void);
-extern int ps2mouse_cmdline_options_init(void);
+extern int ds12c887rtc_enable(void);
+extern void ds12c887rtc_detach(void);
 
-extern int ps2mouse_enabled;
+extern int ds12c887rtc_resources_init(void);
+extern void ds12c887rtc_resources_shutdown(void);
 
-extern int mouse_resources_init(void);
-extern int mouse_cmdline_options_init(void);
-extern void mouse_init(void);
-extern void mouse_shutdown(void);
+extern int ds12c887rtc_cmdline_options_init(void);
 
-extern void mouse_button_left(int pressed);
-extern void mouse_button_right(int pressed);
+struct snapshot_s;
 
-extern BYTE mouse_get_x(void);
-extern BYTE mouse_get_y(void);
-
-extern int _mouse_enabled;
+extern int ds12c887rtc_snapshot_write_module(struct snapshot_s *s);
+extern int ds12c887rtc_snapshot_read_module(struct snapshot_s *s);
 
 #endif

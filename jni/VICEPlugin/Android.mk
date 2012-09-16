@@ -158,6 +158,7 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH) \
     $(LOCAL_PATH)/vice/lib/p64 \
     $(LOCAL_PATH)/vice/monitor \
     $(LOCAL_PATH)/vice/raster \
+    $(LOCAL_PATH)/vice/rtc \
     $(LOCAL_PATH)/vice/sid \
     $(LOCAL_PATH)/vice/tape \
     $(LOCAL_PATH)/vice/userport \

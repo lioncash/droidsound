@@ -153,7 +153,7 @@
  *                     when set to a 1, permits the Alarm Flag (AF) bit in register 12
  *                     to assert IRQ. An alarm interrupt occurs for each second that
  *                     the 3 time bytes equal the 3 alarm bytes including a
- *                     “don’t care” alarm code of binary 11XXXXXX. When the AIE bit is
+ *                     ?don?t care? alarm code of binary 11XXXXXX. When the AIE bit is
  *                     set to 0, the AF bit does not initiate the IRQ signal. The
  *                     internal functions of the DS12C887 not affect the AIE bit.
  *               bit 4 The Update Ended Interrupt Enable (UIE) bit is a read/write bit
@@ -204,6 +204,10 @@
  *               bits 5-4 10 centuries
  *               bits 3-0 centuries
  *               this register can only be accessed in BCD mode
+ */
+
+/* This module is currently used in the following emulated hardware:
+   - C64/C128/VIC20 DS12C887 RTC cartridge
  */
 
 /* ---------------------------------------------------------------------------------------------------- */
@@ -738,4 +742,3 @@ BYTE ds12c887_read(rtc_ds12c887_t *context)
     }
     return retval;
 }
-
