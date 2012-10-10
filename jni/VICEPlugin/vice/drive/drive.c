@@ -7,7 +7,7 @@
  * Based on old code by
  *  Daniel Sladic <sladic@eecg.toronto.edu>
  *  Ettore Perazzoli <ettore@comm2000.it>
- *  Andr? Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <fachat@physik.tu-chemnitz.de>
  *  Teemu Rantanen <tvr@cs.hut.fi>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -86,8 +86,6 @@ int rom_loaded = 0;
 
 static int drive_led_color[DRIVE_NUM];
 
-static void drive_extend_disk_image(drive_t *drive);
-
 /* ------------------------------------------------------------------------- */
 
 void drive_set_disk_memory(BYTE *id, unsigned int track, unsigned int sector,
@@ -116,11 +114,21 @@ void drive_set_last_read(unsigned int track, unsigned int sector, BYTE *buffer,
                          struct drive_context_s *drv)
 {
     drive_t *drive;
+    int side = 0;
 
     drive = drv->drive;
 
     drive_gcr_data_writeback(drive);
-    drive_set_half_track(track * 2, drive);
+
+    if (drive->type == DRIVE_TYPE_1570
+            || drive->type == DRIVE_TYPE_1571
+            || drive->type == DRIVE_TYPE_1571CR) {
+        if (track > 35) {
+            track -= 35;
+            side = 1;
+        }
+    }
+    drive_set_half_track(track * 2, side, drive);
 
     if (drive->type == DRIVE_TYPE_1541
         || drive->type == DRIVE_TYPE_1541II
@@ -208,7 +216,7 @@ int drive_init(void)
         drive->byte_ready_edge = 1;
         drive->GCR_dirty_track = 0;
         drive->GCR_write_value = 0x55;
-        drive->GCR_track_start_ptr = drive->gcr->data;
+        drive->GCR_track_start_ptr = NULL;
         drive->GCR_current_track_size = 0;
         drive->attach_clk = (CLOCK)0;
         drive->detach_clk = (CLOCK)0;
@@ -226,10 +234,9 @@ int drive_init(void)
         drive->led_active_ticks = 0;
 
         rotation_reset(drive);
-        drive_image_init_track_size_d64(drive);
 
         /* Position the R/W head on the directory track.  */
-        drive_set_half_track(36, drive);
+        drive_set_half_track(36, 0, drive);
         drive_led_color[dnr] = DRIVE_ACTIVE_RED;
     }
 
@@ -383,6 +390,7 @@ void drive_enable_update_ui(drive_context_t *drv)
             enabled_drives |= the_drive;
             drive->old_led_status = -1;
             drive->old_half_track = -1;
+            drive->old_side = -1;
         }
     }
 
@@ -417,6 +425,9 @@ int drive_enable(drive_context_t *drv)
     /* Recalculate drive geometry.  */
     if (drive->image != NULL)
         drive_image_attach(drive->image, dnr + 8);
+
+    /* resync */
+    drv->cpu->stop_clk = *(drv->clk_ptr);
 
     if (drive->type == DRIVE_TYPE_2000 || drive->type == DRIVE_TYPE_4000) {
         drivecpu65c02_wake_up(drv);
@@ -478,22 +489,16 @@ void drive_reset(void)
     }
 }
 
-void drive_current_track_size_set(drive_t *dptr)
-{
-    dptr->GCR_current_track_size =
-        dptr->gcr->track_size[dptr->current_half_track - 2];
-}
-
 /* Move the head to half track `num'.  */
-void drive_set_half_track(int num, drive_t *dptr)
+void drive_set_half_track(int num, int side, drive_t *dptr)
 {
     if ((dptr->type == DRIVE_TYPE_1541 || dptr->type == DRIVE_TYPE_1541II
         || dptr->type == DRIVE_TYPE_1551 || dptr->type == DRIVE_TYPE_1570
         || dptr->type == DRIVE_TYPE_2031) && num > 84)
         num = 84;
     if ((dptr->type == DRIVE_TYPE_1571 || dptr->type == DRIVE_TYPE_1571CR)
-        && num > 140)
-        num = 140;
+        && num > 70)
+        num = 70;
     if (num < 2)
         num = 2;
 
@@ -503,19 +508,19 @@ void drive_set_half_track(int num, drive_t *dptr)
             dptr->p64->PulseStreams[dptr->current_half_track].CurrentIndex = -1;
         }
     }
+    dptr->side = side;
 
-    dptr->GCR_track_start_ptr = (dptr->gcr->data
-                                + ((dptr->current_half_track - 2)
-                                * dptr->gcr->max_track_size));
+    dptr->GCR_track_start_ptr = dptr->gcr->tracks[dptr->current_half_track - 2 + dptr->side * 70].data;
 
     if (dptr->GCR_current_track_size != 0)
         dptr->GCR_head_offset = (dptr->GCR_head_offset
-            * dptr->gcr->track_size[dptr->current_half_track - 2])
+            * dptr->gcr->tracks[dptr->current_half_track - 2].size)
             / dptr->GCR_current_track_size;
     else
         dptr->GCR_head_offset = 0;
 
-    drive_current_track_size_set(dptr);
+    dptr->GCR_current_track_size =
+        dptr->gcr->tracks[dptr->current_half_track - 2].size;
 }
 
 /*-------------------------------------------------------------------------- */
@@ -525,48 +530,20 @@ void drive_set_half_track(int num, drive_t *dptr)
 void drive_move_head(int step, drive_t *drive)
 {
     drive_gcr_data_writeback(drive);
-    if (drive->type == DRIVE_TYPE_1571
-        || drive->type == DRIVE_TYPE_1571CR) {
-        if (drive->current_half_track + step >= 71)
-            return;
-    }
     drive_sound_head(drive->current_half_track, step, drive->mynumber);
-    drive_set_half_track(drive->current_half_track + step, drive);
-}
-
-/* Hack... otherwise you get internal compiler errors when optimizing on
-    gcc2.7.2 on RISC OS */
-static void gcr_data_writeback2(BYTE *buffer, BYTE *offset, unsigned int track,
-                                unsigned int sector, drive_t *drive)
-{
-    int rc;
-
-    gcr_convert_GCR_to_sector(buffer, offset,
-                              drive->GCR_track_start_ptr,
-                              drive->GCR_current_track_size);
-    if (buffer[0] != 0x7) {
-        log_error(drive->log,
-                  "Could not find data block id of T:%d S:%d.",
-                  track, sector);
-    } else {
-        rc = disk_image_write_sector(drive->image, buffer + 1, track, sector);
-        if (rc < 0)
-            log_error(drive->log,
-                      "Could not update T:%d S:%d.", track, sector);
-    }
+    drive_set_half_track(drive->current_half_track + step, drive->side, drive);
 }
 
 void drive_gcr_data_writeback(drive_t *drive)
 {
     int extend;
-    unsigned int half_track, track, sector, max_sector = 0;
-    BYTE buffer[260], *offset;
+    unsigned int half_track, track;
 
     if (drive->image == NULL) {
         return;
     }
 
-    half_track = drive->current_half_track;
+    half_track = drive->current_half_track + drive->side * 70;
     track = drive->current_half_track / 2;
 
     if (drive->image->type == DISK_IMAGE_TYPE_P64) {
@@ -578,83 +555,46 @@ void drive_gcr_data_writeback(drive_t *drive)
     }
 
     if (drive->image->type == DISK_IMAGE_TYPE_G64) {
-        BYTE *gcr_track_start_ptr;
-        unsigned int gcr_current_track_size;
-
-        gcr_current_track_size = drive->gcr->track_size[half_track - 2];
-
-        gcr_track_start_ptr = drive->gcr->data
-                              + ((half_track - 2) * drive->gcr->max_track_size);
-
         disk_image_write_half_track(drive->image, half_track,
-                                   gcr_current_track_size,
-                                   drive->gcr->speed_zone,
-                                   gcr_track_start_ptr);
+                                   &drive->gcr->tracks[half_track - 2]);
         drive->GCR_dirty_track = 0;
         return;
     }
 
-    if (drive->image->type == DISK_IMAGE_TYPE_D64
-        || drive->image->type == DISK_IMAGE_TYPE_X64) {
-        if (track > EXT_TRACKS_1541)
+    if (half_track > drive->image->max_half_tracks) {
+        drive->GCR_dirty_track = 0;
+        return;
+    }
+    if (track > drive->image->tracks) {
+        switch (drive->extend_image_policy) {
+        case DRIVE_EXTEND_NEVER:
+            drive->ask_extend_disk_image = 1;
+            drive->GCR_dirty_track = 0;
             return;
-        max_sector = disk_image_sector_per_track(DISK_IMAGE_TYPE_D64, track);
-        if (track > drive->image->tracks) {
-            switch (drive->extend_image_policy) {
-              case DRIVE_EXTEND_NEVER:
-                drive->ask_extend_disk_image = 1;
-                return;
-              case DRIVE_EXTEND_ASK:
-                if (drive->ask_extend_disk_image == 1) {
-                    extend = ui_extend_image_dialog();
-                    if (extend == 0) {
-                        drive->ask_extend_disk_image = 0;
-                        return;
-                    } else {
-                        drive_extend_disk_image(drive);
-                    }
-                } else {
+        case DRIVE_EXTEND_ASK:
+            if (drive->ask_extend_disk_image == 1) {
+                extend = ui_extend_image_dialog();
+                if (extend == 0) {
+                    drive->GCR_dirty_track = 0;
+                    drive->ask_extend_disk_image = 0;
                     return;
                 }
-                break;
-              case DRIVE_EXTEND_ACCESS:
-                drive->ask_extend_disk_image = 1;
-                drive_extend_disk_image(drive);
-                break;
+                drive->ask_extend_disk_image = 2;
+            } else if (drive->ask_extend_disk_image == 0) {
+                drive->GCR_dirty_track = 0;
+                return;
             }
+            break;
+        case DRIVE_EXTEND_ACCESS:
+            drive->ask_extend_disk_image = 1;
+            break;
         }
     }
 
-    if (drive->image->type == DISK_IMAGE_TYPE_D71) {
-        if (track > MAX_TRACKS_1571)
-            return;
-        max_sector = disk_image_sector_per_track(DISK_IMAGE_TYPE_D71, track);
-    }
+    disk_image_write_half_track(drive->image, half_track,
+            &drive->gcr->tracks[half_track - 2]);
 
     drive->GCR_dirty_track = 0;
-
-    for (sector = 0; sector < max_sector; sector++) {
-
-        offset = gcr_find_sector_header(track, sector,
-                                        drive->GCR_track_start_ptr,
-                                        drive->GCR_current_track_size);
-        if (offset == NULL) {
-            log_error(drive->log,
-                      "Could not find header of T:%d S:%d.",
-                      track, sector);
-        } else {
-            offset = gcr_find_sector_data(offset,
-                                          drive->GCR_track_start_ptr,
-                                          drive->GCR_current_track_size);
-            if (offset == NULL) {
-                log_error(drive->log,
-                          "Could not find data sync of T:%d S:%d.",
-                          track, sector);
-            } else {
-                gcr_data_writeback2(buffer, offset, track, sector, drive);
-            }
-        }
-    }
 }
 
 void drive_gcr_data_writeback_all(void)
@@ -676,27 +616,6 @@ void drive_gcr_data_writeback_all(void)
     }
 
 
-}
-
-static void drive_extend_disk_image(drive_t *drive)
-{
-    int rc;
-    unsigned int track, sector;
-    BYTE buffer[256];
-
-    drive->image->tracks = EXT_TRACKS_1541;
-    memset(buffer, 0, 256);
-    for (track = NUM_TRACKS_1541 + 1; track <= EXT_TRACKS_1541; track++) {
-        for (sector = 0;
-             sector < disk_image_sector_per_track(DISK_IMAGE_TYPE_D64, track);
-             sector++) {
-             rc = disk_image_write_sector(drive->image, buffer, track,
-                                          sector);
-             if (rc < 0)
-                 log_error(drive->log,
-                           "Could not update T:%d S:%d.", track, sector);
-        }
-    }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -774,12 +693,14 @@ void drive_update_ui_status(void)
 
             drive_led_update(drive, drive0);
 
-            if (drive->current_half_track != drive->old_half_track) {
+            if (drive->current_half_track != drive->old_half_track
+                    || drive->side != drive->old_side) {
                 drive->old_half_track = drive->current_half_track;
+                drive->old_side = drive->side;
                 dual = dual || drive->drive1;   /* also include drive 0 */
                 ui_display_drive_track(i,
                         dual ? 0 : 8,
-                        drive->current_half_track);
+                        drive->current_half_track + drive->side * 70);
             }
         }
     }

@@ -54,7 +54,7 @@ void rawimage_name_set(disk_image_t *image, char *name)
     rawimage->name = name;
 }
 
-char *rawimage_name_get(disk_image_t *image)
+char *rawimage_name_get(const disk_image_t *image)
 {
     rawimage_t *rawimage;
 
@@ -115,16 +115,16 @@ int rawimage_close(disk_image_t *image)
 
 /*-----------------------------------------------------------------------*/
 
-int rawimage_read_sector(disk_image_t *image, BYTE *buf, unsigned int track,
-                         unsigned int sector)
+int rawimage_read_sector(const disk_image_t *image, BYTE *buf,
+                         const disk_addr_t *dadr)
 {
-    return blockdev_read_sector(buf, track, sector);
+    return blockdev_read_sector(buf, dadr->track, dadr->sector);
 }
 
-int rawimage_write_sector(disk_image_t *image, BYTE *buf, unsigned int track,
-                          unsigned int sector)
+int rawimage_write_sector(disk_image_t *image, const BYTE *buf,
+                          const disk_addr_t *dadr)
 {
-    return blockdev_write_sector(buf, track, sector);
+    return blockdev_write_sector(buf, dadr->track, dadr->sector);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -169,4 +169,3 @@ int rawimage_cmdline_options_init()
 {
     return blockdev_cmdline_options_init();
 }
-

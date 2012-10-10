@@ -11,7 +11,7 @@
  *  Jarkko Sonninen <sonninen@lut.fi>
  *  Jouko Valta <jopi@stekt.oulu.fi>
  *  Olaf Seibert <rhialto@mbfys.kun.nl>
- *  André Fachat <a.fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <a.fachat@physik.tu-chemnitz.de>
  *  Ettore Perazzoli <ettore@comm2000.it>
  *  pottendo <pottendo@gmx.net>
  *
@@ -116,7 +116,7 @@ void vdrive_dir_free_chain(vdrive_t *vdrive, int t, int s)
 
         /* FIXME: This seems to be redundant.  AB19981124  */
         vdrive_bam_free_sector(vdrive->image_format, vdrive->bam, t, s);
-        disk_image_read_sector(vdrive->image, buf, t, s);
+        vdrive_read_sector(vdrive, buf, t, s);
         t = (int)buf[0];
         s = (int)buf[1];
     }
@@ -132,8 +132,8 @@ static BYTE *find_next_directory_sector(vdrive_t *vdrive, unsigned int track,
         sector)) {
         vdrive->Dir_buffer[0] = track;
         vdrive->Dir_buffer[1] = sector;
-        disk_image_write_sector(vdrive->image, vdrive->Dir_buffer,
-                                vdrive->Curr_track, vdrive->Curr_sector);
+        vdrive_write_sector(vdrive, vdrive->Dir_buffer,
+                            vdrive->Curr_track, vdrive->Curr_sector);
 #ifdef DEBUG_DRIVE
         log_debug("Found (%d %d) TR = %d SE = %d.",
                   track, sector, vdrive->Curr_track, vdrive->Curr_sector);
@@ -205,7 +205,7 @@ void vdrive_dir_remove_slot(vdrive_t *vdrive, BYTE *slot)
 
         /* Update directory entry */
         vdrive->Dir_buffer[vdrive->SlotNumber * 32 + SLOT_TYPE_OFFSET] = 0;
-        disk_image_write_sector(vdrive->image, vdrive->Dir_buffer,
+        vdrive_write_sector(vdrive, vdrive->Dir_buffer,
                                 vdrive->Curr_track, vdrive->Curr_sector);
     }
 }
@@ -231,7 +231,7 @@ void vdrive_dir_find_first_slot(vdrive_t *vdrive, const char *name,
     vdrive->Curr_sector = vdrive->Header_Sector;
     vdrive->SlotNumber = 7;
 
-    disk_image_read_sector(vdrive->image, vdrive->Dir_buffer,
+    vdrive_read_sector(vdrive, vdrive->Dir_buffer,
                            vdrive->Curr_track, vdrive->Curr_sector);
 
     vdrive->Dir_buffer[0] = vdrive->Dir_Track;
@@ -275,7 +275,7 @@ BYTE *vdrive_dir_find_next_slot(vdrive_t *vdrive)
             vdrive->Curr_track  = (int)vdrive->Dir_buffer[0];
             vdrive->Curr_sector = (int)vdrive->Dir_buffer[1];
 
-            status = disk_image_read_sector(vdrive->image, vdrive->Dir_buffer,
+            status = vdrive_read_sector(vdrive, vdrive->Dir_buffer,
                                             vdrive->Curr_track,
                                             vdrive->Curr_sector);
             if (status != 0) {
@@ -460,4 +460,3 @@ int vdrive_dir_next_directory(vdrive_t *vdrive, bufferinfo_t *b)
     l[27] = 0;
     return b->bufptr + 31;
 }
-

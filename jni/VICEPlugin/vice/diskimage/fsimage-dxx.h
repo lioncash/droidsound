@@ -1,8 +1,8 @@
 /*
- * realimage.h
+ * fsimage-dxx.h
  *
  * Written by
- *  Andreas Boose <viceteam@t-online.de>
+ *  Kajtar Zsolt <soci@c64.rulez.org>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -24,28 +24,23 @@
  *
  */
 
-#ifndef VICE_REALIMAGE_H
-#define VICE_REALIMAGE_H
+#ifndef VICE_FSIMAGE_DXX_H
+#define VICE_FSIMAGE_DXX_H
 
 #include "types.h"
 
 struct disk_image_s;
+struct disk_track_s;
 struct disk_addr_s;
 
-typedef struct realimage_s {
-    unsigned int unit;
-    unsigned int drivetype;
-} realimage_t;
+extern void fsimage_dxx_init(void);
 
+extern int fsimage_read_dxx_image(const disk_image_t *image);
 
-extern void realimage_init(void);
-
-extern int realimage_open(struct disk_image_s *image);
-extern int realimage_close(struct disk_image_s *image);
-extern int realimage_read_sector(const struct disk_image_s *image, BYTE *buf,
-                                 const struct disk_addr_s *dadr);
-extern int realimage_write_sector(struct disk_image_s *image, const BYTE *buf,
-                                  const struct disk_addr_s *dadr);
-extern void realimage_media_create(struct disk_image_s *image);
-extern void realimage_media_destroy(struct disk_image_s *image);
+extern int fsimage_dxx_write_half_track(disk_image_t *image, unsigned int half_track,
+                                 const struct disk_track_s *raw);
+extern int fsimage_dxx_read_sector(const struct disk_image_s *image, BYTE *buf,
+                                   const struct disk_addr_s *dadr);
+extern int fsimage_dxx_write_sector(struct disk_image_s *image, const BYTE *buf,
+                                    const struct disk_addr_s *dadr);
 #endif

@@ -42,6 +42,7 @@
 #include "diskimage.h"
 #include "fsimage-check.h"
 #include "fsimage-create.h"
+#include "fsimage-dxx.h"
 #include "fsimage-gcr.h"
 #include "fsimage-p64.h"
 #include "fsimage.h"
@@ -56,72 +57,43 @@ static log_t disk_image_log = LOG_DEFAULT;
 
 
 /*-----------------------------------------------------------------------*/
-/* Disk constants.  */
+/* Speed zones */
 
-static const unsigned int speed_map_1541[42] =
-    { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-      3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 1, 1,
-      1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0 };
-
-static const unsigned int speed_map_1571[70] =
-    { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-      3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 1, 1,
-      1, 1, 1, 1, 0, 0, 0, 0, 0,
-      3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-      3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 1, 1,
-      1, 1, 1, 1, 0, 0, 0, 0, 0 };
-
-unsigned int disk_image_speed_map_1541(unsigned int track)
+unsigned int disk_image_speed_map(unsigned int format, unsigned int track)
 {
-    return speed_map_1541[track];
-}
-
-unsigned int disk_image_speed_map_1571(unsigned int track)
-{
-    return speed_map_1571[track];
+    switch (format) {
+    case DISK_IMAGE_TYPE_D71:
+          if (track > 35) {
+              track -= 35;
+          }
+          /* fall through */
+    case DISK_IMAGE_TYPE_D67:
+    case DISK_IMAGE_TYPE_D64:
+    case DISK_IMAGE_TYPE_X64:
+    case DISK_IMAGE_TYPE_G64:
+    case DISK_IMAGE_TYPE_P64:
+        return (track < 31) + (track < 25) + (track < 18);
+    case DISK_IMAGE_TYPE_D82:
+          if (track > 77) {
+              track -= 77;
+          }
+          /* fall through */
+    case DISK_IMAGE_TYPE_D80:
+        return (track < 65) + (track < 54) + (track < 40);
+    default:
+        log_message(disk_image_log,
+                    "Unknown disk type %i. Cannot calculate zone speed",
+                    format);
+    }
+    return 0;
 }
 
 /*-----------------------------------------------------------------------*/
-/* Check for track out of bounds.  */
+/* Number of sectors per track */
 
-static const char sector_map_d64[43] =
-    { 0,
-      21, 21, 21, 21, 21, 21, 21, 21, 21, 21, /*  1 - 10 */
-      21, 21, 21, 21, 21, 21, 21, 19, 19, 19, /* 11 - 20 */
-      19, 19, 19, 19, 18, 18, 18, 18, 18, 18, /* 21 - 30 */
-      17, 17, 17, 17, 17,                     /* 31 - 35 */
-      17, 17, 17, 17, 17, 17, 17 };           /* 36 - 42 */
-
-static const char sector_map_d67[36] =
-    { 0,
-      21, 21, 21, 21, 21, 21, 21, 21, 21, 21, /*  1 - 10 */
-      21, 21, 21, 21, 21, 21, 21, 20, 20, 20, /* 11 - 20 */
-      20, 20, 20, 20, 18, 18, 18, 18, 18, 18, /* 21 - 30 */
-      17, 17, 17, 17, 17 };                   /* 31 - 35 */
-
-static const char sector_map_d71[71] =
-    { 0,
-      21, 21, 21, 21, 21, 21, 21, 21, 21, 21, /*  1 - 10 */
-      21, 21, 21, 21, 21, 21, 21, 19, 19, 19, /* 11 - 20 */
-      19, 19, 19, 19, 18, 18, 18, 18, 18, 18, /* 21 - 30 */
-      17, 17, 17, 17, 17,                     /* 31 - 35 */
-      21, 21, 21, 21, 21, 21, 21, 21, 21, 21, /* 36 - 45 */
-      21, 21, 21, 21, 21, 21, 21, 19, 19, 19, /* 46 - 55 */
-      19, 19, 19, 19, 18, 18, 18, 18, 18, 18, /* 56 - 65 */
-      17, 17, 17, 17, 17 };                   /* 66 - 70 */
-
-static const char sector_map_d80[78] =
-    { 0,
-      29, 29, 29, 29, 29, 29, 29, 29, 29, 29, /*  1 - 10 */
-      29, 29, 29, 29, 29, 29, 29, 29, 29, 29, /* 11 - 20 */
-      29, 29, 29, 29, 29, 29, 29, 29, 29, 29, /* 21 - 30 */
-      29, 29, 29, 29, 29, 29, 29, 29, 29, 27, /* 31 - 40 */
-      27, 27, 27, 27, 27, 27, 27, 27, 27, 27, /* 41 - 50 */
-      27, 27, 27, 25, 25, 25, 25, 25, 25, 25, /* 51 - 60 */
-      25, 25, 25, 25, 23, 23, 23, 23, 23, 23, /* 61 - 70 */
-      23, 23, 23, 23, 23, 23, 23 };           /* 71 - 77 */
-
+static const unsigned int sector_map_d64[4] = { 17, 18, 19, 21 };
+static const unsigned int sector_map_d67[4] = { 17, 18, 20, 21 };
+static const unsigned int sector_map_d80[4] = { 23, 25, 27, 29 };
 
 unsigned int disk_image_sector_per_track(unsigned int format,
                                          unsigned int track)
@@ -129,30 +101,15 @@ unsigned int disk_image_sector_per_track(unsigned int format,
     switch (format) {
       case DISK_IMAGE_TYPE_D64:
       case DISK_IMAGE_TYPE_X64:
-        if (track >= sizeof(sector_map_d64)) {
-            log_message(disk_image_log, "Track %i exceeds sector map.", track);
-            return 0;
-        }
-        return sector_map_d64[track];
-      case DISK_IMAGE_TYPE_D67:
-        if (track >= sizeof(sector_map_d67)) {
-            log_message(disk_image_log, "Track %i exceeds sector map.", track);
-            return 0;
-        }
-        return sector_map_d67[track];
+      case DISK_IMAGE_TYPE_G64:
+      case DISK_IMAGE_TYPE_P64:
       case DISK_IMAGE_TYPE_D71:
-        if (track >= sizeof(sector_map_d71)) {
-            log_message(disk_image_log, "Track %i exceeds sector map.", track);
-            return 0;
-        }
-        return sector_map_d71[track];
+          return sector_map_d64[disk_image_speed_map(format, track)];
+      case DISK_IMAGE_TYPE_D67:
+          return sector_map_d67[disk_image_speed_map(format, track)];
       case DISK_IMAGE_TYPE_D80:
       case DISK_IMAGE_TYPE_D82:
-        if (track >= sizeof(sector_map_d80)) {
-            log_message(disk_image_log, "Track %i exceeds sector map.", track);
-            return 0;
-        }
-        return sector_map_d80[track];
+          return sector_map_d80[disk_image_speed_map(format, track)];
       default:
         log_message(disk_image_log,
                     "Unknown disk type %i.  Cannot calculate sectors per track",
@@ -162,8 +119,62 @@ unsigned int disk_image_sector_per_track(unsigned int format,
 }
 
 /*-----------------------------------------------------------------------*/
+/* Bytes per track */
 
-int disk_image_check_sector(disk_image_t *image, unsigned int track,
+static const unsigned int raw_track_size_d64[4] = { 6250, 6666, 7142, 7692 };
+static const unsigned int raw_track_size_d80[4] = { 9375, 10000, 10714, 11538 };
+
+unsigned int disk_image_raw_track_size(unsigned int format,
+                                        unsigned int track)
+{
+    switch (format) {
+      case DISK_IMAGE_TYPE_D64:
+      case DISK_IMAGE_TYPE_X64:
+      case DISK_IMAGE_TYPE_G64:
+      case DISK_IMAGE_TYPE_P64:
+      case DISK_IMAGE_TYPE_D71:
+      case DISK_IMAGE_TYPE_D67:
+          return raw_track_size_d64[disk_image_speed_map(format, track)];
+      case DISK_IMAGE_TYPE_D80:
+      case DISK_IMAGE_TYPE_D82:
+          return raw_track_size_d80[disk_image_speed_map(format, track)];
+      default:
+        log_message(disk_image_log,
+                    "Unknown disk type %i.  Cannot calculate raw size of track",
+                    format);
+    }
+    return 1;
+}
+
+/*-----------------------------------------------------------------------*/
+/* Gap between sectors */
+
+static const unsigned int gap_size_d64[4] = { 9, 12, 17, 8 };
+
+unsigned int disk_image_gap_size(unsigned int format, unsigned int track)
+{
+    switch (format) {
+      case DISK_IMAGE_TYPE_D64:
+      case DISK_IMAGE_TYPE_X64:
+      case DISK_IMAGE_TYPE_G64:
+      case DISK_IMAGE_TYPE_P64:
+      case DISK_IMAGE_TYPE_D71:
+      case DISK_IMAGE_TYPE_D67:
+          return gap_size_d64[disk_image_speed_map(format, track)];
+      case DISK_IMAGE_TYPE_D80:
+      case DISK_IMAGE_TYPE_D82:
+          return 25;
+      default:
+        log_message(disk_image_log,
+                    "Unknown disk type %i.  Cannot calculate gap size",
+                    format);
+    }
+    return 1;
+}
+
+/*-----------------------------------------------------------------------*/
+/* Check out of bound */
+int disk_image_check_sector(const disk_image_t *image, unsigned int track,
                             unsigned int sector)
 {
     if (image->device == DISK_IMAGE_DEVICE_FS)
@@ -174,7 +185,7 @@ int disk_image_check_sector(disk_image_t *image, unsigned int track,
 
 /*-----------------------------------------------------------------------*/
 
-static const char *disk_image_type(disk_image_t *image)
+static const char *disk_image_type(const disk_image_t *image)
 {
     switch(image->type) {
         case DISK_IMAGE_TYPE_D80: return "D80";
@@ -193,7 +204,7 @@ static const char *disk_image_type(disk_image_t *image)
     }
 }
 
-void disk_image_attach_log(disk_image_t *image, signed int lognum,
+void disk_image_attach_log(const disk_image_t *image, signed int lognum,
                            unsigned int unit)
 {
     const char *type = disk_image_type(image);
@@ -216,7 +227,7 @@ void disk_image_attach_log(disk_image_t *image, signed int lognum,
     }
 }
 
-void disk_image_detach_log(disk_image_t *image, signed int lognum,
+void disk_image_detach_log(const disk_image_t *image, signed int lognum,
                            unsigned int unit)
 {
     const char *type = disk_image_type(image);
@@ -245,12 +256,12 @@ void disk_image_fsimage_name_set(disk_image_t *image, char *name)
     fsimage_name_set(image, name);
 }
 
-char *disk_image_fsimage_name_get(disk_image_t *image)
+char *disk_image_fsimage_name_get(const disk_image_t *image)
 {
     return fsimage_name_get(image);
 }
 
-void *disk_image_fsimage_fd_get(disk_image_t *image)
+void *disk_image_fsimage_fd_get(const disk_image_t *image)
 {
     return fsimage_fd_get(image);
 }
@@ -292,7 +303,7 @@ void disk_image_name_set(disk_image_t *image, char *name)
     }
 }
 
-char *disk_image_name_get(disk_image_t *image)
+char *disk_image_name_get(const disk_image_t *image)
 {
     switch (image->device) {
       case DISK_IMAGE_DEVICE_FS:
@@ -424,23 +435,22 @@ int disk_image_close(disk_image_t *image)
 
 /*-----------------------------------------------------------------------*/
 
-int disk_image_read_sector(disk_image_t *image, BYTE *buf, unsigned int track,
-                           unsigned int sector)
+int disk_image_read_sector(const disk_image_t *image, BYTE *buf, const disk_addr_t *dadr)
 {
     int rc = 0;
 
     switch (image->device) {
       case DISK_IMAGE_DEVICE_FS:
-        rc = fsimage_read_sector(image, buf, track, sector);
+        rc = fsimage_read_sector(image, buf, dadr);
         break;
 #ifdef HAVE_OPENCBM
       case DISK_IMAGE_DEVICE_REAL:
-        rc = realimage_read_sector(image, buf, track, sector);
+        rc = realimage_read_sector(image, buf, dadr);
         break;
 #endif
 #ifdef HAVE_RAWDRIVE
       case DISK_IMAGE_DEVICE_RAW:
-        rc = rawimage_read_sector(image, buf, track, sector);
+        rc = rawimage_read_sector(image, buf, dadr);
         break;
 #endif
       default:
@@ -451,23 +461,27 @@ int disk_image_read_sector(disk_image_t *image, BYTE *buf, unsigned int track,
     return rc;
 }
 
-int disk_image_write_sector(disk_image_t *image, BYTE *buf, unsigned int track,
-                            unsigned int sector)
+int disk_image_write_sector(disk_image_t *image, const BYTE *buf, const disk_addr_t *dadr)
 {
     int rc = 0;
 
+    if (image->read_only != 0) {
+        log_error(disk_image_log, "Attempt to write to read-only disk image.");
+        return -1;
+    }
+
     switch (image->device) {
       case DISK_IMAGE_DEVICE_FS:
-        rc = fsimage_write_sector(image, buf, track, sector);
+        rc = fsimage_write_sector(image, buf, dadr);
         break;
 #ifdef HAVE_OPENCBM
       case DISK_IMAGE_DEVICE_REAL:
-        rc = realimage_write_sector(image, buf, track, sector);
+        rc = realimage_write_sector(image, buf, dadr);
         break;
 #endif
 #ifdef HAVE_RAWDRIVE
       case DISK_IMAGE_DEVICE_RAW:
-        rc = rawimage_write_sector(image, buf, track, sector);
+        rc = rawimage_write_sector(image, buf, dadr);
         break;
 #endif
       default:
@@ -480,61 +494,35 @@ int disk_image_write_sector(disk_image_t *image, BYTE *buf, unsigned int track,
 
 /*-----------------------------------------------------------------------*/
 
-int disk_image_read_half_track(disk_image_t *image, unsigned int half_track,
-                              BYTE *gcr_data, int *gcr_track_size)
-{
-    if (image->type == DISK_IMAGE_TYPE_P64) {
-        return fsimage_p64_read_half_track(image, half_track, gcr_data, gcr_track_size);
-    } else {
-        return fsimage_gcr_read_half_track(image, half_track, gcr_data, gcr_track_size);
-    }
-}
-
 int disk_image_write_half_track(disk_image_t *image, unsigned int half_track,
-                               int gcr_track_size, BYTE *gcr_speed_zone,
-                               BYTE *gcr_track_start_ptr)
+                               const struct disk_track_s *raw)
 {
-    if (image->type == DISK_IMAGE_TYPE_P64) {
-      return fsimage_p64_write_half_track(image, half_track, gcr_track_size, gcr_speed_zone, gcr_track_start_ptr);
-    } else {
-      return fsimage_gcr_write_half_track(image, half_track, gcr_track_size, gcr_speed_zone, gcr_track_start_ptr);
+    if (half_track > image->max_half_tracks) {
+        log_error(disk_image_log, "Attempt to write beyond extension limit of disk image.");
+        return -1;
+    }
+    if (image->read_only != 0) {
+        log_error(disk_image_log, "Attempt to write to read-only disk image.");
+        return -1;
+    }
+
+    switch (image->type) {
+    case DISK_IMAGE_TYPE_P64: return fsimage_p64_write_half_track(image, half_track, raw);
+    case DISK_IMAGE_TYPE_G64: return fsimage_gcr_write_half_track(image, half_track, raw);
+    default: return fsimage_dxx_write_half_track(image, half_track, raw);
     }
 }
 
-int disk_image_read_track(disk_image_t *image, unsigned int track,
-                          BYTE *gcr_data, int *gcr_track_size)
+int disk_image_read_image(const disk_image_t *image)
 {
-    if (image->type == DISK_IMAGE_TYPE_P64) {
-	return fsimage_p64_read_track(image, track, gcr_data, gcr_track_size);
-    } else {
-	return fsimage_gcr_read_track(image, track, gcr_data, gcr_track_size);
+    switch (image->type) {
+    case DISK_IMAGE_TYPE_P64: return fsimage_read_p64_image(image);
+    case DISK_IMAGE_TYPE_G64: return fsimage_read_gcr_image(image);
+    default: return fsimage_read_dxx_image(image);
     }
 }
 
-int disk_image_write_track(disk_image_t *image, unsigned int track,
-                           int gcr_track_size, BYTE *gcr_speed_zone,
-                           BYTE *gcr_track_start_ptr)
-{
-    if (image->type == DISK_IMAGE_TYPE_P64) {
-	return fsimage_p64_write_track(image, track, gcr_track_size, gcr_speed_zone,
-    	                               gcr_track_start_ptr);
-    } else {
-	return fsimage_gcr_write_track(image, track, gcr_track_size, gcr_speed_zone,
-    	                               gcr_track_start_ptr);
-    }
-}
-
-int disk_image_read_gcr_image(disk_image_t *image)
-{
-    return fsimage_read_gcr_image(image);
-}
-
-int disk_image_read_p64_image(disk_image_t *image)
-{
-    return fsimage_read_p64_image(image);
-}
-
-int disk_image_write_p64_image(disk_image_t *image)
+int disk_image_write_p64_image(const disk_image_t *image)
 {
     return fsimage_write_p64_image(image);
 }

@@ -234,6 +234,11 @@ inline static void write_next_bit(drive_t *dptr, int value)
     }
     dptr->GCR_head_offset = off;
 
+    /* track does not exists */
+    if (dptr->GCR_track_start_ptr == NULL) {
+        return;
+    }
+    dptr->GCR_dirty_track = 1;
     if (value) {
         dptr->GCR_track_start_ptr[byte_offset] |= 1 << bit;
     } else {
@@ -258,6 +263,10 @@ inline static int read_next_bit(drive_t *dptr)
     }
     dptr->GCR_head_offset = off;
 
+    /* track does not exists */
+    if (dptr->GCR_track_start_ptr == NULL) {
+        return 0;
+    }
     return (dptr->GCR_track_start_ptr[byte_offset] >> bit) & 1;
 }
 
@@ -479,8 +488,6 @@ void rotation_1541_gcr(drive_t *dptr, int ref_cycles)
                     /* UE5 NOR gate shifts in a 1 only at C2 when DC is 0 */
                     rptr->last_read_data = ((rptr->last_read_data << 1) & 0x3fe) | (((rptr->uf4_counter + 0x1c) >> 4) & 0x01);
 
-                    dptr->GCR_dirty_track = 1;
-
                     write_next_bit(dptr, rptr->last_write_data & 0x80);
 
                     rptr->last_write_data <<= 1;
@@ -523,6 +530,8 @@ void rotation_1541_gcr_cycle(drive_t *dptr)
 	/* cpu cycles since last call */
 	cpu_cycles = *(dptr->clk) - rptr->rotation_last_clk;
 	rptr->rotation_last_clk = *(dptr->clk);
+        /* modulo, at least one revolution, but not more than two */
+        while (cpu_cycles > 400000) cpu_cycles -= 200000;
 
 	/* Calculate the reference clock cycles from the cpu clock cycles - hw works the other way around...
 		 The reference clock is actually 16MHz, and the cpu clock is the result of dividing that by 16 */
@@ -904,6 +913,8 @@ void rotation_1541_p64_cycle(drive_t *dptr)
 	/* cpu cycles since last call */
 	cpu_cycles = *(dptr->clk) - rptr->rotation_last_clk;
 	rptr->rotation_last_clk = *(dptr->clk);
+        /* modulo, at least one revolution, but not more than two */
+        while (cpu_cycles > 400000) cpu_cycles -= 200000;
 
 	/* Calculate the reference clock cycles from the cpu clock cycles - hw works the other way around...
 		 The reference clock is actually 16MHz, and the cpu clock is the result of dividing that by 16 */
@@ -1065,7 +1076,6 @@ void rotation_rotate_disk(drive_t *dptr)
                 rptr->last_read_data |= 1;
             }
 
-            dptr->GCR_dirty_track = 1;
             write_next_bit(dptr, rptr->last_write_data & 0x80);
             rptr->last_write_data <<= 1;
 

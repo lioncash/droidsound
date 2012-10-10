@@ -887,7 +887,7 @@ void disk_image_resources_shutdown(void)
 {
 }
 
-char *disk_image_fsimage_name_get(disk_image_t *image)
+char *disk_image_fsimage_name_get(const disk_image_t *image)
 {
     return NULL;
 }
@@ -932,17 +932,17 @@ int disk_image_fsimage_create(const char *name, unsigned int type)
     return 0;
 }
 
-int disk_image_write_sector(disk_image_t *image, BYTE *buf, unsigned int track, unsigned int sector)
+int disk_image_write_sector(disk_image_t *image, const BYTE *buf, const disk_addr_t *dadr)
 {
     return 0;
 }
 
-int disk_image_read_sector(disk_image_t *image, BYTE *buf, unsigned int track, unsigned int sector)
+int disk_image_read_sector(const disk_image_t *image, BYTE *buf, const disk_addr_t *dadr)
 {
     return 0;
 }
 
-char *disk_image_name_get(disk_image_t *image)
+char *disk_image_name_get(const disk_image_t *image)
 {
     return NULL;
 }
@@ -952,45 +952,20 @@ unsigned int disk_image_sector_per_track(unsigned int format, unsigned int track
     return 0;
 }
 
-int disk_image_write_track(disk_image_t *image, unsigned int track, int gcr_track_size, BYTE *gcr_speed_zone, BYTE *gcr_track_start_ptr)
+int disk_image_write_p64_image(const disk_image_t *image)
 {
     return 0;
 }
 
-unsigned int disk_image_speed_map_1541(unsigned int track)
-{
-    return 0;
-}
-
-int disk_image_read_gcr_image(disk_image_t *image)
-{
-    return 0;
-}
-
-int disk_image_read_p64_image(disk_image_t *image)
-{
-    return 0;
-}
-
-int disk_image_write_p64_image(disk_image_t *image)
-{
-    return 0;
-}
-
-void disk_image_attach_log(disk_image_t *image, signed int lognum, unsigned int unit)
+void disk_image_attach_log(const disk_image_t *image, signed int lognum, unsigned int unit)
 {
 }
 
-unsigned int disk_image_speed_map_1571(unsigned int track)
-{
-    return 0;
-}
-
-void disk_image_detach_log(disk_image_t *image, signed int lognum, unsigned int unit)
+void disk_image_detach_log(const disk_image_t *image, signed int lognum, unsigned int unit)
 {
 }
 
-int disk_image_check_sector(disk_image_t *image, unsigned int track, unsigned int sector)
+int disk_image_check_sector(const disk_image_t *image, unsigned int track, unsigned int sector)
 {
     return 0;
 }
@@ -999,7 +974,7 @@ void disk_image_name_set(disk_image_t *image, char *name)
 {
 }
 
-void *disk_image_fsimage_fd_get(disk_image_t *image)
+void *disk_image_fsimage_fd_get(const disk_image_t *image)
 {
     return NULL;
 }
@@ -1220,6 +1195,16 @@ int vdrive_iec_read(vdrive_t *vdrive, BYTE *data, unsigned int secondary)
 }
 
 int vdrive_command_execute(vdrive_t *vdrive, const BYTE *buf, unsigned int length)
+{
+    return 0;
+}
+
+int vdrive_write_sector(vdrive_t *vdrive, const BYTE *buf, unsigned int track, unsigned int sector)
+{
+    return 0;
+}
+
+int vdrive_read_sector(const vdrive_t *vdrive, BYTE *buf, unsigned int track, unsigned int sector)
 {
     return 0;
 }

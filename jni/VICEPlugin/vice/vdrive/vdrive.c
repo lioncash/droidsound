@@ -9,7 +9,7 @@
  *  Jarkko Sonninen <sonninen@lut.fi>
  *  Jouko Valta <jopi@stekt.oulu.fi>
  *  Olaf Seibert <rhialto@mbfys.kun.nl>
- *  André Fachat <a.fachat@physik.tu-chemnitz.de>
+ *  Andre Fachat <a.fachat@physik.tu-chemnitz.de>
  *  Ettore Perazzoli <ettore@comm2000.it>
  *  pottendo <pottendo@gmx.net>
  *
@@ -302,6 +302,11 @@ int vdrive_attach_image(disk_image_t *image, unsigned int unit,
         vdrive->num_tracks = 35;
         vdrive->bam_size = 0x100;
         break;
+      case DISK_IMAGE_TYPE_P64:
+        vdrive->image_format = VDRIVE_IMAGE_FORMAT_1541;
+        vdrive->num_tracks = 35;
+        vdrive->bam_size = 0x100;
+        break;
       case DISK_IMAGE_TYPE_X64:
         vdrive->image_format = VDRIVE_IMAGE_FORMAT_1541;
         vdrive->num_tracks = image->tracks;
@@ -444,3 +449,22 @@ void vdrive_set_last_read(unsigned int track, unsigned int sector,
     memcpy(last_read_buffer, buffer, 256);
 }
 
+/* ------------------------------------------------------------------------- */
+/* This is where logical sectors are turned to physical. Not yet, but soon. */
+int vdrive_read_sector(vdrive_t *vdrive, BYTE *buf,
+                       unsigned int track, unsigned int sector)
+{
+    disk_addr_t dadr;
+    dadr.track = track;
+    dadr.sector = sector;
+    return disk_image_read_sector(vdrive->image, buf, &dadr);
+}
+
+int vdrive_write_sector(vdrive_t *vdrive, const BYTE *buf,
+                        unsigned int track, unsigned int sector)
+{
+    disk_addr_t dadr;
+    dadr.track = track;
+    dadr.sector = sector;
+    return disk_image_write_sector(vdrive->image, buf, &dadr);
+}

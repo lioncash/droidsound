@@ -38,53 +38,33 @@
 
 /* Number of bytes in one raw track in memory. 64k big to avoid buffer overrun, because
  * the G64 track size field is a 16-bit word */
-#ifdef GCR_LOW_MEM
-#define NUM_MAX_MEM_BYTES_TRACK 10240
-#else
 #define NUM_MAX_MEM_BYTES_TRACK 65536
-#endif
 
 /* Number of tracks we emulate. 84 for 1541, 140 for 1571 */
 #define MAX_GCR_TRACKS 140
 
+#define SECTOR_GCR_SIZE_WITH_HEADER 340
+
+typedef struct disk_track_s {
+    BYTE *data;
+    int size;
+} disk_track_t;
+
 typedef struct gcr_s {
     /* Raw GCR image of the disk.  */
-    /* RJM: This is a hack.  Need to dynamically allocate it */
-    BYTE data[(MAX_GCR_TRACKS + 1) * NUM_MAX_MEM_BYTES_TRACK];
-
-    /* Speed zone image of the disk.  */
-    /* RJM: This is a hack.  Need to dynamically allocate it */
-    BYTE speed_zone[(MAX_GCR_TRACKS + 1) * NUM_MAX_MEM_BYTES_TRACK];
-
-    /* Size of the GCR data of each track.  */
-    unsigned int track_size[MAX_GCR_TRACKS];
-
-    /* Size of the largest track, set from the file header */
-    unsigned int max_track_size;
-
+    disk_track_t tracks[MAX_GCR_TRACKS];
 } gcr_t;
 
-extern void gcr_convert_sector_to_GCR(BYTE *buffer, BYTE *ptr,
-                                      unsigned int track, unsigned int sector,
-                                      BYTE diskID1, BYTE diskID2,
-                                      BYTE error_code);
-extern void gcr_convert_GCR_to_sector(BYTE *buffer, BYTE *ptr,
-                                      BYTE *GCR_track_start_ptr,
-                                      unsigned int GCR_current_track_size);
+typedef struct gcr_header_s {
+    BYTE sector, track, id2, id1;
+} gcr_header_t;
 
-extern BYTE *gcr_find_sector_header(unsigned int track, unsigned int sector,
-                                    BYTE *gcr_track_start_ptr,
-                                    unsigned int gcr_current_track_size);
-extern BYTE *gcr_find_sector_data(BYTE *offset,
-                                  BYTE *gcr_track_start_ptr,
-                                  unsigned int gcr_current_track_size);
-extern int gcr_read_sector(BYTE *gcr_track_start_ptr,
-                           unsigned int gcr_current_track_size, BYTE *readdata,
-                           unsigned int track, unsigned int sector);
-extern int gcr_write_sector(BYTE *gcr_track_start_ptr,
-                            unsigned int gcr_current_track_size,
-                            BYTE *writedata,
-                            unsigned int track, unsigned int sector);
+enum fdc_err_e;
+
+extern void gcr_convert_sector_to_GCR(const BYTE *buffer, BYTE *ptr, const gcr_header_t *header,
+                                      int gap, int sync, enum fdc_err_e error_code);
+extern enum fdc_err_e gcr_read_sector(const disk_track_t *raw, BYTE *data, BYTE sector);
+extern enum fdc_err_e gcr_write_sector(disk_track_t *raw, const BYTE *data, BYTE sector);
 
 extern gcr_t *gcr_create_image(void);
 extern void gcr_destroy_image(gcr_t *gcr);

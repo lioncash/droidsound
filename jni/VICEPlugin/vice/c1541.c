@@ -681,7 +681,7 @@ static int open_disk_image(vdrive_t *vdrive, const char *name,
 
     disk_image_media_create(image);
 
-    image->gcr = gcr_create_image();
+    image->gcr = NULL;
     image->p64 = lib_calloc(1, sizeof(TP64Image));
     P64ImageCreate((PP64Image)image->p64);
     image->read_only = 0;
@@ -711,7 +711,6 @@ static void close_disk_image(vdrive_t *vdrive, int unit)
 
     if (image != NULL) {
         vdrive_detach_image(image, unit, vdrive);
-        gcr_destroy_image(image->gcr);
         P64ImageDestroy((PP64Image)image->p64);
         lib_free(image->p64);
         if (image->device == DISK_IMAGE_DEVICE_REAL)
@@ -826,7 +825,7 @@ static int block_cmd(int nargs, char **args)
         return FD_BAD_TS;
 
     /* Read one block */
-    if (disk_image_read_sector(vdrive->image, sector_data, track, sector)
+    if (vdrive_read_sector(vdrive, sector_data, track, sector)
         != 0) {
         fprintf(stderr, "Cannot read track %i sector %i.", track, sector);
         return FD_RDERR;
@@ -846,18 +845,6 @@ static int block_cmd(int nargs, char **args)
             '.' : charset_p_toascii(buf[disp & 255], 0));
         }
         printf("  ;%s\n", str);
-    }
-
-    /* Find next sector for the file being traced.  */
-    if (buf[0] && buf[1]) {
-        track = buf[0];
-        sector = buf[1];
-    } else {
-        if (disk_image_check_sector(vdrive->image, track, ++sector) < 0) {
-            sector = 0;
-            if ((unsigned int)(++track) > vdrive->image->tracks)
-                track = vdrive->Dir_Track;
-        }
     }
     return FD_OK;
 }
@@ -1323,7 +1310,7 @@ static int info_cmd(int nargs, char **args)
 /*printf("Sides\t   : %d.\n", hdr.sides);*/
     printf("Tracks\t   : %d.\n", vdrive->image->tracks);
     if (vdrive->image->device == DISK_IMAGE_DEVICE_FS) {
-        printf(((vdrive->image->media.fsimage)->error_info)
+        printf(((vdrive->image->media.fsimage)->error_info.map)
                ? "Error Block present.\n" : "No Error Block.\n");
     }
     printf("Write protect: %s.\n", vdrive->image->read_only ? "On" : "Off");
@@ -1660,7 +1647,7 @@ int internal_read_geos_file(int unit, FILE* outf, char* src_name_ascii)
 
     /* read info block */
 
-    if (disk_image_read_sector(drives[unit]->image, infoBlock, infoTrk,
+    if (vdrive_read_sector(drives[unit], infoBlock, infoTrk,
         infoSec) != 0) {
         fprintf(stderr,
                 "Cannot read input file info block `%s': %s.\n",
@@ -1673,7 +1660,7 @@ int internal_read_geos_file(int unit, FILE* outf, char* src_name_ascii)
     for (n = 2; n < 256; n++) fputc(infoBlock[n], outf);
 
     /* read first data block or vlir block */
-    if (disk_image_read_sector(drives[unit]->image, vlirBlock, firstTrk,
+    if (vdrive_read_sector(drives[unit], vlirBlock, firstTrk,
         firstSec) != 0) {
         fprintf(stderr,
         "Cannot read input file data `%s': %s.\n",
@@ -1696,7 +1683,7 @@ int internal_read_geos_file(int unit, FILE* outf, char* src_name_ascii)
         aktTrk = vlirBlock[0];
         aktSec = vlirBlock[1];
         while (aktTrk != 0) {
-            if (disk_image_read_sector(drives[unit]->image, block,
+            if (vdrive_read_sector(drives[unit], block,
                 aktTrk, aktSec) != 0) {
                 fprintf(stderr,
                         "Cannot read input file data block `%s': %s.\n",
@@ -1734,7 +1721,7 @@ int internal_read_geos_file(int unit, FILE* outf, char* src_name_ascii)
                 while (aktTrk != 0) {
                     /* Read the chain and collect No Of Blocks */
 
-                    if (disk_image_read_sector(drives[unit]->image, block,
+                    if (vdrive_read_sector(drives[unit], block,
                         aktTrk, aktSec) != 0) {
                         fprintf(stderr,
                                 "Cannot read input file data block `%s': %s.\n",
@@ -1788,7 +1775,7 @@ int internal_read_geos_file(int unit, FILE* outf, char* src_name_ascii)
             if (aktTrk != 0) {
                 /* Record exists */
                 while (aktTrk != 0) {
-                    if (disk_image_read_sector(drives[unit]->image, block,
+                    if (vdrive_read_sector(drives[unit], block,
                         aktTrk, aktSec) != 0) {
                         fprintf(stderr,
                                 "Cannot read input file data block `%s': %s.\n",
@@ -1917,10 +1904,10 @@ static int fix_ts(int unit, unsigned int trk, unsigned int sec,
                   unsigned int blk_offset)
 {
     BYTE block[256];
-    if (disk_image_read_sector(drives[unit]->image, block, trk, sec) == 0) {
+    if (vdrive_read_sector(drives[unit], block, trk, sec) == 0) {
         block[blk_offset] = next_trk;
         block[blk_offset + 1] = next_sec;
-        if (disk_image_write_sector(drives[unit]->image, block, trk, sec) == 0)
+        if (vdrive_write_sector(drives[unit], block, trk, sec) == 0)
             return 1;
     }
     return 0;
@@ -1942,7 +1929,6 @@ static int internal_write_geos_file(int unit, FILE* f)
     unsigned int aktTrk, aktSec;
     unsigned int lastTrk, lastSec;
     BYTE geosFileStruc;
-    BYTE geosFileType;
     int c = 0;
     int n;
     int bContinue;
@@ -1962,7 +1948,6 @@ static int internal_write_geos_file(int unit, FILE* f)
     }
 
     geosFileStruc = drives[unit]->buffers[1].slot[SLOT_GEOS_FILE_STRUC];
-    geosFileType  = drives[unit]->buffers[1].slot[SLOT_GEOS_FILE_TYPE];
 
     /* next is the geos info block */
 
@@ -1980,7 +1965,7 @@ static int internal_write_geos_file(int unit, FILE* f)
         fprintf(stderr, "Disk full\n");
         return FD_WRTERR;
     }
-    if (disk_image_write_sector(drives[unit]->image, infoBlock, infoTrk,
+    if (vdrive_write_sector(drives[unit], infoBlock, infoTrk,
         infoSec) != 0) {
         fprintf(stderr, "Disk full\n");
         return FD_WRTERR;
@@ -2014,7 +1999,7 @@ static int internal_write_geos_file(int unit, FILE* f)
         return FD_WRTERR;
     }
 
-    if (disk_image_write_sector(drives[unit]->image, vlirBlock, vlirTrk,
+    if (vdrive_write_sector(drives[unit], vlirBlock, vlirTrk,
         vlirSec) != 0) {
             fprintf(stderr, "Disk full\n");
             return FD_WRTERR;
@@ -2059,7 +2044,7 @@ static int internal_write_geos_file(int unit, FILE* f)
 
             /* write it to disk */
 
-            if (disk_image_write_sector(drives[unit]->image, block, aktTrk,
+            if (vdrive_write_sector(drives[unit], block, aktTrk,
                 aktSec) != 0) {
                 fprintf(stderr, "Disk full\n");
                 return FD_WRTERR;
@@ -2122,7 +2107,7 @@ static int internal_write_geos_file(int unit, FILE* f)
 
                     /* write it to disk */
 
-                    if (disk_image_write_sector(drives[unit]->image, block,
+                    if (vdrive_write_sector(drives[unit], block,
                         aktTrk, aktSec) != 0) {
                         fprintf(stderr, "Disk full\n");
                         return FD_WRTERR;
@@ -2231,7 +2216,7 @@ static int write_geos_cmd(int nargs, char **args)
 #ifdef DEBUG_DRIVE
     log_debug("DEBUG: closing, write DIR slot (%d %d) and BAM.", drives[unit]->Curr_track, drives[unit]->Curr_sector);
 #endif
-    disk_image_write_sector(drives[unit]->image, drives[unit]->Dir_buffer,
+    vdrive_write_sector(drives[unit], drives[unit]->Dir_buffer,
                             drives[unit]->Curr_track,
                             drives[unit]->Curr_sector);
     vdrive_bam_write_bam(drives[unit]);
@@ -2957,7 +2942,7 @@ static int zcreate_cmd(int nargs, char **args)
                 return FD_BADIMAGE;
             }
             /* Write one block */
-            if (disk_image_write_sector(vdrive->image, sector_data, track,
+            if (vdrive_write_sector(vdrive, sector_data, track,
                 sector) < 0) {
                 fclose(fsfd);
                 lib_free(fname);
