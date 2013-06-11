@@ -55,4 +55,7 @@ $(LOCAL_PATH)/$(FE)
 
 LOCAL_LDLIBS := -llog
 
+LOCAL_CFLAGS += -flto
+LOCAL_LDFLAGS += -flto
+
 include $(BUILD_SHARED_LIBRARY)

@@ -2,16 +2,19 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_MODULE := resid
 LOCAL_ARM_MODE := arm
-LOCAL_CFLAGS := -O3 -ffast-math -fno-exceptions
+LOCAL_CFLAGS += -ffast-math -fno-exceptions
 
 MY_RESID_FILES = $(wildcard $(LOCAL_PATH)/vice/resid/*.cpp)
 LOCAL_SRC_FILES := $(MY_RESID_FILES:$(LOCAL_PATH)%=%)
+
+LOCAL_CFLAGS += -flto
+LOCAL_LDFLAGS += -flto
+
 include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := vice
 LOCAL_ARM_MODE := arm
-LOCAL_CFLAGS = -O3
 LOCAL_LDLIBS := -llog -lz
 LOCAL_SRC_FILES := \
     VICEPlugin.cpp \
@@ -167,5 +170,8 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH) \
 #terminator for last backslash
 
 LOCAL_STATIC_LIBRARIES := resid
+
+LOCAL_CFLAGS += -flto
+LOCAL_LDFLAGS += -flto
 
 include $(BUILD_SHARED_LIBRARY)

@@ -25,10 +25,13 @@ MY_SOURCES := $(wildcard $(LOCAL_PATH)/modplug/*.cpp)
 
 LOCAL_SRC_FILES += $(MY_SOURCES:$(LOCAL_PATH)%=%)
 
-LOCAL_CFLAGS := -DHAVE_CONFIG_H
+LOCAL_CFLAGS += -DHAVE_CONFIG_H
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/modplug $(LOCAL_PATH)/modplug/libmodplug
 
 LOCAL_LDLIBS := -llog 
+
+LOCAL_CFLAGS += -flto
+LOCAL_LDFLAGS += -flto
 
 include $(BUILD_SHARED_LIBRARY)
