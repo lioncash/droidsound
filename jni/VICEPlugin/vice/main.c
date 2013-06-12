@@ -7,7 +7,7 @@
  *  Vesa-Matti Puro <vmp@lut.fi>
  *  Jarkko Sonninen <sonninen@lut.fi>
  *  Jouko Valta <jopi@stekt.oulu.fi>
- *  Andre Fachat <a.fachat@physik.tu-chemnitz.de>
+ *  Andr� Fachat <a.fachat@physik.tu-chemnitz.de>
  *  Andreas Boose <viceteam@t-online.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -29,6 +29,8 @@
  *  02111-1307  USA.
  *
  */
+
+/* #define DEBUG_MAIN */
 
 #include "vice.h"
 
@@ -67,8 +69,16 @@
 #include "version.h"
 #include "video.h"
 
+#ifdef USE_SVN_REVISION
+#include "svnversion.h"
+#endif
 
-int vsid_mode = 0; /* FIXME: remove this if all ports are updated */
+#ifdef DEBUG_MAIN
+#define DBG(x)  printf x
+#else
+#define DBG(x)
+#endif
+
 #ifdef __OS2__
 const
 #endif
@@ -83,22 +93,29 @@ int main_program(int argc, char **argv)
 {
     int i;
     char *program_name;
+    int ishelp = 0;
 
     /* Check for -config and -console before initializing the user interface.
        -config  => use specified configuration file
        -console => no user interface
     */
+    DBG(("main:early cmdline(argc:%d)\n", argc));
     for (i = 0; i < argc; i++) {
 #ifndef __OS2__
-        if (strcmp(argv[i], "-console") == 0) {
+        if ((!strcmp(argv[i], "-console")) || (!strcmp(argv[i], "--console"))) {
             console_mode = 1;
             video_disabled_mode = 1;
         } else
 #endif
-        if (strcmp(argv[i], "-config") == 0) {
-            if ((i+1) < argc) {
+        if ((!strcmp(argv[i], "-config")) || (!strcmp(argv[i], "--config"))) {
+            if ((i + 1) < argc) {
                 vice_config_file = lib_stralloc(argv[++i]);
             }
+        } else if ((!strcmp(argv[i], "-help")) ||
+                   (!strcmp(argv[i], "--help")) ||
+                   (!strcmp(argv[i], "-h")) ||
+                   (!strcmp(argv[i], "-?"))) {
+            ishelp = 1;
         }
     }
 
@@ -110,6 +127,7 @@ int main_program(int argc, char **argv)
     textdomain(PACKAGE);
 #endif
 
+    DBG(("main:archdep_init(argc:%d)\n", argc));
     archdep_init(&argc, argv);
 
     if (atexit(main_exit) < 0) {
@@ -125,8 +143,7 @@ int main_program(int argc, char **argv)
     /* Initialize system file locator.  */
     sysfile_init(machine_name);
 
-    gfxoutput_early_init();
-
+    gfxoutput_early_init(!ishelp);
     if (init_resources() < 0 || init_cmdline_options() < 0) {
         return -1;
     }
@@ -140,23 +157,26 @@ int main_program(int argc, char **argv)
     /* Initialize the user interface.  `ui_init()' might need to handle the
        command line somehow, so we call it before parsing the options.
        (e.g. under X11, the `-display' option is handled independently).  */
+    DBG(("main:ui_init(argc:%d)\n", argc));
     if (!console_mode && ui_init(&argc, argv) < 0) {
         archdep_startup_log_error("Cannot initialize the UI.\n");
         return -1;
     }
 
 #ifdef HAS_TRANSLATION
-   /* set the default arch language */
+    /* set the default arch language */
     translate_arch_language_init();
 #endif
 
-    /* Load the user's default configuration file.  */
-    if (resources_load(NULL) < 0) {
-        /* The resource file might contain errors, and thus certain
-           resources might have been initialized anyway.  */
-        if (resources_set_defaults() < 0) {
-            archdep_startup_log_error("Cannot set defaults.\n");
-            return -1;
+    if (!ishelp) {
+        /* Load the user's default configuration file.  */
+        if (resources_load(NULL) < 0) {
+            /* The resource file might contain errors, and thus certain
+            resources might have been initialized anyway.  */
+            if (resources_set_defaults() < 0) {
+                archdep_startup_log_error("Cannot set defaults.\n");
+                return -1;
+            }
         }
     }
 
@@ -164,6 +184,7 @@ int main_program(int argc, char **argv)
         archdep_startup_log_error("Cannot startup logging system.\n");
     }
 
+    DBG(("main:initcmdline_check_args(argc:%d)\n", argc));
     if (initcmdline_check_args(argc, argv) < 0) {
         return -1;
     }
@@ -171,7 +192,12 @@ int main_program(int argc, char **argv)
     program_name = archdep_program_name();
 
     /* VICE boot sequence.  */
+    log_message(LOG_DEFAULT, " ");
+#ifdef USE_SVN_REVISION
+    log_message(LOG_DEFAULT, "*** VICE Version %s, rev %s ***", VERSION, VICE_SVN_REV_STRING);
+#else
     log_message(LOG_DEFAULT, "*** VICE Version %s ***", VERSION);
+#endif
     log_message(LOG_DEFAULT, "OS compiled for: %s", platform_get_compile_time_os());
     log_message(LOG_DEFAULT, "GUI compiled for: %s", platform_get_ui());
     log_message(LOG_DEFAULT, "CPU compiled for: %s", platform_get_compile_time_cpu());
@@ -179,8 +205,13 @@ int main_program(int argc, char **argv)
     log_message(LOG_DEFAULT, "Current OS: %s", platform_get_runtime_os());
     log_message(LOG_DEFAULT, "Current CPU: %s", platform_get_runtime_cpu());
     log_message(LOG_DEFAULT, " ");
-    log_message(LOG_DEFAULT, "Welcome to %s, the free portable %s Emulator.",
-                program_name, machine_name);
+    if (machine_class == VICE_MACHINE_VSID) {
+        log_message(LOG_DEFAULT, "Welcome to %s, the free portable SID Player.",
+                    program_name);
+    } else {
+        log_message(LOG_DEFAULT, "Welcome to %s, the free portable %s Emulator.",
+                    program_name, machine_name);
+    }
     log_message(LOG_DEFAULT, " ");
     log_message(LOG_DEFAULT, "Current VICE team members:");
     log_message(LOG_DEFAULT, "D. Lem, A. Matthies, M. Pottendorfer, S. Trikaliotis, M. van den Heuvel,");

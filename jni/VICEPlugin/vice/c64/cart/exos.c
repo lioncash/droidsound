@@ -61,7 +61,7 @@ static const c64export_resource_t export_res = {
 
 /* ---------------------------------------------------------------------*/
 
-BYTE exos_romh_read(WORD addr)
+BYTE exos_romh_read_hirom(WORD addr)
 {
     return romh_banks[(addr & 0x1fff)];
 }
@@ -152,7 +152,7 @@ int exos_snapshot_write_module(snapshot_t *s)
     snapshot_module_t *m;
 
     m = snapshot_module_create(s, SNAP_MODULE_NAME,
-                          CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR);
+                               CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR);
     if (m == NULL) {
         return -1;
     }

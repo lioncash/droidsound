@@ -50,7 +50,7 @@ rom is mapped to $e000
 *** Register Details
 
 Writing anywhere to the IO2 area adresses a MC6521 (2 8bit i/o ports). However
-its registers are not simply memory mapped, instead A0-A5 go to D0-D5, D1 to D7 
+its registers are not simply memory mapped, instead A0-A5 go to D0-D5, D1 to D7
 and A6-A7 to RS1/RS0.
 
 addr    dfXX    RRDD DDDD
@@ -65,7 +65,7 @@ data      .X    .... ..D.
 *** MC6821 Registers
 
 RS1  RS0 (CRA2 CRB2 = control register bit 2)
- 
+
 0    0    1    .     Data A
 0    0    0    .     Data Direction A
 0    1    .    .     Control Register A
@@ -78,8 +78,8 @@ RS1  RS0 (CRA2 CRB2 = control register bit 2)
 PA (Output Data)
 
 A0,A1,A2       - ROM Bank
-A3             - extra ROM enable/disable (?)
-A4             - RAM enable/disable (?)
+A3             - extra ROM enable (0) / disable (1)
+A4             - RAM enable (0) / disable (1)
 A5-A7 unused
 
 PB (Output Data)
@@ -187,7 +187,7 @@ static int hwversion = 0;
 static mc6821_state my6821;
 
 /****************************************************************************
-* 
+*
 ****************************************************************************/
 #ifdef LOG_BANKS
 static int logbanks[0x10];
@@ -211,31 +211,23 @@ static void log_bank(int bank)
 #endif
 
 /****************************************************************************
-* 
+*
 ****************************************************************************/
 
 /*
     magic formel switches GAME depending on ADDR ($E000-$FFFF)
 */
 
-static int kernal_decoder(WORD addr)
+static void change_config(void)
 {
-    export_game = kernal_enabled || freeze_enabled;
-
-    if (export_game) {
+    if (kernal_enabled || freeze_enabled) {
         cart_config_changed_slotmain(2, (BYTE)(3 | (romh_bank << CMODE_BANK_SHIFT)), CMODE_READ | CMODE_PHI2_RAM);
     } else {
         cart_config_changed_slotmain(2, (BYTE)(2 | (romh_bank << CMODE_BANK_SHIFT)), CMODE_READ | CMODE_PHI2_RAM);
     }
-
-    if (addr < 0xe000) {
-        return 0;
-    }
-
-    return 1;
 }
 
-static void freeze_flipflop(int reset,int freeze,int clear)
+static void freeze_flipflop(int reset, int freeze, int clear)
 {
     if (reset) {
         freeze_enabled = 1;
@@ -258,7 +250,7 @@ static void mf_print_pa(BYTE data)
 {
     /*
         PA (Output Data)
-        
+
         A0,A1,A2       - ROM Bank
         A3             - extra ROM enable/disable (?)
         A4             - RAM enable/disable (?)
@@ -317,8 +309,8 @@ static void mf_set_pa(mc6821_state *ctx)
     } else {
         romh_bank = data & 0x0f;
     }
-    freeze_flipflop(0 /* reset */,0 /* freeze */, ctx->CB2);
-    kernal_decoder(0xdf00);
+    freeze_flipflop(0 /* reset */, 0 /* freeze */, ctx->CB2);
+    change_config();
 
 #ifdef LOG_BANKS
     log_bank(romh_bank);
@@ -368,7 +360,7 @@ static void mf_set_pb(mc6821_state *ctx)
     }
 
     freeze_flipflop(0 /* reset */, 0 /* freeze */, ctx->CB2);
-    kernal_decoder(0xdf00);
+    change_config();
 }
 
 /*
@@ -387,12 +379,12 @@ static void mf_set_ca2(mc6821_state *ctx)
 
 static void mf_set_cb2(mc6821_state *ctx)
 {
-    freeze_flipflop(0 /* reset */,0 /* freeze */, ctx->CB2);
-    kernal_decoder(0xdf00);
+    freeze_flipflop(0 /* reset */, 0 /* freeze */, ctx->CB2);
+    change_config();
 }
 
 /****************************************************************************
-* 
+*
 ****************************************************************************/
 
 static BYTE magicformel_io1_read(WORD addr)
@@ -437,24 +429,20 @@ static void magicformel_io1_store(WORD addr, BYTE value)
 
 static BYTE magicformel_io2_read(WORD addr)
 {
-    int data, port, reg;
+    int port, reg;
 
-    /* fixme: what about d0..d5 ? */
-    data = (addr & 0x3f);   /* d0..d5 (d7) */
     port = (addr >> 7) & 1; /* rs1 */
     reg = (addr >> 6) & 1;  /* rs0 */
 
-    DBG(("MF: read from io2 %04x data %02x port %02x reg %02x\n",addr,data,port,reg));
+    DBG(("MF: read from io2 %04x data %02x port %02x reg %02x\n", addr, addr & 0x3f, port, reg));
 
     return mc6821core_read(&my6821, port /* rs1 */, reg /* rs0 */);
 }
 
 static BYTE magicformel_io2_peek(WORD addr)
 {
-    int data, port, reg;
+    int port, reg;
 
-    /* fixme: what about d0..d5 ? */
-    data = (addr & 0x3f);   /* d0..d5 (d7) */
     port = (addr >> 7) & 1; /* rs1 */
     reg = (addr >> 6) & 1;  /* rs0 */
 
@@ -476,7 +464,7 @@ static void magicformel_io2_store(WORD addr, BYTE value)
 
 
 /****************************************************************************
-* 
+*
 ****************************************************************************/
 /* ---------------------------------------------------------------------*/
 
@@ -486,17 +474,15 @@ static void magicformel_io2_store(WORD addr, BYTE value)
 */
 BYTE magicformel_romh_read(WORD addr)
 {
-    if (freeze_enabled) {
-        if (kernal_decoder(addr)) {
-            return romh_banks[(addr & 0x1fff) + (romh_bank << 13)];
-        }
+    if (freeze_enabled && addr >= 0xe000) {
+        return romh_banks[(addr & 0x1fff) + (romh_bank << 13)];
     }
     return mem_read_without_ultimax(addr);
 }
 
 BYTE magicformel_romh_read_hirom(WORD addr)
 {
-    if (kernal_decoder(addr)) {
+    if (addr >= 0xe000) {
         return romh_banks[(addr & 0x1fff) + (romh_bank << 13)];
     }
     return mem_read_without_ultimax(addr);
@@ -514,22 +500,12 @@ int magicformel_romh_phi2_read(WORD addr, BYTE *value)
 
 int magicformel_peek_mem(struct export_s *export, WORD addr, BYTE *value)
 {
-    if (addr >= 0x8000 && addr <= 0x9fff) {
-        if (export_ram) {
-            *value = export_ram0[addr & 0x1fff];
-            return CART_READ_VALID;
-        }
-        *value = roml_banks[(addr & 0x1fff) + (roml_bank << 13)];
-        return CART_READ_VALID;
-    }
-
     if (addr >= 0xe000) {
         *value = romh_banks[(addr & 0x1fff) + (romh_bank << 13)];
         return CART_READ_VALID;
     }
     return CART_READ_THROUGH;
 }
-
 
 /****************************************************************************/
 
@@ -544,7 +520,6 @@ void magicformel_freeze(void)
     io1_enabled = 1;
 
     freeze_flipflop(0 /* reset */, 1 /* freeze */, my6821.CB2);
-    kernal_decoder(0xfffe);
 
     cart_config_changed_slotmain(2, (BYTE)(3 | ((romh_bank & 0x0f) << CMODE_BANK_SHIFT)), CMODE_READ | CMODE_RELEASE_FREEZE);
 }
@@ -560,8 +535,7 @@ void magicformel_config_init(void)
 
     kernal_enabled = 1;   /* PB7 */
 
-    freeze_flipflop(1 /* reset */,0 /* freeze */, my6821.CB2);
-    kernal_decoder(0xfffe);
+    freeze_flipflop(1 /* reset */, 0 /* freeze */, my6821.CB2);
 
     cart_config_changed_slotmain(2, (BYTE)(3 | (romh_bank << CMODE_BANK_SHIFT)), CMODE_READ);
 }
@@ -672,7 +646,7 @@ int magicformel_snapshot_write_module(snapshot_t *s)
     snapshot_module_t *m;
 
     m = snapshot_module_create(s, SNAP_MODULE_NAME,
-                          CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR);
+                               CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR);
     if (m == NULL) {
         return -1;
     }
@@ -690,7 +664,7 @@ int magicformel_snapshot_write_module(snapshot_t *s)
         return -1;
     }
 
-    if (mc6821core_snapshot_write_data(&my6821, m)  < 0) {
+    if (mc6821core_snapshot_write_data(&my6821, m) < 0) {
         return -1;
     }
 
@@ -726,7 +700,7 @@ int magicformel_snapshot_read_module(snapshot_t *s)
         return -1;
     }
 
-    if (mc6821core_snapshot_read_data(&my6821, m)  < 0) {
+    if (mc6821core_snapshot_read_data(&my6821, m) < 0) {
         return -1;
     }
 

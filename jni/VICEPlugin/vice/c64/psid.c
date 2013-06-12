@@ -49,6 +49,7 @@ static log_t vlog = LOG_ERR;
 
 typedef struct psid_s {
     /* PSID data */
+    BYTE is_rsid;
     WORD version;
     WORD data_offset;
     WORD load_addr;
@@ -209,6 +210,7 @@ int psid_load_file(const char* filename)
     if (fread(ptr, 1, 6, f) != 6 || (memcmp(ptr, "PSID", 4) != 0 && memcmp(ptr, "RSID", 4) != 0)) {
         goto fail;
     }
+    psid->is_rsid = ptr[0] == 'R';
 
     ptr += 4;
     psid->version = psid_extract_word(&ptr);
@@ -413,7 +415,7 @@ void psid_init_tune(void)
     }
 
     /* Check for PlaySID specific file. */
-    if (psid->flags & 0x02) {
+    if (!psid->is_rsid && psid->flags & 0x02) {
         log_warning(vlog, "Image is PlaySID specific - trying anyway.");
     }
 
@@ -471,7 +473,7 @@ void psid_init_tune(void)
     ram_store(addr, (BYTE)(start_song));
 
     /* force flag in c64 memory, many sids reads it and must be set AFTER the sid flag is read */
-    ram_store((WORD)(0x02a6), (BYTE)(sync == MACHINE_SYNC_NTSC ? 0 : 1) );
+    ram_store((WORD)(0x02a6), (BYTE)(sync == MACHINE_SYNC_NTSC ? 0 : 1));
 }
 
 void psid_set_tune(int tune)
@@ -547,9 +549,9 @@ void psid_init_driver(void)
         sid2loc = 0xd000 | ((psid->reserved >> 4) & 0x0ff0);
         log_message(vlog, "2nd SID at $%04x", sid2loc);
         if (((sid2loc >= 0xd420 && sid2loc < 0xd800) || sid2loc >= 0xde00)
-                && (sid2loc & 0x10) == 0) {
-                resources_set_int("SidStereo", 1);
-                resources_set_int("SidStereoAddressStart", sid2loc);
+            && (sid2loc & 0x10) == 0) {
+            resources_set_int("SidStereo", 1);
+            resources_set_int("SidStereoAddressStart", sid2loc);
         }
     }
 

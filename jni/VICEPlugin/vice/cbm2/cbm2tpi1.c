@@ -2,7 +2,7 @@
  * cbm2tpi1.c - TPI 1 for CBM-II
  *
  * Written by
- *  Andre Fachat <a.fachat@physik.tu-chemnitz.de>
+ *  André Fachat <a.fachat@physik.tu-chemnitz.de>
  *  Andreas Boose <viceteam@t-online.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -149,10 +149,12 @@ static void undump_pa(tpi_context_t *tpi_context, BYTE byte)
 
 static void store_pb(tpi_context_t *tpi_context, BYTE byte)
 {
-    if ((byte ^ tpi_context->oldpb) & 0x40)
+    if ((byte ^ tpi_context->oldpb) & 0x40) {
         datasette_set_motor(!(byte & 0x40));
-    if ((byte ^ tpi_context->oldpb) & 0x20)
+    }
+    if ((byte ^ tpi_context->oldpb) & 0x20) {
         datasette_toggle_write_bit(byte & 0x20);
+    }
 }
 
 static void store_pc(tpi_context_t *tpi_context, BYTE byte)

@@ -68,8 +68,7 @@ void vicii_set_phi1_addr_options(WORD mask, WORD offset)
     vicii.vaddr_mask_phi1 = mask;
     vicii.vaddr_offset_phi1 = offset;
 
-    VICII_DEBUG_REGISTER(("Set phi1 video addr mask=%04x, offset=%04x",
-                         mask, offset));
+    VICII_DEBUG_REGISTER(("Set phi1 video addr mask=%04x, offset=%04x", mask, offset));
 }
 
 void vicii_set_phi2_addr_options(WORD mask, WORD offset)
@@ -77,8 +76,7 @@ void vicii_set_phi2_addr_options(WORD mask, WORD offset)
     vicii.vaddr_mask_phi2 = mask;
     vicii.vaddr_offset_phi2 = offset;
 
-    VICII_DEBUG_REGISTER(("Set phi2 video addr mask=%04x, offset=%04x",
-                         mask, offset));
+    VICII_DEBUG_REGISTER(("Set phi2 video addr mask=%04x, offset=%04x", mask, offset));
 }
 
 void vicii_set_phi1_chargen_addr_options(WORD mask, WORD value)
@@ -86,8 +84,7 @@ void vicii_set_phi1_chargen_addr_options(WORD mask, WORD value)
     vicii.vaddr_chargen_mask_phi1 = mask;
     vicii.vaddr_chargen_value_phi1 = value;
 
-    VICII_DEBUG_REGISTER(("Set phi1 chargen addr mask=%04x, value=%04x",
-                         mask, value));
+    VICII_DEBUG_REGISTER(("Set phi1 chargen addr mask=%04x, value=%04x", mask, value));
 }
 
 void vicii_set_phi2_chargen_addr_options(WORD mask, WORD value)
@@ -95,8 +92,7 @@ void vicii_set_phi2_chargen_addr_options(WORD mask, WORD value)
     vicii.vaddr_chargen_mask_phi2 = mask;
     vicii.vaddr_chargen_value_phi2 = value;
 
-    VICII_DEBUG_REGISTER(("Set phi2 chargen addr mask=%04x, value=%04x",
-                         mask, value));
+    VICII_DEBUG_REGISTER(("Set phi2 chargen addr mask=%04x, value=%04x", mask, value));
 }
 
 void vicii_set_chargen_addr_options(WORD mask, WORD value)
@@ -106,8 +102,7 @@ void vicii_set_chargen_addr_options(WORD mask, WORD value)
     vicii.vaddr_chargen_mask_phi2 = mask;
     vicii.vaddr_chargen_value_phi2 = value;
 
-    VICII_DEBUG_REGISTER(("Set chargen addr mask=%04x, value=%04x",
-                         mask, value));
+    VICII_DEBUG_REGISTER(("Set chargen addr mask=%04x, value=%04x", mask, value));
 }
 
 /* ---------------------------------------------------------------------*/
@@ -188,9 +183,9 @@ static void vicii_set_geometry(void)
     raster_set_geometry(&vicii.raster,
                         width, height, /* canvas dimensions */
                         width, vicii.screen_height, /* screen dimensions */
-                        width, height, /* gfx dimensions */
-                        width/8, height/8, /* text dimensions */
-                        0, 0, /* gfx position */
+                        VICII_SCREEN_XPIX, VICII_SCREEN_YPIX, /* gfx dimensions */
+                        VICII_SCREEN_TEXTCOLS, VICII_SCREEN_TEXTLINES, /* text dimensions */
+                        vicii.screen_leftborderwidth, VICII_NO_BORDER_FIRST_DISPLAYED_LINE, /* gfx position */
                         0, /* gfx area doesn't move */
                         vicii.first_displayed_line,
                         vicii.last_displayed_line,
@@ -205,6 +200,7 @@ static void vicii_set_geometry(void)
     vicii.raster.display_ystop = vicii.screen_height;
     vicii.raster.display_xstart = 0;
     vicii.raster.display_xstop = width;
+    vicii.raster.dont_cache_all = 1;
 
     vicii.raster.geometry->pixel_aspect_ratio = vicii_get_pixel_aspect();
     vicii.raster.viewport->crt_type = vicii_get_crt_type();
@@ -239,7 +235,11 @@ static int init_raster(void)
     raster_set_title(raster, machine_name);
 #else
     /* hack */
-    raster_set_title(raster, "C64 (x64sc)");
+    if (machine_class != VICE_MACHINE_C64SC) {
+        raster_set_title(raster, machine_name);
+    } else {
+        raster_set_title(raster, "C64 (x64sc)");
+    }
 #endif
 
     if (raster_realize(raster) < 0) {
@@ -439,14 +439,14 @@ void vicii_raster_draw_handler(void)
     int in_visible_area;
 
     in_visible_area = (vicii.raster.current_line
-                      >= (unsigned int)vicii.first_displayed_line
-                      && vicii.raster.current_line
-                      <= (unsigned int)vicii.last_displayed_line);
+                       >= (unsigned int)vicii.first_displayed_line
+                       && vicii.raster.current_line
+                       <= (unsigned int)vicii.last_displayed_line);
 
     /* handle wrap if the first few lines are displayed in the visible lower border */
     if ((unsigned int)vicii.last_displayed_line >= vicii.screen_height) {
         in_visible_area |= vicii.raster.current_line
-                          <= ((unsigned int)vicii.last_displayed_line - vicii.screen_height);
+                           <= ((unsigned int)vicii.last_displayed_line - vicii.screen_height);
     }
 
     raster_line_emulate(&vicii.raster);
@@ -456,7 +456,7 @@ void vicii_raster_draw_handler(void)
         if ((unsigned int)vicii.last_displayed_line < vicii.screen_height) {
             raster_skip_frame(&vicii.raster,
                               vsync_do_vsync(vicii.raster.canvas,
-                              vicii.raster.skip_frame));
+                                             vicii.raster.skip_frame));
         }
 
 #ifdef __MSDOS__
@@ -465,9 +465,10 @@ void vicii_raster_draw_handler(void)
                 <= VICII_SCREEN_XPIX
                 && vicii.raster.canvas->draw_buffer->canvas_height
                 <= VICII_SCREEN_YPIX
-                && vicii.raster.canvas->viewport->update_canvas)
+                && vicii.raster.canvas->viewport->update_canvas) {
                 canvas_set_border_color(vicii.raster.canvas,
                                         vicii.raster.border_color);
+            }
         }
 #endif
     }
@@ -477,15 +478,16 @@ void vicii_raster_draw_handler(void)
         && vicii.raster.current_line == vicii.last_displayed_line - vicii.screen_height + 1) {
         raster_skip_frame(&vicii.raster,
                           vsync_do_vsync(vicii.raster.canvas,
-                          vicii.raster.skip_frame));
+                                         vicii.raster.skip_frame));
 #ifdef __MSDOS__
         if (vicii.raster.canvas->draw_buffer->canvas_width
             <= VICII_SCREEN_XPIX
             && vicii.raster.canvas->draw_buffer->canvas_height
             <= VICII_SCREEN_YPIX
-            && vicii.raster.canvas->viewport->update_canvas)
+            && vicii.raster.canvas->viewport->update_canvas) {
             canvas_set_border_color(vicii.raster.canvas,
                                     vicii.raster.border_color);
+        }
 #endif
     }
 }

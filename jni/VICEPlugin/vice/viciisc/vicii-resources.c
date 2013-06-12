@@ -154,9 +154,7 @@ int vicii_resources_init(void)
     video_chip_cap.dscan_allowed = ARCHDEP_VICII_DSCAN;
     video_chip_cap.hwscale_allowed = ARCHDEP_VICII_HWSCALE;
     video_chip_cap.scale2x_allowed = ARCHDEP_VICII_DSIZE;
-    video_chip_cap.internal_palette_allowed = 1;
     video_chip_cap.external_palette_name = "default";
-    video_chip_cap.palemulation_allowed = 1;
     video_chip_cap.double_buffering_allowed = ARCHDEP_VICII_DBUF;
     video_chip_cap.single_mode.sizex = 1;
     video_chip_cap.single_mode.sizey = 1;
@@ -169,9 +167,9 @@ int vicii_resources_init(void)
 
     vicii.video_chip_cap = &video_chip_cap;
 
-    if (raster_resources_chip_init("VICII", &vicii.raster,
-        &video_chip_cap) < 0)
+    if (raster_resources_chip_init("VICII", &vicii.raster, &video_chip_cap) < 0) {
         return -1;
+    }
 
     return resources_register_int(resources_int);
 }

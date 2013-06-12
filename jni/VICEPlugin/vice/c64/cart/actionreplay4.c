@@ -155,13 +155,6 @@ static BYTE actionreplay4_io2_read(WORD addr)
 
 /* ---------------------------------------------------------------------*/
 
-BYTE actionreplay4_roml_read(WORD addr)
-{
-    return roml_banks[(addr & 0x1fff) + (roml_bank << 13)];
-}
-
-/* ---------------------------------------------------------------------*/
-
 void actionreplay4_freeze(void)
 {
     ar_active = 1;
@@ -252,7 +245,7 @@ int actionreplay4_snapshot_write_module(snapshot_t *s)
     snapshot_module_t *m;
 
     m = snapshot_module_create(s, SNAP_MODULE_NAME,
-                          CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR);
+                               CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR);
     if (m == NULL) {
         return -1;
     }

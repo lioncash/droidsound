@@ -3,6 +3,8 @@
  *
  * Written by
  *  Andreas Boose <viceteam@t-online.de>
+ * Screen centering code rewrite
+ *  Kajtar Zsolt <soci@c64.rulez.org>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -32,10 +34,6 @@
 #include "videoarch.h"
 #include "viewport.h"
 
-#ifndef MIN
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
-
 void video_viewport_get(video_canvas_t *canvas, viewport_t **viewport,
                         geometry_t **geometry)
 {
@@ -47,15 +45,22 @@ void video_viewport_get(video_canvas_t *canvas, viewport_t **viewport,
 void video_viewport_resize(video_canvas_t *canvas, char resize_canvas)
 {
     geometry_t *geometry;
-    viewport_t *viewport;
-    rectangle_t *screen_size;
+    viewport_t *viewport;     /* this will be displayed at the end */
+    rectangle_t *screen_size; /* emulated screen with border */
     rectangle_t *gfx_size;
-    position_t *gfx_position;
-    unsigned int gfx_height;
+    position_t *gfx_position; /* top left corner of non border screen area */
     unsigned width, height;
+    int first_x;
+    int x_offset;
+    int real_gfx_height;
+    int first_line;
+    int displayed_height;
+    int y_offset;
+    int small_x_border, small_y_border;
 
-    if (canvas->initialized == 0)
+    if (canvas->initialized == 0) {
         return;
+    }
 
     geometry = canvas->geometry;
     viewport = canvas->viewport;
@@ -71,8 +76,7 @@ void video_viewport_resize(video_canvas_t *canvas, char resize_canvas)
         canvas->draw_buffer->canvas_height = canvas->draw_buffer->visible_height;
         canvas->draw_buffer->canvas_physical_width = canvas->draw_buffer->canvas_width * (canvas->videoconfig->doublesizex + 1);
         canvas->draw_buffer->canvas_physical_height = canvas->draw_buffer->canvas_height * (canvas->videoconfig->doublesizey + 1);
-    }
-    else {
+    } else {
         /* The emulator's screen has been resized,
            or he emulated screen has changed but the emulator's screen is unable to adapt:
            in any case, the size of the emulator screen won't change now */
@@ -82,56 +86,77 @@ void video_viewport_resize(video_canvas_t *canvas, char resize_canvas)
     width = canvas->draw_buffer->canvas_width;
     height = canvas->draw_buffer->canvas_height;
 
-    if (width >= screen_size->width) {
-        viewport->x_offset = (width - screen_size->width) / 2;
-        viewport->first_x = 0;
-    } else {
-        viewport->x_offset = 0;
+    /* Horizontal alignment strategy (from small to big):
+     * 1. cut off left border, cut as much as needed from the right side of gfx
+     *    except for moving area chips, there cut of equally from left/right side
+     * 2. gfx fits, try to make the border area symmetric
+     * 3. reveal the asymmetric border part, without black bands
+     * 4. the complete screen fits, try to do equal black banding for the remaining space */
 
-        if (geometry->gfx_area_moves) {
-            viewport->first_x = (screen_size->width - width) / 2;
-        } else {
-            viewport->first_x = gfx_position->x;
-
-            if (width > gfx_size->width)
-                viewport->first_x -= (width - gfx_size->width) / 2;
+    /* smallest of left/right border */
+    small_x_border = (int)screen_size->width - (int)gfx_position->x - (int)gfx_size->width;
+    if (small_x_border > (int)gfx_position->x) {
+        small_x_border = (int)gfx_position->x;
+    }
+    /* Easy part, just put it in center with symmetric borders */
+    if ((int)gfx_size->width + small_x_border * 2 > (int)width) {
+        first_x = (int)gfx_position->x - ((int)width - (int)gfx_size->width) / 2;
+    } else { /* With a lot of space it's possible reveal the extra non-symmetric border part */
+        if ((int)gfx_position->x > small_x_border) { /* left border bigger */
+            first_x = (int)screen_size->width - (int)width;
+        } else { /* right border bigger */
+            first_x = 0;
         }
     }
+    x_offset = ((int)width - (int)screen_size->width) / 2;
 
-    gfx_height = height - gfx_size->height;
+    if (x_offset < 0) {
+        x_offset = 0;
+    }
+    if (first_x < 0) {
+        first_x = 0;
+    }
+    /* Stop at the border, unless gfx_area_moves, then cut off even more */
+    if (!geometry->gfx_area_moves && first_x > (int)gfx_position->x) {
+        first_x = (int)gfx_position->x;
+    }
+    viewport->first_x = first_x;
+    viewport->x_offset = x_offset;
 
-    if (height >= screen_size->height) {
-        viewport->y_offset = (height - screen_size->height) / 2;
-        viewport->first_line = 0;
-        viewport->last_line = screen_size->height - 1;
-    } else {
-        viewport->y_offset = 0;
+    /* Vertical alignment. Also easy, just put the visible area in center. */
+    real_gfx_height = geometry->last_displayed_line - geometry->first_displayed_line + 1;
 
-        if (geometry->gfx_area_moves) {
-            viewport->first_line = (screen_size->height - height) / 2;
-        } else {
-            /* FIXME: Somewhat buggy.  */
-            viewport->first_line = gfx_position->y;
+    small_y_border = (int)geometry->last_displayed_line - (int)gfx_position->y - (int)gfx_size->height + 1;
+    if (small_y_border > (int)gfx_position->y - (int)geometry->first_displayed_line) {
+        small_y_border = (int)gfx_position->y - (int)geometry->first_displayed_line;
+    }
 
-            if (height > gfx_size->height) {
-                if (gfx_height <= gfx_position->y)
-                    viewport->first_line -= gfx_height / 2;
-                else
-                    viewport->first_line = 0;
-            }
-
+    /* Easy part, just put it in center with symmetric borders */
+    if ((int)gfx_size->height + small_y_border * 2 > (int)height) {
+        first_line = (int)gfx_position->y - ((int)height - (int)gfx_size->height) / 2;
+    } else { /* With a lot of space it's possible reveal the extra non-symmetric border part */
+        if ((int)gfx_position->y - (int)geometry->first_displayed_line > small_y_border) { /* top border bigger */
+            first_line = real_gfx_height - (int)height + (int)geometry->first_displayed_line;
+        } else { /* bottom border bigger */
+            first_line = (int)geometry->first_displayed_line;
         }
-        viewport->last_line = (viewport->first_line + height) - 1;
     }
+    y_offset = ((int)height - real_gfx_height) / 2;
 
-    /* Make sure we don't waste space showing unused lines.  */
-    if ((viewport->first_line < geometry->first_displayed_line
-        && viewport->last_line < geometry->last_displayed_line)
-        || (viewport->first_line > geometry->first_displayed_line
-        && viewport->last_line > geometry->last_displayed_line)) {
-        viewport->first_line = geometry->first_displayed_line;
-        viewport->last_line = MIN(viewport->first_line + height - 1, geometry->last_displayed_line);
+    if (y_offset < 0) {
+        y_offset = 0;
     }
+    if (first_line < (int)geometry->first_displayed_line) {
+        first_line = (int)geometry->first_displayed_line;
+    }
+    /* Stop at the border, unless gfx_area_moves, then cut off even more */
+    if (!geometry->gfx_area_moves && first_line > (int)gfx_position->y) {
+        first_line = (int)gfx_position->y;
+    }
+    displayed_height = (real_gfx_height > (int)height) ? height : real_gfx_height;
+    viewport->first_line = (unsigned int)first_line;
+    viewport->y_offset = (unsigned int)y_offset;
+    viewport->last_line = viewport->first_line + (unsigned int)displayed_height - 1;
 
     if (!video_disabled_mode) {
         video_canvas_resize(canvas, (char)(resize_canvas && video_canvas_can_resize(canvas)));

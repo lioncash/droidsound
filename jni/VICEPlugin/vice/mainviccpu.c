@@ -60,12 +60,12 @@ CLOCK debug_clk;
 /* ------------------------------------------------------------------------- */
 
 /* Implement the hack to make opcode fetches faster.  */
-#define JUMP(addr)                            \
-    do {                                      \
-        reg_pc = (unsigned int)(addr);        \
-        bank_base = mem_read_base(reg_pc);    \
-        bank_limit = mem_read_limit(reg_pc);  \
-        mem_old_reg_pc = reg_pc;              \
+#define JUMP(addr)                                                                         \
+    do {                                                                                   \
+        reg_pc = (unsigned int)(addr);                                                     \
+        if (reg_pc >= (unsigned int)bank_limit || reg_pc < (unsigned int)bank_start) {     \
+            mem_mmu_translate((unsigned int)(addr), &bank_base, &bank_start, &bank_limit); \
+        }                                                                                  \
     } while (0)
 
 /* ------------------------------------------------------------------------- */
@@ -74,9 +74,9 @@ CLOCK debug_clk;
 
 void memmap_mem_store(unsigned int addr, unsigned int value)
 {
-    if (((addr >= 0x9000)&&(addr <= 0x93ff)) || ((addr >= 0x9800)&&(addr <= 0x9fff))) {
+    if (((addr >= 0x9000) && (addr <= 0x93ff)) || ((addr >= 0x9800) && (addr <= 0x9fff))) {
         monitor_memmap_store(addr, MEMMAP_I_O_W);
-    } else if (((addr >= 0x8000)&&(addr <= 0x8fff)) || (addr >= 0xc000)) {
+    } else if (((addr >= 0x8000) && (addr <= 0x8fff)) || (addr >= 0xc000)) {
         monitor_memmap_store(addr, MEMMAP_ROM_W);
     } else {
         monitor_memmap_store(addr, MEMMAP_RAM_W);
@@ -84,16 +84,23 @@ void memmap_mem_store(unsigned int addr, unsigned int value)
     (*_mem_write_tab_ptr[(addr) >> 8])((WORD)(addr), (BYTE)(value));
 }
 
-BYTE memmap_mem_read(unsigned int addr)
+/* mark as read (no side effects) */
+void memmap_mark_read(unsigned int addr)
 {
-    if (((addr >= 0x9000)&&(addr <= 0x93ff)) || ((addr >= 0x9800)&&(addr <= 0x9fff))) {
+    if (((addr >= 0x9000) && (addr <= 0x93ff)) || ((addr >= 0x9800) && (addr <= 0x9fff))) {
         monitor_memmap_store(addr, MEMMAP_I_O_R);
-    } else if (((addr >= 0x8000)&&(addr <= 0x8fff)) || (addr >= 0xc000)) {
-        monitor_memmap_store(addr, (memmap_state&MEMMAP_STATE_OPCODE)?MEMMAP_ROM_X:(memmap_state&MEMMAP_STATE_INSTR)?0:MEMMAP_ROM_R);
+    } else if (((addr >= 0x8000) && (addr <= 0x8fff)) || (addr >= 0xc000)) {
+        monitor_memmap_store(addr, (memmap_state & MEMMAP_STATE_OPCODE) ? MEMMAP_ROM_X : (memmap_state & MEMMAP_STATE_INSTR) ? 0 : MEMMAP_ROM_R);
     } else {
-        monitor_memmap_store(addr, (memmap_state&MEMMAP_STATE_OPCODE)?MEMMAP_RAM_X:(memmap_state&MEMMAP_STATE_INSTR)?0:MEMMAP_RAM_R);
+        monitor_memmap_store(addr, (memmap_state & MEMMAP_STATE_OPCODE) ? MEMMAP_RAM_X : (memmap_state & MEMMAP_STATE_INSTR) ? 0 : MEMMAP_RAM_R);
     }
     memmap_state &= ~(MEMMAP_STATE_OPCODE);
+}
+
+/* read byte and mark as read */
+BYTE memmap_mem_read(unsigned int addr)
+{
+    memmap_mark_read(addr);
     return (*_mem_read_tab_ptr[(addr) >> 8])((WORD)(addr));
 }
 
@@ -138,21 +145,6 @@ BYTE memmap_mem_read(unsigned int addr)
 #define LOAD_ZERO(addr) \
     (*_mem_read_tab_ptr[0])((WORD)(addr))
 #endif
-
-inline static BYTE *mem_read_base(int addr)
-{
-    BYTE *p = _mem_read_base_tab_ptr[addr >> 8];
-
-    if (p == NULL)
-        return p;
-
-    return p - (addr & 0xff00);
-}
-
-inline static int mem_read_limit(int addr)
-{
-    return mem_read_limit_tab_ptr[addr >> 8];
-}
 
 #ifndef DMA_FUNC
 static void maincpu_generic_dma(void)
@@ -281,8 +273,9 @@ static void cpu_reset(void)
 
     interrupt_cpu_status_reset(maincpu_int_status);
 
-    if (preserve_monitor)
+    if (preserve_monitor) {
         interrupt_monitor_trap_on(maincpu_int_status);
+    }
 
     maincpu_clk = 6; /* # of clock cycles needed for RESET.  */
 
@@ -309,13 +302,21 @@ inline static int interrupt_check_nmi_delay(interrupt_cpu_status_t *cs,
 {
     CLOCK nmi_clk = cs->nmi_clk + INTERRUPT_DELAY;
 
+    /* BRK (0x00) delays the NMI by one opcode.  */
+    /* TODO DO_INTERRUPT sets last opcode to 0: can NMI occur right after IRQ? */
+    if (OPINFO_NUMBER(*cs->last_opcode_info_ptr) == 0x00) {
+        return 0;
+    }
+
     /* Branch instructions delay IRQs and NMI by one cycle if branch
        is taken with no page boundary crossing.  */
-    if (OPINFO_DELAYS_INTERRUPT(*cs->last_opcode_info_ptr))
+    if (OPINFO_DELAYS_INTERRUPT(*cs->last_opcode_info_ptr)) {
         nmi_clk++;
+    }
 
-    if (cpu_clk >= nmi_clk)
+    if (cpu_clk >= nmi_clk) {
         return 1;
+    }
 
     return 0;
 }
@@ -330,8 +331,9 @@ inline static int interrupt_check_irq_delay(interrupt_cpu_status_t *cs,
 
     /* Branch instructions delay IRQs and NMI by one cycle if branch
        is taken with no page boundary crossing.  */
-    if (OPINFO_DELAYS_INTERRUPT(*cs->last_opcode_info_ptr))
+    if (OPINFO_DELAYS_INTERRUPT(*cs->last_opcode_info_ptr)) {
         irq_clk++;
+    }
 
     /* If an opcode changes the I flag from 1 to 0, the 6510 needs
        one more opcode before it triggers the IRQ routine.  */
@@ -351,6 +353,17 @@ inline static int interrupt_check_irq_delay(interrupt_cpu_status_t *cs,
 unsigned int reg_pc;
 #endif
 
+static BYTE **o_bank_base;
+static int *o_bank_start;
+static int *o_bank_limit;
+
+void maincpu_resync_limits(void)
+{
+    if (o_bank_base) {
+        mem_mmu_translate(reg_pc, o_bank_base, o_bank_start, o_bank_limit);
+    }
+}
+
 void maincpu_mainloop(void)
 {
     /* Notice that using a struct for these would make it a lot slower (at
@@ -365,16 +378,17 @@ void maincpu_mainloop(void)
 #ifndef NEED_REG_PC
     unsigned int reg_pc;
 #endif
-
     BYTE *bank_base;
-    int bank_limit;
+    int bank_start = 0;
+    int bank_limit = 0;
 
-    mem_set_bank_pointer(&bank_base, &bank_limit);
+    o_bank_base = &bank_base;
+    o_bank_start = &bank_start;
+    o_bank_limit = &bank_limit;
 
     machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
 
     while (1) {
-
 #define CLK maincpu_clk
 #define RMW_FLAG maincpu_rmw_flag
 #define LAST_OPCODE_INFO last_opcode_info
@@ -385,17 +399,13 @@ void maincpu_mainloop(void)
 
 #define ALARM_CONTEXT maincpu_alarm_context
 
-#define CHECK_PENDING_ALARM() \
-   (clk >= next_alarm_clk(maincpu_int_status))
+#define CHECK_PENDING_ALARM() (clk >= next_alarm_clk(maincpu_int_status))
 
-#define CHECK_PENDING_INTERRUPT() \
-   check_pending_interrupt(maincpu_int_status)
+#define CHECK_PENDING_INTERRUPT() check_pending_interrupt(maincpu_int_status)
 
-#define TRAP(addr) \
-   maincpu_int_status->trap_func(addr);
+#define TRAP(addr) maincpu_int_status->trap_func(addr);
 
-#define ROM_TRAP_HANDLER() \
-   traps_handler()
+#define ROM_TRAP_HANDLER() traps_handler()
 
 #define JAM()                                                         \
     do {                                                              \
@@ -404,19 +414,19 @@ void maincpu_mainloop(void)
         EXPORT_REGISTERS();                                           \
         tmp = machine_jam("   " CPU_STR ": JAM at $%04X   ", reg_pc); \
         switch (tmp) {                                                \
-          case JAM_RESET:                                             \
-            DO_INTERRUPT(IK_RESET);                                   \
-            break;                                                    \
-          case JAM_HARD_RESET:                                        \
-            mem_powerup();                                            \
-            DO_INTERRUPT(IK_RESET);                                   \
-            break;                                                    \
-          case JAM_MONITOR:                                           \
-            monitor_startup(e_comp_space);                            \
-            IMPORT_REGISTERS();                                       \
-            break;                                                    \
-          default:                                                    \
-            CLK_INC();                                                \
+            case JAM_RESET:                                           \
+                DO_INTERRUPT(IK_RESET);                               \
+                break;                                                \
+            case JAM_HARD_RESET:                                      \
+                mem_powerup();                                        \
+                DO_INTERRUPT(IK_RESET);                               \
+                break;                                                \
+            case JAM_MONITOR:                                         \
+                monitor_startup(e_comp_space);                        \
+                IMPORT_REGISTERS();                                   \
+                break;                                                \
+            default:                                                  \
+                CLK_INC();                                            \
         }                                                             \
     } while (0)
 
@@ -430,8 +440,9 @@ void maincpu_mainloop(void)
 
         maincpu_int_status->num_dma_per_opcode = 0;
 #if 0
-        if (CLK > 246171754)
+        if (CLK > 246171754) {
             debug.maincpu_traceflg = 1;
+        }
 #endif
     }
 }
@@ -448,8 +459,9 @@ int maincpu_snapshot_write_module(snapshot_t *s)
 
     m = snapshot_module_create(s, snap_module_name, ((BYTE)SNAP_MAJOR),
                                ((BYTE)SNAP_MINOR));
-    if (m == NULL)
+    if (m == NULL) {
         return -1;
+    }
 
     if (0
         || SMW_DW(m, maincpu_clk) < 0
@@ -459,20 +471,24 @@ int maincpu_snapshot_write_module(snapshot_t *s)
         || SMW_B(m, MOS6510_REGS_GET_SP(&maincpu_regs)) < 0
         || SMW_W(m, (WORD)MOS6510_REGS_GET_PC(&maincpu_regs)) < 0
         || SMW_B(m, (BYTE)MOS6510_REGS_GET_STATUS(&maincpu_regs)) < 0
-        || SMW_DW(m, (DWORD)last_opcode_info) < 0)
+        || SMW_DW(m, (DWORD)last_opcode_info) < 0) {
         goto fail;
+    }
 
-    if (interrupt_write_snapshot(maincpu_int_status, m) < 0)
+    if (interrupt_write_snapshot(maincpu_int_status, m) < 0) {
         goto fail;
+    }
 
-    if (interrupt_write_new_snapshot(maincpu_int_status, m) < 0)
+    if (interrupt_write_new_snapshot(maincpu_int_status, m) < 0) {
         goto fail;
+    }
 
     return snapshot_module_close(m);
 
 fail:
-    if (m != NULL)
+    if (m != NULL) {
         snapshot_module_close(m);
+    }
     return -1;
 }
 
@@ -484,8 +500,9 @@ int maincpu_snapshot_read_module(snapshot_t *s)
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, snap_module_name, &major, &minor);
-    if (m == NULL)
+    if (m == NULL) {
         return -1;
+    }
 
     /* FIXME: This is a mighty kludge to prevent VIC-II from stealing the
        wrong number of cycles.  */
@@ -500,8 +517,9 @@ int maincpu_snapshot_read_module(snapshot_t *s)
         || SMR_B(m, &sp) < 0
         || SMR_W(m, &pc) < 0
         || SMR_B(m, &status) < 0
-        || SMR_DW_UINT(m, &last_opcode_info) < 0)
+        || SMR_DW_UINT(m, &last_opcode_info) < 0) {
         goto fail;
+    }
 
     MOS6510_REGS_SET_A(&maincpu_regs, a);
     MOS6510_REGS_SET_X(&maincpu_regs, x);
@@ -521,7 +539,8 @@ int maincpu_snapshot_read_module(snapshot_t *s)
     return snapshot_module_close(m);
 
 fail:
-    if (m != NULL)
+    if (m != NULL) {
         snapshot_module_close(m);
+    }
     return -1;
 }

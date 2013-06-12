@@ -1,8 +1,8 @@
 /*
- * doodledrv.h - Create a c64 doodle type file.
+ * vic20model.h - VIC20 model detection and setting.
  *
  * Written by
- *  Marco van den Heuvel <blackystardust68@yahoo.com>
+ *  groepaz <groepaz@gmx.net>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -24,23 +24,20 @@
  *
  */
 
-#ifndef VICE_DOODLEDRV_H
-#define VICE_DOODLEDRV_H
+#ifndef VICE_VIC20MODEL_H
+#define VICE_VIC20MODEL_H
 
 #include "types.h"
 
-typedef struct doodle_data_s {
-    BYTE *colormap;
-    int xsize;
-    int ysize;
-    const char *filename;
-} doodle_data_t;
+#define VIC20MODEL_VIC20_PAL        0
+#define VIC20MODEL_VIC20_NTSC       1
+#define VIC20MODEL_VIC21            2 /* SuperVIC (+16K) */
 
-typedef struct doodle_color_sort_s {
-    BYTE color;
-    int amount;
-} doodle_color_sort_t;
+#define VIC20MODEL_NUM 3
 
-extern void gfxoutput_init_doodle(void);
+#define VIC20MODEL_UNKNOWN 99
+
+extern int vic20model_get(void);
+extern void vic20model_set(int model);
 
 #endif

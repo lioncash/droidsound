@@ -222,12 +222,12 @@ IDCLS_DISABLE_AUTOSTART_RANDOM_DELAY
 
 /* c128/c128-cmdline-options.c, c64/c64-cmdline-options.c,
    c64/psid.c, plus4/plus4-cmdline-options.c,
-   vic20/vic20-cmdline-options.c */
+   vic20/vic20-cmdline-options.c, scpu64/scpu64-cmdline-options.c */
 IDCLS_USE_PAL_SYNC_FACTOR
 
 /* c128/c128-cmdline-options.c, c64/c64-cmdline-options.c,
    c64/psid.c, plus4/plus4-cmdline-options.c,
-   vic20/vic20-cmdline-options.c */
+   vic20/vic20-cmdline-options.c, scpu64/scpu64-cmdline-options.c */
 IDCLS_USE_NTSC_SYNC_FACTOR
 
 /* c128/c128-cmdline-options.c, c128/functionrom.c,
@@ -243,7 +243,7 @@ IDCLS_USE_NTSC_SYNC_FACTOR
    vic20/vic20cartridge.c, video/video-cmdline-options.c,
    fliplist.c, initcmdline.c, log.c, sound.c, c64/plus60k.c,
    c64/c64_256k.c, pet/petreu.c, c64/plus256k.c,
-   c64/cart/mmc64.c */
+   c64/cart/mmc64.c, scpu64/scpu64-cmdline-options.c */
 IDCLS_P_NAME
 
 /* c128/c128-cmdline-options.c */
@@ -310,10 +310,12 @@ IDCLS_P_REVISION
 IDCLS_PATCH_KERNAL_TO_REVISION
 
 #ifdef HAVE_RS232
-/* c128/c128-cmdline-options.c, c64/c64-cmdline-options.c */
+/* c128/c128-cmdline-options.c, c64/c64-cmdline-options.c,
+   scpu64/scpu64-cmdline-options.c */
 IDCLS_ENABLE_DEXX_ACIA_RS232_EMU
 
-/* c128/c128-cmdline-options.c, c64/c64-cmdline-options.c */
+/* c128/c128-cmdline-options.c, c64/c64-cmdline-options.c,
+   scpu64/scpu64-cmdline-options.c */
 IDCLS_DISABLE_DEXX_ACIA_RS232_EMU
 #endif   /* HAVE_RS232 */
 
@@ -326,7 +328,8 @@ IDCLS_DISABLE_ACIA_EMU
 /* c128/c128-cmdline-options.c, c64/c64-cmdline-options.c,
    c64/psid.c, cbm2/cbm2-cmdline-options.c,
    pet/pet-cmdline-options.c, plus4/plus4-cmdline-options.c,
-   vdc/vdc-cmdline-options.c, vic20/vic20-cmdline-options.c */
+   vdc/vdc-cmdline-options.c, vic20/vic20-cmdline-options.c,
+   scpu64/scpu64-cmdline-options.c */
 IDCLS_P_NUMBER
 
 #ifdef COMMON_KBD
@@ -335,11 +338,13 @@ IDCLS_P_NUMBER
 IDCLS_SPECIFY_KEYMAP_FILE_INDEX
 
 /* c128/c128-cmdline-options.c, c64/c64-cmdline-options.c,
-   plus4/plus4-cmdline-options.c, vic20/vic20-cmdline-options.c */
+   plus4/plus4-cmdline-options.c, vic20/vic20-cmdline-options.c,
+   scpu64/scpu64-cmdline-options.c */
 IDCLS_SPECIFY_SYM_KEYMAP_FILE_NAME
 
 /* c128/c128-cmdline-options.c, c64/c64-cmdline-options.c,
-   plus4/plus4-cmdline-options.c, vic20/vic20-cmdline-options.c */
+   plus4/plus4-cmdline-options.c, vic20/vic20-cmdline-options.c,
+   scpu64/scpu64-cmdline-options.c */
 IDCLS_SPECIFY_POS_KEYMAP_FILE_NAME
 #endif  /* COMMON_KBD */
 
@@ -365,30 +370,25 @@ IDCLS_SPECIFY_EXT_FUNC_ROM_NAME
 IDCLS_ENABLE_INT_FUNC_ROM
 
 /* c128/functionrom.c */
-IDCLS_DISABLE_INT_FUNC_ROM
-
-/* c128/functionrom.c */
 IDCLS_ENABLE_EXT_FUNC_ROM
 
-/* c128/functionrom.c */
-IDCLS_DISABLE_EXT_FUNC_ROM
-
-/* c64/c64-cmdline-options.c, c64/psid.c */
+/* c64/c64-cmdline-options.c, c64/psid.c, scpu64/scpu64-cmdline-options.c */
 IDCLS_USE_OLD_NTSC_SYNC_FACTOR
 
-/* c64/c64-cmdline-options.c, viciisc/vicii-cmdline-options.c */
+/* c64/c64-cmdline-options.c, viciisc/vicii-cmdline-options.c,
+   scpu64/scpu64-cmdline-options.c */
 IDCLS_P_MODEL
 
-/* c64/c64-cmdline-options.c */
+/* c64/c64-cmdline-options.c, scpu64/scpu64-cmdline-options.c */
 IDCLS_SET_BOTH_CIA_MODELS
 
-/* c64/c64-cmdline-options.c */
+/* c64/c64-cmdline-options.c, scpu64/scpu64-cmdline-options.c */
 IDCLS_SET_CIA1_MODEL
 
-/* c64/c64-cmdline-options.c */
+/* c64/c64-cmdline-options.c, scpu64/scpu64-cmdline-options.c */
 IDCLS_SET_CIA2_MODEL
 
-/* c64/c64-cmdline-options.c */
+/* c64/c64-cmdline-options.c, scpu64/scpu64-cmdline-options.c */
 IDCLS_SET_C64_MODEL
 
 /* c128/c128-cmdline-options.c */
@@ -397,13 +397,16 @@ IDCLS_SET_C128_MODEL
 /* plus4/plus4-cmdline-options.c */
 IDCLS_SET_PLUS4_MODEL
 
+/* vic29/vic29-cmdline-options.c */
+IDCLS_SET_VIC20_MODEL
+
 /* c64dtv/c64dtv-cmdline-options.c */
 IDCLS_SET_DTV_MODEL
 
-/* c64/c64-cmdline-options.c */
+/* c64/c64-cmdline-options.c, scpu64/scpu64-cmdline-options.c */
 IDCLS_USE_PALN_SYNC_FACTOR
 
-/* c64/c64-cmdline-options.c */
+/* c64/c64-cmdline-options.c, scpu64/scpu64-cmdline-options.c */
 IDCLS_SET_BURST_MOD
 
 /* c64/c64-cmdline-options.c, cbm2/cbm2-cmdline-options.c,
@@ -417,14 +420,15 @@ IDCLS_SPECIFY_KERNAL_ROM_NAME
 IDCLS_SPECIFY_BASIC_ROM_NAME
 
 /* c64/c64-cmdline-options.c, cbm2/cbm2-cmdline-options.c,
-   pet/pet-cmdline-options.c, vic20/vic20-cmdline-options.c */
+   pet/pet-cmdline-options.c, vic20/vic20-cmdline-options.c,
+   scpu64/scpu64-cmdline-options.c */
 IDCLS_SPECIFY_CHARGEN_ROM_NAME
 
 #ifdef COMMON_KBD
-/* c64/c64-cmdline-options.c */
+/* c64/c64-cmdline-options.c, scpu64/scpu64-cmdline-options.c */
 IDCLS_SPECIFY_INDEX_KEYMAP_FILE_0_2
 
-/* c64/c64-cmdline-options.c */
+/* c64/c64-cmdline-options.c, scpu64/scpu64-cmdline-options.c */
 IDCLS_SPECIFY_NAME_SYM_DE_KEYMAP
 #endif   /* COMMON_KBD */
 
@@ -483,9 +487,6 @@ IDCLS_MAP_CART_IO_2
 /* c64/cart/sfx_soundexpander.c, c64/cart/sfx_soundsampler.c,
    c64/cart/tfe.c */
 IDCLS_MAP_CART_IO_3
-
-/* initcmdline.c */
-IDCLS_SID_PLAYER_MODE
 
 /* c64/psid.c */
 IDCLS_OVERWRITE_PSID_SETTINGS
@@ -984,8 +985,16 @@ IDCLS_ENABLE_DRIVE_SOUND
 /* drive/drive-cmdline-options.c */
 IDCLS_DISABLE_DRIVE_SOUND
 
-/* drive/drive-cmdline-options.c, printerdrv/interface-serial.c,
-   attach.c, drive/iec/iec-cmdline-options.c */
+/* drive/drive-cmdline-options.c */
+IDCLS_SET_DRIVE_SOUND_VOLUME
+
+/* drive/drive-cmdline-options.c */
+IDCLS_P_VOLUME
+
+/* drive/drive-cmdline-options.c, drive/iec/plus4exp/plus4exp-cmdline-options.c,
+   drive/iec/c64exp/c64exp-cmdline-options.c, printerdrv/interface-serial.c,
+   attach.c, lightpen.c, c128/functionrom.c, userport/userport_joystick.c,
+   c64/c64gluelogic.c, c64/cart/sfx_soundexpander.c */
 IDCLS_P_TYPE
 
 /* monitor/mon_command.c */
@@ -1000,16 +1009,19 @@ IDCLS_P_METHOD
 /* gfxoutputdrv/doodledrv.c */
 IDCLS_P_COLOR
 
-/* gfxoutputdrv/doodledrv.c */
+/* gfxoutputdrv/doodledrv.c, gfxoutputdrv/koaladrv.c */
 IDCLS_OVERSIZED_HANDLING
+
+/* gfxoutputdrv/doodledrv.c, gfxoutputdrv/koaladrv.c */
+IDCLS_UNDERSIZED_HANDLING
 
 /* gfxoutputdrv/doodledrv.c */
 IDCLS_MULTICOLOR_HANDLING
 
-/* gfxoutputdrv/doodledrv.c */
+/* gfxoutputdrv/doodledrv.c, gfxoutputdrv/koaladrv.c */
 IDCLS_TED_LUM_HANDLING
 
-/* gfxoutputdrv/doodledrv.c */
+/* gfxoutputdrv/doodledrv.c, gfxoutputdrv/koaladrv.c */
 IDCLS_CRTC_TEXT_COLOR
 
 /* drive/drive-cmdline-options.c */
@@ -1184,6 +1196,45 @@ IDCLS_EOI_BLANKS_SCREEN
 
 /* pet/pet-cmdline-options.c */
 IDCLS_EOI_DOES_NOT_BLANK_SCREEN
+
+/* pet/pet-cmdline-options.c */
+IDCLS_SET_CPU_SWITCH_TO_6502
+
+/* pet/pet-cmdline-options.c */
+IDCLS_SET_CPU_SWITCH_TO_6809
+
+/* pet/pet-cmdline-options.c */
+IDCLS_SET_CPU_SWITCH_TO_PROG
+
+/* pet/pet-cmdline-options.c */
+IDCLS_SPECIFY_6809_ROM_AT_A000
+
+/* pet/pet-cmdline-options.c */
+IDCLS_SPECIFY_6809_ROM_AT_B000
+
+/* pet/pet-cmdline-options.c */
+IDCLS_SPECIFY_6809_ROM_AT_C000
+
+/* pet/pet-cmdline-options.c */
+IDCLS_SPECIFY_6809_ROM_AT_D000
+
+/* pet/pet-cmdline-options.c */
+IDCLS_SPECIFY_6809_ROM_AT_E000
+
+/* pet/pet-cmdline-options.c */
+IDCLS_SPECIFY_6809_ROM_AT_F000
+
+/* pet/pet-cmdline-options.c */
+IDCLS_PET4032_COLOUR_RGBI
+
+/* pet/pet-cmdline-options.c */
+IDCLS_PET4032_COLOUR_ANALOG
+
+/* pet/pet-cmdline-options.c */
+IDCLS_P_COLOUR_0_255
+
+/* pet/pet-cmdline-options.c */
+IDCLS_PET4032_COLOUR_BACKGROUND
 
 /* pet/petpia1.c */
 IDCLS_ENABLE_USERPORT_DIAG_PIN
@@ -1671,6 +1722,9 @@ IDCLS_PLAYBACK_RECORDED_EVENTS
 IDCLS_EXECUTE_MONITOR_FROM_FILE
 
 /* monitor.c */
+IDCLS_WRITE_MONITOR_LOG_TO_FILE
+
+/* monitor.c */
 IDCLS_SET_INITIAL_BREAKPOINT
 
 /* monitor_network.c */
@@ -1776,6 +1830,21 @@ IDCLS_LENGTH_BLOCK_SAME_VALUE
 
 /* ram.c */
 IDCLS_LENGTH_BLOCK_SAME_PATTERN
+
+/* romset.c */
+IDCLS_PB_FILE
+
+/* romset.c */
+IDCLS_LOAD_ROMSET_FILE
+
+/* romset.c */
+IDCLS_LOAD_ROMSET_ARCHIVE
+
+/* romset.c */
+IDCLS_P_ITEM_NUMBER
+
+/* romset.c */
+IDCLS_SELECT_ITEM_FROM_ROMSET_ARCHIVE
 
 /* sound.c */
 IDCLS_ENABLE_SOUND_PLAYBACK
@@ -1914,11 +1983,26 @@ IDCLS_DISABLE_PETDWW
 /* pet/petdww.c */
 IDCLS_SPECIFY_PETDWW_NAME
 
-/* pet/pet_userport_dac.c */
+/* userport/userport_dac.c */
 IDCLS_ENABLE_USERPORT_DAC
 
-/* pet/pet_userport_dac.c */
+/* userport/userport_dac.c */
 IDCLS_DISABLE_USERPORT_DAC
+
+/* userport/userport_joystick.c */
+IDCLS_ENABLE_USERPORT_JOY
+
+/* userport/userport_joystick.c */
+IDCLS_DISABLE_USERPORT_JOY
+
+/* userport/userport_joystick.c */
+IDCLS_SET_USERPORT_JOY_TYPE
+
+/* userport/userport_rtc.c */
+IDCLS_ENABLE_USERPORT_RTC
+
+/* userport/userport_rtc.c */
+IDCLS_DISABLE_USERPORT_RTC
 
 /* c64/plus256k.c */
 IDCLS_ENABLE_PLUS256K_EXPANSION
@@ -1970,6 +2054,15 @@ IDCLS_DISABLE_DIGIMAX
 
 /* c64/cart/digimax.c */
 IDCLS_DIGIMAX_BASE
+
+/* c64/cart/ds12c887rtc.c */
+IDCLS_ENABLE_DS12C887RTC
+
+/* c64/cart/ds12c887rtc.c */
+IDCLS_DISABLE_DS12C887RTC
+
+/* c64/cart/ds12c887rtc.c */
+IDCLS_DS12C887RTC_BASE
 
 /* c64/cart/sfx_soundexpander.c */
 IDCLS_ENABLE_SFX_SE
@@ -2410,3 +2503,24 @@ IDCLS_ENABLE_EASYFLASH_CRT_WRITING
 
 /* c64/cart/lash.c */
 IDCLS_DISABLE_EASYFLASH_CRT_WRITING
+
+/* scpu64/scpu64-cmdline-options.c */
+IDCLS_SET_SIMM_SIZE
+
+/* scpu64/scpu64-cmdline-options.c */
+IDCLS_ENABLE_JIFFY_SWITCH
+
+/* scpu64/scpu64-cmdline-options.c */
+IDCLS_DISABLE_JIFFY_SWITCH
+
+/* scpu64/scpu64-cmdline-options.c */
+IDCLS_ENABLE_SPEED_SWITCH
+
+/* scpu64/scpu64-cmdline-options.c */
+IDCLS_DISABLE_SPEED_SWITCH
+
+/* pet/pethre.c */
+IDCLS_ENABLE_HIRES_EMULATION_BOARD
+
+/* pet/pethre.c */
+IDCLS_DISABLE_HIRES_EMULATION_BOARD

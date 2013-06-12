@@ -61,7 +61,7 @@
 
 #define VIC_NTSC_NO_BORDER_FIRST_DISPLAYED_LINE     50
 #define VIC_NTSC_NO_BORDER_LAST_DISPLAYED_LINE      233
-#define VIC_NTSC_NO_BORDER_DISPLAY_WIDTH            (176+8) /* FIXME */
+#define VIC_NTSC_NO_BORDER_DISPLAY_WIDTH            (176 + 8) /* FIXME */
 
 
 struct machine_timing_s;

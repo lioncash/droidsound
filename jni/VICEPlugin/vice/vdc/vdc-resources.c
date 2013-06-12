@@ -122,9 +122,7 @@ int vdc_resources_init(void)
     video_chip_cap.dscan_allowed = ARCHDEP_VDC_DSCAN;
     video_chip_cap.hwscale_allowed = ARCHDEP_VDC_HWSCALE;
     video_chip_cap.scale2x_allowed = 0;
-    video_chip_cap.internal_palette_allowed = 1;
     video_chip_cap.external_palette_name = "vdc_deft";
-    video_chip_cap.palemulation_allowed = 1;
     video_chip_cap.double_buffering_allowed = ARCHDEP_VDC_DBUF;
 
     vdc_update_renderer();
@@ -133,8 +131,9 @@ int vdc_resources_init(void)
 
     vdc.video_chip_cap = &video_chip_cap;
 
-    if (raster_resources_chip_init("VDC", &vdc.raster, &video_chip_cap) < 0)
+    if (raster_resources_chip_init("VDC", &vdc.raster, &video_chip_cap) < 0) {
         return -1;
+    }
 
     return resources_register_int(resources_int);
 }

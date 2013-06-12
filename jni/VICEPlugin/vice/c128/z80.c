@@ -119,7 +119,6 @@ inline static int z80mem_read_limit(int addr)
         z80_reg_pc = (addr);                            \
         z80_bank_base = z80mem_read_base(z80_reg_pc);   \
         z80_bank_limit = z80mem_read_limit(z80_reg_pc); \
-        z80_old_reg_pc = z80_reg_pc;                    \
     } while (0)
 
 #define LOAD(addr) (*_z80mem_read_tab_ptr[(addr) >> 8])((WORD)(addr))
@@ -135,10 +134,10 @@ inline static int z80mem_read_limit(int addr)
 
 #define opcode_t DWORD
 
-#define FETCH_OPCODE(o) ((o) = (LOAD(z80_reg_pc)              \
-                               | (LOAD(z80_reg_pc + 1) << 8)  \
-                               | (LOAD(z80_reg_pc + 2) << 16) \
-                               | (LOAD(z80_reg_pc + 3) << 24)))
+#define FETCH_OPCODE(o) ((o) = (LOAD(z80_reg_pc)               \
+                                | (LOAD(z80_reg_pc + 1) << 8)  \
+                                | (LOAD(z80_reg_pc + 2) << 16) \
+                                | (LOAD(z80_reg_pc + 3) << 24)))
 
 #define p0 (opcode & 0xff)
 #define p1 ((opcode >> 8) & 0xff)
@@ -173,7 +172,7 @@ inline static CLOCK z80cpu_clock_add(CLOCK clock, int amount)
     return tmp_clock;
 }
 
-void z80_stretch_clock(void)
+void z80_clock_stretch(void)
 {
     CLK++;
     z80_half_cycle = 0;
@@ -551,13 +550,13 @@ static void export_registers(void)
             if (monitor_mask[e_comp_space]) {                                             \
                 export_registers();                                                       \
             }                                                                             \
+            if (monitor_mask[e_comp_space] & (MI_STEP)) {                                 \
+                monitor_check_icount((WORD)z80_reg_pc);                                   \
+            }                                                                             \
             if (monitor_mask[e_comp_space] & (MI_BREAK)) {                                \
                 if (monitor_check_breakpoints(e_comp_space, (WORD)z80_reg_pc)) {          \
                     monitor_startup(e_comp_space);                                        \
                 }                                                                         \
-            }                                                                             \
-            if (monitor_mask[e_comp_space] & (MI_STEP)) {                                 \
-                monitor_check_icount((WORD)z80_reg_pc);                                   \
             }                                                                             \
             if (monitor_mask[e_comp_space] & (MI_WATCH)) {                                \
                 monitor_check_watchpoints(LAST_OPCODE_ADDR, (WORD)z80_reg_pc);            \
@@ -718,7 +717,7 @@ static void export_registers(void)
         if (cond) {                                                                \
             CALL(reg_value, clk_inc1, clk_inc2, clk_inc3, pc_inc);                 \
         } else {                                                                   \
-            CLK_ADD(CLK, clk_inc4);                                                       \
+            CLK_ADD(CLK, clk_inc4);                                                \
             INC_PC(3);                                                             \
         }                                                                          \
     } while (0)
@@ -1890,7 +1889,7 @@ static void export_registers(void)
 
 /* ------------------------------------------------------------------------- */
 
-/* Extented opcodes.  */
+/* Extended opcodes.  */
 
 static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
 {
@@ -2254,7 +2253,7 @@ static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             break;
         case 0x77: /* BIT A 6 */
             BIT(reg_a, 6, 0, 8, 2);
-           break;
+            break;
         case 0x78: /* BIT B 7 */
             BIT(reg_b, 7, 0, 8, 2);
             break;
@@ -2586,7 +2585,7 @@ static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             SET(reg_l, 4);
             break;
         case 0xe6: /* SET (HL) 4 */
-           SETXX(4, HL_WORD(), 4, 4, 7, 2);
+            SETXX(4, HL_WORD(), 4, 4, 7, 2);
             break;
         case 0xe7: /* SET A 4 */
             SET(reg_a, 4);
@@ -3329,7 +3328,7 @@ static void opcode_dd_cb(BYTE iip2, BYTE iip3, WORD iip23)
             break;
         default:
             INC_PC(4);
-   }
+    }
 }
 
 static void opcode_dd(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
@@ -3978,7 +3977,7 @@ static void opcode_dd(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
                         (int)(CLK), (unsigned int)(z80_reg_pc), reg_a, reg_f, reg_b, reg_c, reg_d, reg_e, reg_h, reg_l, reg_sp, ip1, ip2, ip3);
 #endif
             INC_PC(2);
-   }
+    }
 }
 
 static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
@@ -4180,10 +4179,10 @@ static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
 #ifdef DEBUG_Z80
             log_message(LOG_DEFAULT,
                         "%i PC %04x A%02x F%02x B%02x C%02x D%02x E%02x H%02x L%02x SP%04x OP ED %02x %02x %02x.",
-                    (int)(CLK), (unsigned int)(z80_reg_pc), reg_a, reg_f, reg_b, reg_c, reg_d, reg_e, reg_h, reg_l, reg_sp, ip1, ip2, ip3);
+                        (int)(CLK), (unsigned int)(z80_reg_pc), reg_a, reg_f, reg_b, reg_c, reg_d, reg_e, reg_h, reg_l, reg_sp, ip1, ip2, ip3);
 #endif
             INC_PC(2);
-   }
+    }
 }
 
 static void opcode_fd_cb(BYTE iip2, BYTE iip3, WORD iip23)
@@ -4708,8 +4707,8 @@ static void opcode_fd_cb(BYTE iip2, BYTE iip3, WORD iip23)
             SETXXREG(2, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
             break;
         case 0xd2: /* SET (IY+d),D 2 */
-           SETXXREG(2, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-           break;
+            SETXXREG(2, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
+            break;
         case 0xd3: /* SET (IY+d),E 2 */
             SETXXREG(2, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
             break;
@@ -4847,7 +4846,7 @@ static void opcode_fd_cb(BYTE iip2, BYTE iip3, WORD iip23)
             break;
         default:
             INC_PC(4);
-   }
+    }
 }
 
 static void opcode_fd(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
@@ -5496,7 +5495,15 @@ static void opcode_fd(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
                         (int)(CLK), (unsigned int)z80_reg_pc, reg_a, reg_f, reg_b, reg_c, reg_d, reg_e, reg_h, reg_l, reg_sp, ip1, ip2, ip3);
 #endif
             INC_PC(2);
-   }
+    }
+}
+
+/* ------------------------------------------------------------------------- */
+
+void z80_resync_limits(void)
+{
+    z80_bank_base = z80mem_read_base(z80_reg_pc);
+    z80_bank_limit = z80mem_read_limit(z80_reg_pc);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -5508,8 +5515,6 @@ void z80_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *cpu_a
     opcode_t opcode;
 
     import_registers();
-
-    z80mem_set_bank_pointer(&z80_bank_base, &z80_bank_limit);
 
     dma_request = 0;
 
@@ -6315,7 +6320,6 @@ void z80_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *cpu_a
         }
 
         cpu_int_status->num_dma_per_opcode = 0;
-
     } while (!dma_request);
 
     export_registers();

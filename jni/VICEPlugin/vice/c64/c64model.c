@@ -27,6 +27,8 @@
 
 #include "vice.h"
 
+#include <string.h>
+
 #include "c64-resources.h"
 #include "c64model.h"
 #include "cia.h"
@@ -36,11 +38,22 @@
 #include "types.h"
 #include "vicii.h"
 
+/******************************************************************************/
+
 #define SID_MODEL_DEFAULT_OLD SID_MODEL_6581R4AR_3789
 #define SID_MODEL_DEFAULT_NEW SID_MODEL_8580R5_3691
 
 #define CIA_MODEL_DEFAULT_OLD CIA_MODEL_6526
 #define CIA_MODEL_DEFAULT_NEW CIA_MODEL_6526A
+
+static int c64model_get_temp(int vicii_model, int sid_model, int glue_logic,
+                             int cia1_model, int cia2_model, int new_luma, int board,
+                             const char *kernal, const char *chargen);
+static void c64model_set_temp(int model, int *vicii_model, int *sid_model,
+                              int *glue_logic, int *cia1_model, int *cia2_model,
+                              int *new_luma, int *board, const char *kernal, const char *chargen);
+
+/******************************************************************************/
 
 static int is_new_sid(int model)
 {
@@ -83,21 +96,36 @@ struct model_s {
     int cia;     /* old or new */
     int sid;     /* old or new */
     int sidtype; /* specific type for residfp */
+    int board;
+    char *kernalname;
+    char *chargenname;
 };
 
 static struct model_s c64models[] = {
-    { MACHINE_SYNC_PAL,     1, 0, 0, SID_MODEL_DEFAULT_OLD },
-    { MACHINE_SYNC_PAL,     1, 1, 1, SID_MODEL_DEFAULT_NEW },
-    { MACHINE_SYNC_PAL,     0, 0, 0, SID_MODEL_DEFAULT_OLD },
-    { MACHINE_SYNC_NTSC,    1, 0, 0, SID_MODEL_DEFAULT_OLD },
-    { MACHINE_SYNC_NTSC,    1, 1, 1, SID_MODEL_DEFAULT_NEW },
-    { MACHINE_SYNC_NTSCOLD, 0, 0, 0, SID_MODEL_DEFAULT_OLD },
-    { MACHINE_SYNC_PALN,    1, 0, 0, SID_MODEL_DEFAULT_OLD }
+    { MACHINE_SYNC_PAL,     1, 0, 0, SID_MODEL_DEFAULT_OLD, 0, "kernal", "chargen" },
+    { MACHINE_SYNC_PAL,     1, 1, 1, SID_MODEL_DEFAULT_NEW, 0, "kernal", "chargen" },
+    { MACHINE_SYNC_PAL,     0, 0, 0, SID_MODEL_DEFAULT_OLD, 0, "kernal", "chargen" },
+    { MACHINE_SYNC_NTSC,    1, 0, 0, SID_MODEL_DEFAULT_OLD, 0, "kernal", "chargen" },
+    { MACHINE_SYNC_NTSC,    1, 1, 1, SID_MODEL_DEFAULT_NEW, 0, "kernal", "chargen" },
+    { MACHINE_SYNC_NTSCOLD, 0, 0, 0, SID_MODEL_DEFAULT_OLD, 0, "kernal", "chargen" },
+    { MACHINE_SYNC_PALN,    1, 0, 0, SID_MODEL_DEFAULT_OLD, 0, "kernal", "chargen" },
+    /* SX64 FIXME: guessed */
+    { MACHINE_SYNC_PAL,     1, 0, 0, SID_MODEL_DEFAULT_OLD, 0, "sxkernal", "chargen" },
+    { MACHINE_SYNC_NTSC,    1, 0, 0, SID_MODEL_DEFAULT_OLD, 0, "sxkernal", "chargen" },
+    /* C64 Japanese FIXME: guessed */
+    { MACHINE_SYNC_NTSC,    1, 0, 0, SID_MODEL_DEFAULT_OLD, 0, "jpkernal", "jpchrgen" },
+    /* C64 GS FIXME: guessed */
+    { MACHINE_SYNC_PAL,     1, 1, 1, SID_MODEL_DEFAULT_NEW, 0, "gskernal", "chargen" },
+    /* PET64 FIXME: guessed */
+    { MACHINE_SYNC_PAL,     1, 0, 0, SID_MODEL_DEFAULT_OLD, 0, "edkernal", "chargen" },
+    { MACHINE_SYNC_NTSC,    1, 0, 0, SID_MODEL_DEFAULT_OLD, 0, "edkernal", "chargen" },
+    /* ultimax FIXME: guessed */
+    { MACHINE_SYNC_NTSC,    1, 0, 0, SID_MODEL_DEFAULT_OLD, 1, "kernal", "chargen" },
 };
 
 /* ------------------------------------------------------------------------- */
-int c64model_get_temp(int video, int sid_model, int glue_logic,
-                        int cia1_model, int cia2_model, int new_luma)
+static int c64model_get_temp(int video, int sid_model, int glue_logic,
+                      int cia1_model, int cia2_model, int new_luma, int board, const char *kernal, const char *chargen)
 {
     int new_sid;
     int new_cia;
@@ -112,9 +140,12 @@ int c64model_get_temp(int video, int sid_model, int glue_logic,
 
     for (i = 0; i < C64MODEL_NUM; ++i) {
         if ((c64models[i].video == video)
-         && (c64models[i].luma == new_luma)
-         && (c64models[i].cia == new_cia)
-         && (c64models[i].sid == new_sid)) {
+            && (c64models[i].luma == new_luma)
+            && (c64models[i].cia == new_cia)
+            && (c64models[i].sid == new_sid)
+            && (c64models[i].board == board)
+            && (kernal ? !strcmp(c64models[i].kernalname, kernal) : 1)
+            && (chargen ? !strcmp(c64models[i].chargenname, chargen) : 1)) {
             return i;
         }
     }
@@ -122,25 +153,38 @@ int c64model_get_temp(int video, int sid_model, int glue_logic,
     return C64MODEL_UNKNOWN;
 }
 
+/* get model from details */
+int c64model_get_model(c64model_details_t *details)
+{
+    return c64model_get_temp(details->vicii_model, details->sid_model, details->glue_logic,
+                             details->cia1_model, details->cia2_model, details->new_luma, 
+                             details->board, details->kernal, details->chargen);
+}
+
 int c64model_get(void)
 {
-    int video, sid_model, cia1_model, cia2_model, new_luma;
+    int video, sid_model, cia1_model, cia2_model, new_luma, board;
+    char c[0x10], k[0x10];
+    const char *chargen = c, *kernal = k;
 
     if ((resources_get_int("MachineVideoStandard", &video) < 0)
-     || (resources_get_int("SidModel", &sid_model) < 0)
-     || (resources_get_int("CIA1Model", &cia1_model) < 0)
-     || (resources_get_int("CIA2Model", &cia2_model) < 0)
-     || (resources_get_int("VICIINewLuminances", &new_luma) < 0)) {
+        || (resources_get_int("SidModel", &sid_model) < 0)
+        || (resources_get_int("CIA1Model", &cia1_model) < 0)
+        || (resources_get_int("CIA2Model", &cia2_model) < 0)
+        || (resources_get_int("VICIINewLuminances", &new_luma) < 0)
+        || (resources_get_int("BoardType", &board) < 0)
+        || (resources_get_string("KernalName", &kernal) < 0)
+        || (resources_get_string("ChargenName", &chargen) < 0)) {
         return -1;
     }
 
     return c64model_get_temp(video, sid_model, 0,
-                            cia1_model, cia2_model, new_luma);
+                             cia1_model, cia2_model, new_luma, board, kernal, chargen);
 }
 
-void c64model_set_temp(int model, int *vicii_model, int *sid_model,
+static void c64model_set_temp(int model, int *vicii_model, int *sid_model,
                        int *glue_logic, int *cia1_model, int *cia2_model,
-                       int *new_luma)
+                       int *new_luma, int *board, const char *kernal, const char *chargen)
 {
     int old_model;
     int old_engine;
@@ -149,8 +193,8 @@ void c64model_set_temp(int model, int *vicii_model, int *sid_model,
     int old_type;
     int new_type;
 
-    old_model = c64model_get_temp(*vicii_model, *sid_model, *glue_logic, 
-                                  *cia1_model, *cia2_model, *new_luma);
+    old_model = c64model_get_temp(*vicii_model, *sid_model, *glue_logic,
+                                  *cia1_model, *cia2_model, *new_luma, *board, kernal, chargen);
 
     if ((model == old_model) || (model == C64MODEL_UNKNOWN)) {
         return;
@@ -183,6 +227,14 @@ void c64model_set_temp(int model, int *vicii_model, int *sid_model,
     }
 }
 
+/* get details for model */
+void c64model_set_details(c64model_details_t *details, int model)
+{
+    c64model_set_temp(model, &details->vicii_model, &details->sid_model,
+                       &details->glue_logic, &details->cia1_model, &details->cia2_model,
+                       &details->new_luma, &details->board, details->kernal, details->chargen);
+}
+
 void c64model_set(int model)
 {
     int old_model;
@@ -202,7 +254,11 @@ void c64model_set(int model)
     resources_set_int("CIA1Model", c64models[model].cia);
     resources_set_int("CIA2Model", c64models[model].cia);
     resources_set_int("VICIINewLuminances", c64models[model].luma);
+    resources_set_int("BoardType", c64models[model].board);
 
+    resources_set_string("KernalName", c64models[model].kernalname);
+    resources_set_string("ChargenName", c64models[model].chargenname);
+    
     /* Only change the SID model if the model changes from 6581 to 8580
        or the specific SID type changes if residfp is used. This allows
        to switch between "pal"/"oldpal" without changing the specific

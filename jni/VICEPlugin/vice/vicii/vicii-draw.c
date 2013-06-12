@@ -32,7 +32,6 @@
 #include "raster-cache-fill.h"
 #include "raster-cache-fill-1fff.h"
 #include "raster-cache-fill-39ff.h"
-#include "raster-cache-nibbles.h"
 #include "raster-cache-text-ext.h"
 #include "raster-cache-text-std.h"
 #include "raster-cache.h"
@@ -54,8 +53,8 @@
 static DWORD hr_table[16 * 16 * 16];
 
 /* mc flag(1) | idx(2) | byte(8) -> index into double-pixel table.  */
-static BYTE mc_table[2 * 4 * 256];
-static BYTE mcmsktable[512];
+static BYTE mc_table[3 * 256];
+static BYTE mcmsktable[256];
 
 
 /* These functions draw the background from `start_pixel' to `end_pixel'.  */
@@ -68,8 +67,9 @@ static void draw_std_background(unsigned int start_pixel,
 
     background_color = (BYTE)vicii.raster.background_color;
 
-    if (VICII_IS_ILLEGAL_MODE(vicii.raster.video_mode))
+    if (VICII_IS_ILLEGAL_MODE(vicii.raster.video_mode)) {
         background_color = 0;
+    }
 
     gfxstart = vicii.raster.geometry->gfx_position.x + vicii.raster.xsmooth;
     gfxend = gfxstart + vicii.raster.geometry->gfx_size.width;
@@ -115,8 +115,8 @@ static void draw_std_background(unsigned int start_pixel,
             }
         } else {
             memset(vicii.raster.draw_buffer_ptr + start_pixel,
-                       vicii.raster.xsmooth_color,
-                       end_pixel - start_pixel + 1);
+                   vicii.raster.xsmooth_color,
+                   end_pixel - start_pixel + 1);
         }
     }
 
@@ -126,21 +126,23 @@ static void draw_std_background(unsigned int start_pixel,
         pos = (start_pixel - vicii.raster.geometry->gfx_position.x) / 8;
 
         if (pos >= 0 && pos < VICII_SCREEN_TEXTCOLS) {
-            if (vicii.raster.video_mode == VICII_HIRES_BITMAP_MODE)
+            if (vicii.raster.video_mode == VICII_HIRES_BITMAP_MODE) {
                 background_color = vicii.vbuf[pos] & 0xf;
+            }
             if (vicii.raster.video_mode == VICII_EXTENDED_TEXT_MODE) {
                 int bg_idx;
 
                 bg_idx = vicii.vbuf[pos] >> 6;
 
-                if (bg_idx > 0)
+                if (bg_idx > 0) {
                     background_color = vicii.ext_background_color[bg_idx - 1];
+                }
             }
-            if (VICII_IS_ILLEGAL_MODE(vicii.raster.video_mode))
+            if (VICII_IS_ILLEGAL_MODE(vicii.raster.video_mode)) {
                 background_color = 0;
+            }
             memset(vicii.raster.draw_buffer_ptr + start_pixel + 8,
                    background_color, vicii.raster.xsmooth_shift_right);
-
         }
         vicii.raster.xsmooth_shift_right = 0;
     }
@@ -168,19 +170,19 @@ static BYTE *const aligned_line_buffer = (BYTE *)_aligned_line_buffer;
 /* Pointer to the start of the graphics area on the frame buffer.  */
 #define GFX_PTR()                 \
     (vicii.raster.draw_buffer_ptr \
-    + (vicii.screen_leftborderwidth + vicii.raster.xsmooth))
+     + (vicii.screen_leftborderwidth + vicii.raster.xsmooth))
 
 #ifdef ALLOW_UNALIGNED_ACCESS
 #define ALIGN_DRAW_FUNC(name, xs, xe, gfx_msk_ptr) \
-   name(GFX_PTR(), (xs), (xe), (gfx_msk_ptr))
+    name(GFX_PTR(), (xs), (xe), (gfx_msk_ptr))
 #else
 #define ALIGN_DRAW_FUNC(name, xs, xe, gfx_msk_ptr)           \
-   do {                                                      \
-       name(aligned_line_buffer, (xs), (xe), (gfx_msk_ptr)); \
-       memcpy(GFX_PTR() + (xs) * 8,                          \
-              aligned_line_buffer + (xs) * 8,                \
-              ((xe) - (xs) + 1) * 8);                        \
-   } while (0)
+    do {                                                      \
+        name(aligned_line_buffer, (xs), (xe), (gfx_msk_ptr)); \
+        memcpy(GFX_PTR() + (xs) * 8,                          \
+               aligned_line_buffer + (xs) * 8,                \
+               ((xe) - (xs) + 1) * 8);                        \
+    } while (0)
 #endif
 
 
@@ -200,17 +202,14 @@ static int get_std_text(raster_cache_t *cache, unsigned int *xs,
 
     r = raster_cache_data_fill_text(cache->foreground_data,
                                     vicii.vbuf,
-                                    vicii.chargen_ptr,
-                                    8,
+                                    vicii.chargen_ptr + vicii.raster.ycounter,
                                     VICII_SCREEN_TEXTCOLS,
-                                    vicii.raster.ycounter,
                                     xs, xe,
                                     rr);
 
     r |= raster_cache_data_fill(cache->color_data_1,
                                 vicii.cbuf,
                                 VICII_SCREEN_TEXTCOLS,
-                                1,
                                 xs, xe,
                                 rr);
     return r;
@@ -229,10 +228,10 @@ inline static void _draw_std_text(BYTE *p, unsigned int xs, unsigned int xe,
 
     for (i = xs; i <= xe; i++) {
         DWORD *ptr = table_ptr + (vicii.cbuf[i] << 8);
-        int d = (*(msk_ptr + i) = *(char_ptr + vicii.vbuf[i] * 8));
+        int d = msk_ptr[i] = char_ptr[vicii.vbuf[i] * 8];
 
-        *((DWORD *)p + i * 2) = *(ptr + (d >> 4));
-        *((DWORD *)p + i * 2 + 1) = *(ptr + (d & 0xf));
+        *((DWORD *)p + i * 2) = ptr[d >> 4];
+        *((DWORD *)p + i * 2 + 1) = ptr[d & 0xf];
     }
 }
 
@@ -251,10 +250,10 @@ inline static void _draw_std_text_cached(BYTE *p, unsigned int xs,
 
     for (i = xs; i <= xe; i++) {
         DWORD *ptr = table_ptr + (color_data[i] << 8);
-        int d = (*(msk_ptr + i) = foreground_data[i]);
+        int d = msk_ptr[i] = foreground_data[i];
 
-        *((DWORD *)p + i * 2) = *(ptr + (d >> 4));
-        *((DWORD *)p + i * 2 + 1) = *(ptr + (d & 0xf));
+        *((DWORD *)p + i * 2) = ptr[d >> 4];
+        *((DWORD *)p + i * 2 + 1) = ptr[d & 0xf];
     }
 }
 
@@ -270,20 +269,35 @@ static void draw_std_text(void)
                     vicii.raster.gfx_msk);
 }
 
-#define DRAW_STD_TEXT_BYTE(p, b, f)       \
-    do {                                  \
-        if ((b) & 0x80) *(p) = (f);       \
-        if ((b) & 0x40) *((p) + 1) = (f); \
-        if ((b) & 0x20) *((p) + 2) = (f); \
-        if ((b) & 0x10) *((p) + 3) = (f); \
-        if ((b) & 0x08) *((p) + 4) = (f); \
-        if ((b) & 0x04) *((p) + 5) = (f); \
-        if ((b) & 0x02) *((p) + 6) = (f); \
-        if ((b) & 0x01) *((p) + 7) = (f); \
-    } while (0)                           \
+#define DRAW_STD_TEXT_BYTE(p, b, f) \
+    do {                            \
+        if ((b) & 0x80) {           \
+            *(p) = (f);             \
+        }                           \
+        if ((b) & 0x40) {           \
+            *((p) + 1) = (f);       \
+        }                           \
+        if ((b) & 0x20) {           \
+            *((p) + 2) = (f);       \
+        }                           \
+        if ((b) & 0x10) {           \
+            *((p) + 3) = (f);       \
+        }                           \
+        if ((b) & 0x08) {           \
+            *((p) + 4) = (f);       \
+        }                           \
+        if ((b) & 0x04) {           \
+            *((p) + 5) = (f);       \
+        }                           \
+        if ((b) & 0x02) {           \
+            *((p) + 6) = (f);       \
+        }                           \
+        if ((b) & 0x01) {           \
+            *((p) + 7) = (f);       \
+        }                           \
+    } while (0)
 
-static void draw_std_text_foreground(unsigned int start_char,
-                                     unsigned int end_char)
+static void draw_std_text_foreground(unsigned int start_char, unsigned int end_char)
 {
     unsigned int i;
     BYTE *char_ptr, *msk_ptr, *p;
@@ -296,42 +310,40 @@ static void draw_std_text_foreground(unsigned int start_char,
         BYTE b, f;
 
         b = char_ptr[vicii.vbuf[i - vicii.buf_offset] * 8];
-        
-        if (vicii.raster.last_video_mode == VICII_EXTENDED_TEXT_MODE)
+
+        if (vicii.raster.last_video_mode == VICII_EXTENDED_TEXT_MODE) {
             b = char_ptr[(vicii.vbuf[i - vicii.buf_offset] & 0x3f) * 8];
+        }
 
         if (vicii.raster.last_video_mode == VICII_HIRES_BITMAP_MODE) {
-            unsigned int j = ((vicii.memptr << 3) 
-                                + vicii.raster.ycounter + i * 8) & 0x1fff;
-            if (j & 0x1000)
+            unsigned int j = ((vicii.memptr << 3) + vicii.raster.ycounter + i * 8) & 0x1fff;
+            if (j & 0x1000) {
                 b = vicii.bitmap_high_ptr[j & 0xfff];
-            else
+            } else {
                 b = vicii.bitmap_low_ptr[j];
+            }
         }
 
         f = vicii.cbuf[i - vicii.buf_offset];
-        
+
         if (vicii.raster.xsmooth_shift_left > 0) {
-            b = (b >> vicii.raster.xsmooth_shift_left) 
-                << vicii.raster.xsmooth_shift_left;
+            b = (b >> vicii.raster.xsmooth_shift_left) << vicii.raster.xsmooth_shift_left;
         }
 
-        *(msk_ptr + i) = b;
+        msk_ptr[i] = b;
         DRAW_STD_TEXT_BYTE(p, b, f);
     }
 }
 
 /* Hires Bitmap mode.  */
 
-static int get_hires_bitmap(raster_cache_t *cache, unsigned int *xs,
-                            unsigned int *xe, int rr)
+static int get_hires_bitmap(raster_cache_t *cache, unsigned int *xs, unsigned int *xe, int rr)
 {
     int r;
 
     r = raster_cache_data_fill(cache->background_data,
                                vicii.vbuf,
                                VICII_SCREEN_TEXTCOLS,
-                               1,
                                xs, xe,
                                rr);
     r |= raster_cache_data_fill_1fff(cache->foreground_data,
@@ -339,7 +351,6 @@ static int get_hires_bitmap(raster_cache_t *cache, unsigned int *xs,
                                      vicii.bitmap_high_ptr,
                                      vicii.memptr * 8 + vicii.raster.ycounter,
                                      VICII_SCREEN_TEXTCOLS,
-                                     8,
                                      xs, xe,
                                      rr);
     return r;
@@ -356,21 +367,20 @@ inline static void _draw_hires_bitmap(BYTE *p, unsigned int xs,
     bmptr_high = vicii.bitmap_high_ptr;
     msk_ptr = gfx_msk_ptr + GFX_MSK_LEFTBORDER_SIZE;
 
-    for (j = ((vicii.memptr << 3)
-        + vicii.raster.ycounter + xs * 8) & 0x1fff, i = xs;
-        i <= xe; i++, j = (j + 8) & 0x1fff) {
-
+    for (j = ((vicii.memptr << 3) + vicii.raster.ycounter + xs * 8) & 0x1fff, i = xs;
+         i <= xe; i++, j = (j + 8) & 0x1fff) {
         DWORD *ptr = hr_table + (vicii.vbuf[i] << 4);
         int d;
 
-        if (j & 0x1000)
+        if (j & 0x1000) {
             bmval = bmptr_high[j & 0xfff];
-        else
+        } else {
             bmval = bmptr_low[j];
+        }
 
-        d = *(msk_ptr + i) = bmval;
-        *((DWORD *)p + i * 2) = *(ptr + (d >> 4));
-        *((DWORD *)p + i * 2 + 1) = *(ptr + (d & 0xf));
+        d = msk_ptr[i] = bmval;
+        *((DWORD *)p + i * 2) = ptr[d >> 4];
+        *((DWORD *)p + i * 2 + 1) = ptr[d & 0xf];
     }
 }
 
@@ -389,9 +399,9 @@ inline static void _draw_hires_bitmap_cached(BYTE *p, unsigned int xs,
         DWORD *ptr = hr_table + (background_data[i] << 4);
         int d;
 
-        d = *(msk_ptr + i) = foreground_data[i];
-        *((DWORD *)p + i * 2) = *(ptr + (d >> 4));
-        *((DWORD *)p + i * 2 + 1) = *(ptr + (d & 0xf));
+        d = msk_ptr[i] = foreground_data[i];
+        *((DWORD *)p + i * 2) = ptr[d >> 4];
+        *((DWORD *)p + i * 2 + 1) = ptr[d & 0xf];
     }
 }
 
@@ -419,30 +429,30 @@ inline static void _draw_hires_bitmap_foreground(BYTE *p, unsigned int xs,
     bmptr_high = vicii.bitmap_high_ptr;
     msk_ptr = gfx_msk_ptr + GFX_MSK_LEFTBORDER_SIZE;
 
-    for (j = ((vicii.memptr << 3)
-        + vicii.raster.ycounter + xs * 8) & 0x1fff, i = xs;
-        i <= xe; i++, j = (j + 8) & 0x1fff) {
-
+    for (j = ((vicii.memptr << 3) + vicii.raster.ycounter + xs * 8) & 0x1fff, i = xs;
+         i <= xe; i++, j = (j + 8) & 0x1fff) {
         DWORD *ptr = hr_table + (vicii.vbuf[i - vicii.buf_offset] << 4);
         int d;
 
-        if (vicii.raster.last_video_mode == VICII_ILLEGAL_BITMAP_MODE_1)
+        if (vicii.raster.last_video_mode == VICII_ILLEGAL_BITMAP_MODE_1) {
             j &= 0x19ff;
+        }
 
-        if (j & 0x1000)
+        if (j & 0x1000) {
             bmval = bmptr_high[j & 0xfff];
-        else
+        } else {
             bmval = bmptr_low[j];
+        }
 
         if (vicii.raster.last_video_mode == VICII_NORMAL_TEXT_MODE) {
             BYTE *char_ptr = vicii.chargen_ptr + vicii.raster.ycounter;
             bmval = char_ptr[vicii.vbuf[i - vicii.buf_offset] * 8];
-        } 
+        }
 
-        d = *(msk_ptr + i) = bmval;
+        d = msk_ptr[i] = bmval;
 
-        *((DWORD *)p + i * 2) = *(ptr + (d >> 4));
-        *((DWORD *)p + i * 2 + 1) = *(ptr + (d & 0xf));
+        *((DWORD *)p + i * 2) = ptr[d >> 4];
+        *((DWORD *)p + i * 2 + 1) = ptr[d & 0xf];
     }
 }
 
@@ -473,16 +483,13 @@ static int get_mc_text(raster_cache_t *cache, unsigned int *xs,
 
     r = raster_cache_data_fill_text(cache->foreground_data,
                                     vicii.vbuf,
-                                    vicii.chargen_ptr,
-                                    8,
+                                    vicii.chargen_ptr + vicii.raster.ycounter,
                                     VICII_SCREEN_TEXTCOLS,
-                                    vicii.raster.ycounter,
                                     xs, xe,
                                     rr);
     r |= raster_cache_data_fill(cache->color_data_3,
                                 vicii.cbuf,
                                 VICII_SCREEN_TEXTCOLS,
-                                1,
                                 xs, xe,
                                 rr);
     return r;
@@ -491,72 +498,90 @@ static int get_mc_text(raster_cache_t *cache, unsigned int *xs,
 inline static void _draw_mc_text(BYTE *p, unsigned int xs, unsigned int xe,
                                  BYTE *gfx_msk_ptr)
 {
-    BYTE c[12];
+    BYTE c[8];
+    DWORD *table_ptr;
     BYTE *char_ptr, *msk_ptr;
     WORD *ptmp;
     unsigned int i;
 
+    table_ptr = hr_table + (vicii.raster.background_color << 4);
     char_ptr = vicii.chargen_ptr + vicii.raster.ycounter;
     msk_ptr = gfx_msk_ptr + GFX_MSK_LEFTBORDER_SIZE;
 
     c[1] = c[0] = vicii.raster.background_color;
     c[3] = c[2] = vicii.ext_background_color[0];
     c[5] = c[4] = vicii.ext_background_color[1];
-    c[11] = c[8] = vicii.raster.background_color;
 
     ptmp = (WORD *)(p + xs * 8);
 
     for (i = xs; i <= xe; i++) {
-        unsigned int d;
+        if (vicii.cbuf[i] & 0x8) {
+            unsigned int d;
 
-        d = (*(char_ptr + vicii.vbuf[i] * 8))
-            | ((vicii.cbuf[i] & 0x8) << 5);
+            c[7] = c[6] = vicii.cbuf[i] & 0x7;
 
-        *(msk_ptr + i) = mcmsktable[d];
+            d = char_ptr[vicii.vbuf[i] * 8];
 
-        c[10] = c[9] = c[7] = c[6] = vicii.cbuf[i] & 0x7;
+            msk_ptr[i] = mcmsktable[d];
 
-        ptmp[0] = ((WORD *)c)[mc_table[d]];
-        ptmp[1] = ((WORD *)c)[mc_table[0x200 + d]];
-        ptmp[2] = ((WORD *)c)[mc_table[0x400 + d]];
-        ptmp[3] = ((WORD *)c)[mc_table[0x600 + d]];
-        ptmp += 4;
+            ptmp[0] = ((WORD *)c)[mc_table[d]];
+            ptmp[1] = ((WORD *)c)[mc_table[0x100 + d]];
+            ptmp[2] = ((WORD *)c)[mc_table[0x200 + d]];
+            ptmp[3] = ((WORD *)c)[d & 3];
+            ptmp += 4;
+        } else {
+            DWORD *ptr = table_ptr + (vicii.cbuf[i] << 8);
+            int d = msk_ptr[i] = char_ptr[vicii.vbuf[i] * 8];
+
+            *((DWORD *)ptmp) = ptr[d >> 4];
+            *((DWORD *)(ptmp + 2)) = ptr[d & 0xf];
+            ptmp += 4;
+        }
     }
 }
 
-inline static void _draw_mc_text_cached(BYTE *p, unsigned int xs,
-                                        unsigned int xe, raster_cache_t *cache)
+inline static void _draw_mc_text_cached(BYTE *p, unsigned int xs, unsigned int xe, raster_cache_t *cache)
 {
-    BYTE c[12];
+    BYTE c[8];
+    DWORD *table_ptr;
     BYTE *foreground_data, *color_data_3, *msk_ptr;
     WORD *ptmp;
     unsigned int i;
 
     foreground_data = cache->foreground_data;
     color_data_3 = cache->color_data_3;
+    table_ptr = hr_table + (cache->background_data[0] << 4);
     msk_ptr = cache->gfx_msk + GFX_MSK_LEFTBORDER_SIZE;
 
     c[1] = c[0] = cache->background_data[0];
     c[3] = c[2] = cache->color_data_1[0];
     c[5] = c[4] = cache->color_data_1[1];
-    c[11] = c[8] = cache->background_data[0];
 
     ptmp = (WORD *)(p + xs * 8);
 
     for (i = xs; i <= xe; i++) {
-        unsigned int d;
+        if (color_data_3[i] & 0x8) {
+            unsigned int d;
 
-        d = foreground_data[i] | ((color_data_3[i] & 0x8) << 5);
+            c[7] = c[6] = color_data_3[i] & 0x7;
 
-        *(msk_ptr + i) = mcmsktable[d];
+            d = foreground_data[i];
 
-        c[10] = c[9] = c[7] = c[6] = color_data_3[i] & 0x7;
+            msk_ptr[i] = mcmsktable[d];
 
-        ptmp[0] = ((WORD *)c)[mc_table[d]];
-        ptmp[1] = ((WORD *)c)[mc_table[0x200 + d]];
-        ptmp[2] = ((WORD *)c)[mc_table[0x400 + d]];
-        ptmp[3] = ((WORD *)c)[mc_table[0x600 + d]];
-        ptmp += 4;
+            ptmp[0] = ((WORD *)c)[mc_table[d]];
+            ptmp[1] = ((WORD *)c)[mc_table[0x100 + d]];
+            ptmp[2] = ((WORD *)c)[mc_table[0x200 + d]];
+            ptmp[3] = ((WORD *)c)[d & 3];
+            ptmp += 4;
+        } else {
+            DWORD *ptr = table_ptr + (color_data_3[i] << 8);
+            int d = msk_ptr[i] = foreground_data[i];
+
+            *((DWORD *)ptmp) = ptr[d >> 4];
+            *((DWORD *)(ptmp + 2)) = ptr[d & 0xf];
+            ptmp += 4;
+        }
     }
 }
 
@@ -576,40 +601,47 @@ static void draw_mc_text_cached(raster_cache_t *cache, unsigned int xs,
 #define DRAW_MC_BYTE(p, b, f1, f2, f3)          \
     do {                                        \
         if ((b) & 0x80) {                       \
-            if ((b) & 0x40)                     \
+            if ((b) & 0x40) {                   \
                 *(p) = *((p) + 1) = (f3);       \
-            else                                \
+            } else {                            \
                 *(p) = *((p) + 1) = (f2);       \
-        } else if ((b) & 0x40)                  \
+            }                                   \
+        } else if ((b) & 0x40) {                \
             *(p) = *((p) + 1) = (f1);           \
+        }                                       \
                                                 \
         if ((b) & 0x20) {                       \
-            if ((b) & 0x10)                     \
+            if ((b) & 0x10) {                   \
                 *((p) + 2) = *((p) + 3) = (f3); \
-            else                                \
+            } else {                            \
                 *((p) + 2) = *((p) + 3) = (f2); \
-        } else if ((b) & 0x10)                  \
+            }                                   \
+        } else if ((b) & 0x10) {                \
             *((p) + 2) = *((p) + 3) = (f1);     \
+        }                                       \
                                                 \
         if ((b) & 0x08) {                       \
-            if ((b) & 0x04)                     \
+            if ((b) & 0x04) {                   \
                 *((p) + 4) = *((p) + 5) = (f3); \
-            else                                \
+            } else {                            \
                 *((p) + 4) = *((p) + 5) = (f2); \
-        } else if ((b) & 0x04)                  \
+            }                                   \
+        } else if ((b) & 0x04) {                \
             *((p) + 4) = *((p) + 5) = (f1);     \
+        }                                       \
                                                 \
         if ((b) & 0x02) {                       \
-            if ((b) & 0x01)                     \
+            if ((b) & 0x01) {                   \
                 *((p) + 6) = *((p) + 7) = (f3); \
-            else                                \
+            } else {                            \
                 *((p) + 6) = *((p) + 7) = (f2); \
-        } else if ((b) & 0x01)                  \
+            }                                   \
+        } else if ((b) & 0x01) {                \
             *((p) + 6) = *((p) + 7) = (f1);     \
+        }                                       \
     } while (0)
 
-static void draw_mc_text_foreground(unsigned int start_char,
-                                    unsigned int end_char)
+static void draw_mc_text_foreground(unsigned int start_char, unsigned int end_char)
 {
     BYTE *char_ptr, *msk_ptr;
     BYTE c1, c2;
@@ -627,14 +659,14 @@ static void draw_mc_text_foreground(unsigned int start_char,
 
         c = vicii.cbuf[i - vicii.buf_offset];
         if (vicii.raster.last_video_mode == VICII_MULTICOLOR_BITMAP_MODE) {
-            unsigned int j = ((vicii.memptr << 3) 
-                                + vicii.raster.ycounter + i * 8) & 0x1fff;
-            if (j & 0x1000)
+            unsigned int j = ((vicii.memptr << 3) + vicii.raster.ycounter + i * 8) & 0x1fff;
+            if (j & 0x1000) {
                 b = vicii.bitmap_high_ptr[j & 0xfff];
-            else
+            } else {
                 b = vicii.bitmap_low_ptr[j];
+            }
         } else {
-            b = *(char_ptr + vicii.vbuf[i - vicii.buf_offset] * 8);
+            b = char_ptr[vicii.vbuf[i - vicii.buf_offset] * 8];
         }
 
         if (c & 0x8) {
@@ -643,30 +675,29 @@ static void draw_mc_text_foreground(unsigned int start_char,
 
             c3 = c & 0x7;
             DRAW_MC_BYTE(p, b, c1, c2, c3);
-            *(msk_ptr + i) = mcmsktable[0x100 + b];
+            msk_ptr[i] = mcmsktable[b];
 
             if (vicii.raster.xsmooth_shift_left > 0) {
                 int j;
-                
-                for (j = 0; j < vicii.raster.xsmooth_shift_left; j++)
-                    *(p + 7 - j) = orig_background;
 
-                *(msk_ptr + i) = (BYTE)((mcmsktable[0x100 + b]
-                                 >> vicii.raster.xsmooth_shift_left)
-                                 << vicii.raster.xsmooth_shift_left);
+                for (j = 0; j < vicii.raster.xsmooth_shift_left; j++) {
+                    p[7 - j] = orig_background;
+                }
+
+                msk_ptr[i] = (BYTE)((mcmsktable[b]
+                                     >> vicii.raster.xsmooth_shift_left)
+                                    << vicii.raster.xsmooth_shift_left);
             }
-
         } else {
             BYTE c3;
 
             if (vicii.raster.xsmooth_shift_left > 0) {
-                b = (b >> vicii.raster.xsmooth_shift_left) 
-                    << vicii.raster.xsmooth_shift_left;
+                b = (b >> vicii.raster.xsmooth_shift_left) << vicii.raster.xsmooth_shift_left;
             }
 
             c3 = c;
             DRAW_STD_TEXT_BYTE(p, b, c3);
-            *(msk_ptr + i) = b;
+            msk_ptr[i] = b;
         }
     }
 }
@@ -683,17 +714,14 @@ static int get_mc_bitmap(raster_cache_t *cache, unsigned int *xs,
         rr = 1;
     }
 
-    r = raster_cache_data_fill_nibbles(cache->color_data_1,
-                                       cache->color_data_2,
-                                       vicii.vbuf,
-                                       VICII_SCREEN_TEXTCOLS,
-                                       1,
-                                       xs, xe,
-                                       rr);
+    r = raster_cache_data_fill(cache->color_data_1,
+                               vicii.vbuf,
+                               VICII_SCREEN_TEXTCOLS,
+                               xs, xe,
+                               rr);
     r |= raster_cache_data_fill(cache->color_data_3,
                                 vicii.cbuf,
                                 VICII_SCREEN_TEXTCOLS,
-                                1,
                                 xs, xe,
                                 rr);
     r |= raster_cache_data_fill_1fff(cache->foreground_data,
@@ -701,7 +729,6 @@ static int get_mc_bitmap(raster_cache_t *cache, unsigned int *xs,
                                      vicii.bitmap_high_ptr,
                                      8 * vicii.memptr + vicii.raster.ycounter,
                                      VICII_SCREEN_TEXTCOLS,
-                                     8,
                                      xs, xe,
                                      rr);
     return r;
@@ -724,25 +751,25 @@ inline static void _draw_mc_bitmap(BYTE *p, unsigned int xs, unsigned int xe,
     ptmp = p + xs * 8;
 
     for (j = ((vicii.memptr << 3) + vicii.raster.ycounter + xs * 8) & 0x1fff,
-        i = xs; i <= xe; i++, j = (j + 8) & 0x1fff) {
-
+         i = xs; i <= xe; i++, j = (j + 8) & 0x1fff) {
         unsigned int d;
 
-        if (j & 0x1000)
+        if (j & 0x1000) {
             d = bmptr_high[j & 0xfff];
-        else
+        } else {
             d = bmptr_low[j];
+        }
 
-        *(msk_ptr + i) = mcmsktable[d | 0x100];
+        msk_ptr[i] = mcmsktable[d];
 
         c[1] = vicii.vbuf[i] >> 4;
         c[2] = vicii.vbuf[i] & 0xf;
         c[3] = colptr[i];
 
-        ptmp[1] = ptmp[0] = c[mc_table[0x100 + d]];
-        ptmp[3] = ptmp[2] = c[mc_table[0x300 + d]];
-        ptmp[5] = ptmp[4] = c[mc_table[0x500 + d]];
-        ptmp[7] = ptmp[6] = c[mc_table[0x700 + d]];
+        ptmp[1] = ptmp[0] = c[mc_table[d]];
+        ptmp[3] = ptmp[2] = c[mc_table[0x100 + d]];
+        ptmp[5] = ptmp[4] = c[mc_table[0x200 + d]];
+        ptmp[7] = ptmp[6] = c[d & 3];
         ptmp += 8;
     }
 }
@@ -751,14 +778,13 @@ inline static void _draw_mc_bitmap_cached(BYTE *p, unsigned int xs,
                                           unsigned int xe,
                                           raster_cache_t *cache)
 {
-    BYTE *foreground_data, *color_data_1, *color_data_2, *color_data_3;
+    BYTE *foreground_data, *color_data_1, *color_data_3;
     BYTE *msk_ptr, *ptmp;
     BYTE c[4];
     unsigned int i;
 
     foreground_data = cache->foreground_data;
     color_data_1 = cache->color_data_1;
-    color_data_2 = cache->color_data_2;
     color_data_3 = cache->color_data_3;
     msk_ptr = cache->gfx_msk + GFX_MSK_LEFTBORDER_SIZE;
 
@@ -771,16 +797,16 @@ inline static void _draw_mc_bitmap_cached(BYTE *p, unsigned int xs,
 
         d = foreground_data[i];
 
-        *(msk_ptr + i) = mcmsktable[d | 0x100];
+        msk_ptr[i] = mcmsktable[d];
 
-        c[1] = color_data_1[i];
-        c[2] = color_data_2[i];
+        c[1] = color_data_1[i] >> 4;
+        c[2] = color_data_1[i] & 0xf;
         c[3] = color_data_3[i];
 
-        ptmp[1] = ptmp[0] = c[mc_table[0x100 + d]];
-        ptmp[3] = ptmp[2] = c[mc_table[0x300 + d]];
-        ptmp[5] = ptmp[4] = c[mc_table[0x500 + d]];
-        ptmp[7] = ptmp[6] = c[mc_table[0x700 + d]];
+        ptmp[1] = ptmp[0] = c[mc_table[d]];
+        ptmp[3] = ptmp[2] = c[mc_table[0x100 + d]];
+        ptmp[5] = ptmp[4] = c[mc_table[0x200 + d]];
+        ptmp[7] = ptmp[6] = c[d & 3];
         ptmp += 8;
     }
 }
@@ -808,10 +834,8 @@ static void draw_mc_bitmap_foreground(unsigned int start_char,
     bmptr_high = vicii.bitmap_high_ptr;
     msk_ptr = vicii.raster.gfx_msk + GFX_MSK_LEFTBORDER_SIZE;
 
-    for (j = ((vicii.memptr << 3)
-        + vicii.raster.ycounter + 8 * start_char) & 0x1fff,
-        i = start_char; i <= end_char; j = (j + 8) & 0x1fff, i++, p += 8) {
-
+    for (j = ((vicii.memptr << 3) + vicii.raster.ycounter + 8 * start_char) & 0x1fff,
+         i = start_char; i <= end_char; j = (j + 8) & 0x1fff, i++, p += 8) {
         BYTE c1, c2, c3;
         BYTE b;
         BYTE orig_background = *p;
@@ -820,13 +844,15 @@ static void draw_mc_bitmap_foreground(unsigned int start_char,
         c2 = vicii.vbuf[i - vicii.buf_offset] & 0xf;
         c3 = vicii.cbuf[i - vicii.buf_offset];
 
-        if (vicii.raster.last_video_mode == VICII_ILLEGAL_BITMAP_MODE_2)
+        if (vicii.raster.last_video_mode == VICII_ILLEGAL_BITMAP_MODE_2) {
             j &= 0x19ff;
+        }
 
-        if (j & 0x1000)
+        if (j & 0x1000) {
             b = bmptr_high[j & 0xfff];
-        else
+        } else {
             b = bmptr_low[j];
+        }
 
         if (vicii.raster.last_video_mode == VICII_MULTICOLOR_TEXT_MODE
             || vicii.raster.last_video_mode == VICII_ILLEGAL_TEXT_MODE) {
@@ -834,18 +860,19 @@ static void draw_mc_bitmap_foreground(unsigned int start_char,
             b = char_ptr[vicii.vbuf[i - vicii.buf_offset] * 8];
         }
 
-        *(msk_ptr + i) = mcmsktable[0x100 + b];
+        msk_ptr[i] = mcmsktable[b];
         DRAW_MC_BYTE(p, b, c1, c2, c3);
 
         if (vicii.raster.xsmooth_shift_left > 0) {
             int j;
 
-            for (j = 0; j < vicii.raster.xsmooth_shift_left; j++)
-                *(p + 7 - j) = orig_background;
+            for (j = 0; j < vicii.raster.xsmooth_shift_left; j++) {
+                p[7 - j] = orig_background;
+            }
 
-            *(msk_ptr + i) = (BYTE)((mcmsktable[0x100 + b]
-                             >> vicii.raster.xsmooth_shift_left)
-                             << vicii.raster.xsmooth_shift_left);
+            msk_ptr[i] = (BYTE)((mcmsktable[b]
+                                 >> vicii.raster.xsmooth_shift_left)
+                                << vicii.raster.xsmooth_shift_left);
         }
     }
 }
@@ -883,7 +910,6 @@ static int get_ext_text(raster_cache_t *cache, unsigned int *xs,
     r |= raster_cache_data_fill(cache->color_data_1,
                                 vicii.cbuf,
                                 VICII_SCREEN_TEXTCOLS,
-                                1,
                                 xs, xe,
                                 rr);
     return r;
@@ -905,16 +931,17 @@ inline static void _draw_ext_text(BYTE *p, unsigned int xs, unsigned int xe,
 
         ptr = hr_table + (vicii.cbuf[i] << 8);
         bg_idx = vicii.vbuf[i] >> 6;
-        d = *(char_ptr + (vicii.vbuf[i] & 0x3f) * 8);
+        d = char_ptr[(vicii.vbuf[i] & 0x3f) * 8];
 
-        if (bg_idx == 0)
+        if (bg_idx == 0) {
             ptr += vicii.raster.background_color << 4;
-        else
+        } else {
             ptr += vicii.ext_background_color[bg_idx - 1] << 4;
+        }
 
-        *(msk_ptr + i) = d;
-        *((DWORD *)p + 2 * i) = *(ptr + (d >> 4));
-        *((DWORD *)p + 2 * i + 1) = *(ptr + (d & 0xf));
+        msk_ptr[i] = d;
+        *((DWORD *)p + 2 * i) = ptr[d >> 4];
+        *((DWORD *)p + 2 * i + 1) = ptr[d & 0xf];
     }
 }
 
@@ -941,9 +968,9 @@ inline static void _draw_ext_text_cached(BYTE *p, unsigned int xs,
 
         ptr += color_data_2[color_data_3[i]] << 4;
 
-        *(msk_ptr + i) = d;
-        *((DWORD *)p + 2 * i) = *(ptr + (d >> 4));
-        *((DWORD *)p + 2 * i + 1) = *(ptr + (d & 0xf));
+        msk_ptr[i] = d;
+        *((DWORD *)p + 2 * i) = ptr[d >> 4];
+        *((DWORD *)p + 2 * i + 1) = ptr[d & 0xf];
     }
 }
 
@@ -976,28 +1003,26 @@ static void draw_ext_text_foreground(unsigned int start_char,
         b = char_ptr[(vicii.vbuf[i - vicii.buf_offset] & 0x3f) * 8];
 
         if (vicii.raster.last_video_mode == VICII_ILLEGAL_BITMAP_MODE_1) {
-            unsigned int j = ((vicii.memptr << 3) 
-                                + vicii.raster.ycounter + i * 8) & 0x19ff;
-            if (j & 0x1000)
+            unsigned int j = ((vicii.memptr << 3) + vicii.raster.ycounter + i * 8) & 0x19ff;
+            if (j & 0x1000) {
                 b = vicii.bitmap_high_ptr[j & 0xfff];
-            else
+            } else {
                 b = vicii.bitmap_low_ptr[j];
+            }
         }
 
         f = vicii.cbuf[i - vicii.buf_offset];
         bg_idx = vicii.vbuf[i - vicii.buf_offset] >> 6;
 
         if (vicii.raster.xsmooth_shift_left > 0) {
-            b = (b >> vicii.raster.xsmooth_shift_left) 
-                << vicii.raster.xsmooth_shift_left;
+            b = (b >> vicii.raster.xsmooth_shift_left) << vicii.raster.xsmooth_shift_left;
         }
 
         if (bg_idx > 0) {
-            p[7] = p[6] = p[5] = p[4] = p[3] = p[2] = p[1] = p[0] =
-                vicii.ext_background_color[bg_idx - 1];
+            p[7] = p[6] = p[5] = p[4] = p[3] = p[2] = p[1] = p[0] = vicii.ext_background_color[bg_idx - 1];
         }
 
-        *(msk_ptr + i) = b;
+        msk_ptr[i] = b;
         DRAW_STD_TEXT_BYTE(p, b, f);
     }
 }
@@ -1027,7 +1052,6 @@ static int get_illegal_text(raster_cache_t *cache, unsigned int *xs,
     r |= raster_cache_data_fill(cache->color_data_1,
                                 vicii.cbuf,
                                 VICII_SCREEN_TEXTCOLS,
-                                1,
                                 xs, xe,
                                 rr);
     return r;
@@ -1047,10 +1071,9 @@ inline static void _draw_illegal_text(BYTE *p, unsigned int xs,
     for (i = xs; i <= xe; i++) {
         unsigned int d;
 
-        d = (*(char_ptr + (vicii.vbuf[i] & 0x3f) * 8))
-            | ((vicii.cbuf[i] & 0x8) << 5);
+        d = char_ptr[(vicii.vbuf[i] & 0x3f) * 8];
 
-        *(msk_ptr + i) = mcmsktable[d];
+        msk_ptr[i] = (vicii.cbuf[i] & 0x8) ? mcmsktable[d] : d;
     }
 }
 
@@ -1070,9 +1093,9 @@ inline static void _draw_illegal_text_cached(BYTE *p, unsigned int xs,
     for (i = xs; i <= xe; i++) {
         unsigned int d;
 
-        d = foreground_data[i] | ((color_data_1[i] & 0x8) << 5);
+        d = foreground_data[i];
 
-        *(msk_ptr + i) = mcmsktable[d];
+        msk_ptr[i] = (color_data_1[i] & 0x8) ? mcmsktable[d] : d;
     }
 }
 
@@ -1103,10 +1126,9 @@ static void draw_illegal_text_foreground(unsigned int start_char,
     for (i = start_char; i <= end_char; i++) {
         unsigned int d;
 
-        d = (*(char_ptr + (vicii.vbuf[i - vicii.buf_offset] & 0x3f) * 8))
-            | ((vicii.cbuf[i - vicii.buf_offset] & 0x8) << 5);
+        d = char_ptr[(vicii.vbuf[i - vicii.buf_offset] & 0x3f) * 8];
 
-        *(msk_ptr + i) = mcmsktable[d];
+        msk_ptr[i] = (vicii.cbuf[i - vicii.buf_offset] & 0x8) ? mcmsktable[d] : d;
     }
 }
 
@@ -1120,7 +1142,6 @@ static int get_illegal_bitmap_mode1(raster_cache_t *cache, unsigned int *xs,
     r = raster_cache_data_fill(cache->background_data,
                                vicii.vbuf,
                                VICII_SCREEN_TEXTCOLS,
-                               1,
                                xs, xe,
                                rr);
     r |= raster_cache_data_fill_39ff(cache->foreground_data,
@@ -1149,16 +1170,15 @@ inline static void _draw_illegal_bitmap_mode1(BYTE *p, unsigned int xs,
 
     memset(p + 8 * xs, 0, (xe - xs + 1) * 8);
 
-    for (j = ((vicii.memptr << 3)
-        + vicii.raster.ycounter + xs * 8) & 0x1fff, i = xs;
-        i <= xe; i++, j = (j + 8) & 0x1fff) {
-
-        if (j & 0x1000)
+    for (j = ((vicii.memptr << 3) + vicii.raster.ycounter + xs * 8) & 0x1fff, i = xs;
+         i <= xe; i++, j = (j + 8) & 0x1fff) {
+        if (j & 0x1000) {
             bmval = bmptr_low[j & 0x9ff];
-        else
+        } else {
             bmval = bmptr_high[j & 0x9ff];
+        }
 
-        *(msk_ptr + i) = bmval;
+        msk_ptr[i] = bmval;
     }
 }
 
@@ -1167,15 +1187,12 @@ inline static void _draw_illegal_bitmap_mode1_cached(BYTE *p, unsigned int xs,
                                                      raster_cache_t *cache)
 {
     BYTE *foreground_data, *msk_ptr;
-    unsigned int i;
 
     foreground_data = cache->foreground_data;
     msk_ptr = cache->gfx_msk + GFX_MSK_LEFTBORDER_SIZE;
 
     memset(p + 8 * xs, 0, (xe - xs + 1) * 8);
-
-    for (i = xs; i <= xe; i++)
-        *(msk_ptr + i) = foreground_data[i];
+    memcpy(msk_ptr + xs, foreground_data + xs, xe - xs + 1);
 }
 
 static void draw_illegal_bitmap_mode1(void)
@@ -1204,17 +1221,14 @@ static int get_illegal_bitmap_mode2(raster_cache_t *cache, unsigned int *xs,
 {
     int r;
 
-    r = raster_cache_data_fill_nibbles(cache->color_data_1,
-                                       cache->color_data_2,
-                                       vicii.vbuf,
-                                       VICII_SCREEN_TEXTCOLS,
-                                       1,
-                                       xs, xe,
-                                       rr);
+    r = raster_cache_data_fill(cache->color_data_1,
+                               vicii.vbuf,
+                               VICII_SCREEN_TEXTCOLS,
+                               xs, xe,
+                               rr);
     r |= raster_cache_data_fill(cache->color_data_3,
                                 vicii.cbuf,
                                 VICII_SCREEN_TEXTCOLS,
-                                1,
                                 xs, xe,
                                 rr);
     r |= raster_cache_data_fill_39ff(cache->foreground_data,
@@ -1243,15 +1257,15 @@ inline static void _draw_illegal_bitmap_mode2(BYTE *p, unsigned int xs,
 
     memset(p + 8 * xs, 0, (xe - xs + 1) * 8);
 
-    for (j = ((vicii.memptr << 3)
-        + vicii.raster.ycounter + xs * 8) & 0x1fff, i = xs;
-        i <= xe; i++, j = (j + 8) & 0x1fff) {
-        if (j & 0x1000)
+    for (j = ((vicii.memptr << 3) + vicii.raster.ycounter + xs * 8) & 0x1fff, i = xs;
+         i <= xe; i++, j = (j + 8) & 0x1fff) {
+        if (j & 0x1000) {
             bmval = bmptr_high[j & 0x9ff];
-        else
+        } else {
             bmval = bmptr_low[j & 0x9ff];
+        }
 
-        *(msk_ptr + i) = mcmsktable[bmval | 0x100];
+        msk_ptr[i] = mcmsktable[bmval];
     }
 }
 
@@ -1267,8 +1281,9 @@ inline static void _draw_illegal_bitmap_mode2_cached(BYTE *p, unsigned int xs,
 
     memset(p + 8 * xs, 0, (xe - xs + 1) * 8);
 
-    for (i = xs; i <= xe; i++)
-        *(msk_ptr + i) = mcmsktable[foreground_data[i] | 0x100];
+    for (i = xs; i <= xe; i++) {
+        msk_ptr[i] = mcmsktable[foreground_data[i]];
+    }
 }
 
 static void draw_illegal_bitmap_mode2(void)
@@ -1319,8 +1334,9 @@ inline static void _draw_idle(BYTE *p, unsigned int xs, unsigned int xe,
     BYTE d = 0;
     unsigned int i;
 
-    if (!vicii.raster.blank_enabled)
+    if (!vicii.raster.blank_enabled) {
         d = (BYTE)vicii.idle_data;
+    }
 
     msk_ptr = gfx_msk_ptr + GFX_MSK_LEFTBORDER_SIZE;
 
@@ -1330,8 +1346,8 @@ inline static void _draw_idle(BYTE *p, unsigned int xs, unsigned int xe,
         DWORD c1, c2;
 
         offs = vicii.raster.idle_background_color << 4;
-        c1 = *(hr_table + offs + (d >> 4));
-        c2 = *(hr_table + offs + (d & 0xf));
+        c1 = hr_table[offs + (d >> 4)];
+        c2 = hr_table[offs + (d & 0xf)];
 
         for (i = xs * 8; i <= xe * 8; i += 8) {
             *((DWORD *)(p + i)) = c1;
@@ -1352,19 +1368,18 @@ inline static void _draw_idle(BYTE *p, unsigned int xs, unsigned int xe,
             ptmp = p + xs * 8;
 
             for (i = xs; i <= xe; i++) {
-                *(msk_ptr + i) = mcmsktable[d | 0x100];
+                msk_ptr[i] = mcmsktable[d];
 
-                ptmp[1] = ptmp[0] = c[mc_table[0x100 + d]];
-                ptmp[3] = ptmp[2] = c[mc_table[0x300 + d]];
-                ptmp[5] = ptmp[4] = c[mc_table[0x500 + d]];
-                ptmp[7] = ptmp[6] = c[mc_table[0x700 + d]];
+                ptmp[1] = ptmp[0] = c[mc_table[d]];
+                ptmp[3] = ptmp[2] = c[mc_table[0x100 + d]];
+                ptmp[5] = ptmp[4] = c[mc_table[0x200 + d]];
+                ptmp[7] = ptmp[6] = c[d & 3];
                 ptmp += 8;
             }
         } else {
             memset(p + xs * 8, 0, (xe + 1 - xs) * 8);
             if (vicii.raster.video_mode == VICII_ILLEGAL_BITMAP_MODE_2) {
-                for (i = xs; i <= xe; i++)
-                    *(msk_ptr + i) = mcmsktable[d | 0x100];
+                memset(msk_ptr + xs, mcmsktable[d], xe + 1 - xs);
             } else {
                 memset(msk_ptr + xs, d, xe + 1 - xs);
             }
@@ -1393,17 +1408,17 @@ static void draw_idle_foreground(unsigned int start_char,
 
     p = GFX_PTR();
     msk_ptr = vicii.raster.gfx_msk + GFX_MSK_LEFTBORDER_SIZE;
-    if (!vicii.raster.blank_enabled)
+    if (!vicii.raster.blank_enabled) {
         d = (BYTE)vicii.idle_data;
+    }
 
     if (vicii.raster.xsmooth_shift_left > 0) {
-        d = (d >> vicii.raster.xsmooth_shift_left) 
-            << vicii.raster.xsmooth_shift_left;
+        d = (d >> vicii.raster.xsmooth_shift_left) << vicii.raster.xsmooth_shift_left;
     }
 
     for (i = start_char; i <= end_char; i++) {
         DRAW_STD_TEXT_BYTE(p + i * 8, d, 0);
-        *(msk_ptr + i) = d;
+        msk_ptr[i] = d;
     }
 }
 
@@ -1478,7 +1493,6 @@ static void init_drawing_tables(void)
 {
     DWORD i;
     unsigned int f, b;
-    const BYTE tmptable[4] = { 0, 4, 5, 3 };
 
     for (i = 0; i <= 0xf; i++) {
         for (f = 0; f <= 0xf; f++) {
@@ -1492,29 +1506,19 @@ static void init_drawing_tables(void)
                 offset = (f << 8) | (b << 4);
                 p = (BYTE *)(hr_table + offset + i);
 
-                *p = i & 0x8 ? fp : bp;
-                *(p + 1) = i & 0x4 ? fp : bp;
-                *(p + 2) = i & 0x2 ? fp : bp;
-                *(p + 3) = i & 0x1 ? fp : bp;
+                p[0] = i & 0x8 ? fp : bp;
+                p[1] = i & 0x4 ? fp : bp;
+                p[2] = i & 0x2 ? fp : bp;
+                p[3] = i & 0x1 ? fp : bp;
             }
         }
     }
 
     for (i = 0; i <= 0xff; i++) {
-        mc_table[i + 0x100] = (BYTE)(i >> 6);
-        mc_table[i + 0x300] = (BYTE)((i >> 4) & 0x3);
-        mc_table[i + 0x500] = (BYTE)((i >> 2) & 0x3);
-        mc_table[i + 0x700] = (BYTE)(i & 0x3);
-        mc_table[i] = tmptable[i >> 6];
-        mc_table[i + 0x200] = tmptable[(i >> 4) & 0x3];
-        mc_table[i + 0x400] = tmptable[(i >> 2) & 0x3];
-        mc_table[i + 0x600] = tmptable[i & 0x3];
-        mcmsktable[i + 0x100] = (BYTE)0;
-        mcmsktable[i + 0x100] |= (BYTE)(((i >> 6) & 0x2) ? 0xc0 : 0);
-        mcmsktable[i + 0x100] |= (BYTE)(((i >> 4) & 0x2) ? 0x30 : 0);
-        mcmsktable[i + 0x100] |= (BYTE)(((i >> 2) & 0x2) ? 0x0c : 0);
-        mcmsktable[i + 0x100] |= (BYTE)((i & 0x2) ? 0x03 : 0);
-        mcmsktable[i] = (BYTE)i;
+        mc_table[i] = (BYTE)(i >> 6);
+        mc_table[i + 0x100] = (BYTE)((i >> 4) & 0x3);
+        mc_table[i + 0x200] = (BYTE)((i >> 2) & 0x3);
+        mcmsktable[i] = (BYTE)((i & 0xaa) | ((i & 0xaa) >> 1));
     }
 }
 
@@ -1524,4 +1528,3 @@ void vicii_draw_init(void)
 
     setup_modes();
 }
-

@@ -1,7 +1,7 @@
 /*
  * tpi.h - IEEE488 interface for the C64.
  *
- * Written by 
+ * Written by
  *  Andre' Fachat <a.fachat@physik.tu-chemnitz.de>
  *  Andreas Boose <viceteam@t-online.de>
  *
@@ -59,6 +59,7 @@ extern void tpi_setup_context(struct machine_context_s *machine_context);
 extern int tpi_bin_attach(const char *filename, BYTE *rawcart);
 extern int tpi_crt_attach(FILE *fd, BYTE *rawcart);
 extern const char *tpi_get_file_name(void);
+extern int tpi_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit);
 
 extern void tpi_reset(void);
 extern void tpi_init(void);

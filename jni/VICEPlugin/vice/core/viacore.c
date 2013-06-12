@@ -59,21 +59,21 @@
  * Except for shift register and input latching everything should be ok now.
  */
 
-                                /* Timer debugging */
+/* Timer debugging */
 /*#define MYVIA_TIMER_DEBUG */
-                                /* when PB7 is really used, set this
-                                   to enable pulse output from the timer.
-                                   Otherwise PB7 state is computed only
-                                   when port B is read -
-                                   not yet implemented */
+/* when PB7 is really used, set this
+   to enable pulse output from the timer.
+   Otherwise PB7 state is computed only
+   when port B is read -
+   not yet implemented */
 /*#define MYVIA_NEED_PB7 */
-                                /* When you really need latching, define this.
-                                   It implies additional READ_PR* when
-                                   writing the snapshot. When latching is
-                                   enabled: it reads the port when enabling,
-                                   and when an active C*1 transition occurs.
-                                   It does not read the port when reading the
-                                   port register. Side-effects beware! */
+/* When you really need latching, define this.
+   It implies additional READ_PR* when
+   writing the snapshot. When latching is
+   enabled: it reads the port when enabling,
+   and when an active C*1 transition occurs.
+   It does not read the port when reading the
+   port register. Side-effects beware! */
 /*#define MYVIA_NEED_LATCHING */
 
 
@@ -165,16 +165,35 @@ inline static void update_myviairq_rclk(via_context_t *via_context, CLOCK rclk)
 
 inline static CLOCK myviata(via_context_t *via_context)
 {
-    if (*(via_context->clk_ptr) < via_context->tau - TAUOFFSET)
+    if (*(via_context->clk_ptr) < via_context->tau - TAUOFFSET) {
         return via_context->tau - TAUOFFSET - *(via_context->clk_ptr) - 2;
-    else
+    } else {
         return (via_context->tal - (*(via_context->clk_ptr) - via_context->tau
-               + TAUOFFSET) % (via_context->tal + 2));
+                                    + TAUOFFSET) % (via_context->tal + 2));
+    }
 }
 
 inline static CLOCK myviatb(via_context_t *via_context)
 {
-    return via_context->tbu - *(via_context->clk_ptr) - 2;
+    CLOCK t2;
+
+    if (via_context->via[VIA_ACR] & 0x20) {
+        t2 = (via_context->t2ch << 8) | via_context->t2cl;
+    } else {
+        t2 = via_context->tbu - *(via_context->clk_ptr) - 2;
+
+        if (via_context->tbi) {
+            BYTE t2hi = via_context->t2ch;
+
+            if (*(via_context->clk_ptr) == via_context->tbi) {
+                t2hi--;
+            }
+
+            t2 = (t2hi << 8) | (t2 & 0xff);
+        }
+    }
+
+    return t2;
 }
 
 inline static void update_myviatal(via_context_t *via_context, CLOCK rclk)
@@ -202,19 +221,13 @@ inline static void update_myviatal(via_context_t *via_context, CLOCK rclk)
         }
     }
 
-    if (via_context->tau == rclk)
+    if (via_context->tau == rclk) {
         via_context->pb7x = 1;
+    }
 
     via_context->tal = via_context->via[VIA_T1LL]
                        + (via_context->via[VIA_T1LH] << 8);
 }
-
-inline static void update_myviatbl(via_context_t *via_context)
-{
-    via_context->tbl = via_context->via[VIA_T2CL]
-                       + (via_context->via[VIA_T2CH] << 8);
-}
-
 
 /* ------------------------------------------------------------------------- */
 void viacore_disable(via_context_t *via_context)
@@ -233,15 +246,19 @@ void viacore_reset(via_context_t *via_context)
     int i;
 
     /* clear registers */
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < 4; i++) {
         via_context->via[i] = 0;
-    for (i = 4; i < 10; i++)
+    }
+    for (i = 4; i < 10; i++) {
         via_context->via[i] = 0xff;        /* AB 98.08.23 */
-    for (i = 11; i < 16; i++)
+    }
+    for (i = 11; i < 16; i++) {
         via_context->via[i] = 0;
+    }
 
     via_context->tal = 0xffff;
-    via_context->tbl = 0xffff;
+    via_context->t2cl = 0xff;
+    via_context->t2ch = 0xff;
     via_context->tau = *(via_context->clk_ptr);
     via_context->tbu = *(via_context->clk_ptr);
 
@@ -255,6 +272,8 @@ void viacore_reset(via_context_t *via_context)
     via_context->pb7o = 0;
     via_context->pb7xx = 0;
     via_context->pb7sx = 0;
+
+    via_context->shift_state = 0;
 
     /* disable vice interrupts */
     via_context->tai = 0;
@@ -271,8 +290,9 @@ void viacore_reset(via_context_t *via_context)
     (via_context->set_ca2)(via_context, via_context->ca2_state);      /* input = high */
     (via_context->set_cb2)(via_context, via_context->cb2_state);      /* input = high */
 
-    if (via_context && via_context->reset)
+    if (via_context && via_context->reset) {
         (via_context->reset)(via_context);
+    }
 
     via_context->enabled = 1;
 }
@@ -280,52 +300,52 @@ void viacore_reset(via_context_t *via_context)
 void viacore_signal(via_context_t *via_context, int line, int edge)
 {
     switch (line) {
-      case VIA_SIG_CA1:
-        if ((edge ? 1 : 0) == (via_context->via[VIA_PCR] & 0x01)) {
-            if (IS_CA2_TOGGLE_MODE() && !(via_context->ca2_state)) {
-                via_context->ca2_state = 1;
-                (via_context->set_ca2)(via_context, via_context->ca2_state);
-            }
-            via_context->ifr |= VIA_IM_CA1;
-            update_myviairq(via_context);
+        case VIA_SIG_CA1:
+            if ((edge ? 1 : 0) == (via_context->via[VIA_PCR] & 0x01)) {
+                if (IS_CA2_TOGGLE_MODE() && !(via_context->ca2_state)) {
+                    via_context->ca2_state = 1;
+                    (via_context->set_ca2)(via_context, via_context->ca2_state);
+                }
+                via_context->ifr |= VIA_IM_CA1;
+                update_myviairq(via_context);
 #ifdef MYVIA_NEED_LATCHING
-            if (IS_PA_INPUT_LATCH()) {
-                via_context->ila = (via_context->read_pra)(via_context, addr);
-            }
+                if (IS_PA_INPUT_LATCH()) {
+                    via_context->ila = (via_context->read_pra)(via_context, addr);
+                }
 #endif
-        }
-        break;
-      case VIA_SIG_CA2:
-        if (!(via_context->via[VIA_PCR] & 0x08)) {
-            via_context->ifr |= (((edge << 2)
-                                ^ via_context->via[VIA_PCR]) & 0x04) ?
-                                0 : VIA_IM_CA2;
-            update_myviairq(via_context);
-        }
-        break;
-      case VIA_SIG_CB1:
-        if ((edge ? 0x10 : 0) == (via_context->via[VIA_PCR] & 0x10)) {
-            if (IS_CB2_TOGGLE_MODE() && !(via_context->cb2_state)) {
-                via_context->cb2_state = 1;
-                (via_context->set_cb2)(via_context, via_context->cb2_state);
             }
-            via_context->ifr |= VIA_IM_CB1;
-            update_myviairq(via_context);
+            break;
+        case VIA_SIG_CA2:
+            if (!(via_context->via[VIA_PCR] & 0x08)) {
+                via_context->ifr |= (((edge << 2)
+                                    ^ via_context->via[VIA_PCR]) & 0x04) ?
+                                    0 : VIA_IM_CA2;
+                update_myviairq(via_context);
+            }
+            break;
+        case VIA_SIG_CB1:
+            if ((edge ? 0x10 : 0) == (via_context->via[VIA_PCR] & 0x10)) {
+                if (IS_CB2_TOGGLE_MODE() && !(via_context->cb2_state)) {
+                    via_context->cb2_state = 1;
+                    (via_context->set_cb2)(via_context, via_context->cb2_state);
+                }
+                via_context->ifr |= VIA_IM_CB1;
+                update_myviairq(via_context);
 #ifdef MYVIA_NEED_LATCHING
-            if (IS_PB_INPUT_LATCH()) {
-                via_context->ilb = (via_context->read_prb)(via_context);
-            }
+                if (IS_PB_INPUT_LATCH()) {
+                    via_context->ilb = (via_context->read_prb)(via_context);
+                }
 #endif
-        }
-        break;
-      case VIA_SIG_CB2:
-        if (!(via_context->via[VIA_PCR] & 0x80)) {
-            via_context->ifr |= (((edge << 6)
-                                ^ via_context->via[VIA_PCR]) & 0x40) ?
-                                0 : VIA_IM_CB2;
-            update_myviairq(via_context);
-        }
-        break;
+            }
+            break;
+        case VIA_SIG_CB2:
+            if (!(via_context->via[VIA_PCR] & 0x80)) {
+                via_context->ifr |= (((edge << 6)
+                                    ^ via_context->via[VIA_PCR]) & 0x40) ?
+                                    0 : VIA_IM_CB2;
+                update_myviairq(via_context);
+            }
+            break;
     }
 }
 
@@ -346,229 +366,253 @@ void viacore_store(via_context_t *via_context, WORD addr, BYTE byte)
     addr &= 0xf;
 
     switch (addr) {
-
-      /* these are done with saving the value */
-      case VIA_PRA:             /* port A */
-        via_context->ifr &= ~VIA_IM_CA1;
-        if (!IS_CA2_INDINPUT()) {
-            via_context->ifr &= ~VIA_IM_CA2;
-        }
-        if (IS_CA2_HANDSHAKE()) {
-            via_context->ca2_state = 0;
-            (via_context->set_ca2)(via_context, via_context->ca2_state);
-            if (IS_CA2_PULSE_MODE()) {
-                via_context->ca2_state = 1;
+        /* these are done with saving the value */
+        case VIA_PRA:           /* port A */
+            via_context->ifr &= ~VIA_IM_CA1;
+            if (!IS_CA2_INDINPUT()) {
+                via_context->ifr &= ~VIA_IM_CA2;
+            }
+            if (IS_CA2_HANDSHAKE()) {
+                via_context->ca2_state = 0;
                 (via_context->set_ca2)(via_context, via_context->ca2_state);
+                if (IS_CA2_PULSE_MODE()) {
+                    via_context->ca2_state = 1;
+                    (via_context->set_ca2)(via_context, via_context->ca2_state);
+                }
             }
-        }
-        if (via_context->ier & (VIA_IM_CA1 | VIA_IM_CA2))
-            update_myviairq(via_context);
+            if (via_context->ier & (VIA_IM_CA1 | VIA_IM_CA2)) {
+                update_myviairq(via_context);
+            }
 
-      case VIA_PRA_NHS: /* port A, no handshake */
-        via_context->via[VIA_PRA_NHS] = byte;
-        addr = VIA_PRA;
-      case VIA_DDRA:
-        via_context->via[addr] = byte;
-        byte = via_context->via[VIA_PRA] | ~(via_context->via[VIA_DDRA]);
-        (via_context->store_pra)(via_context, byte, via_context->oldpa, addr);
-        via_context->oldpa = byte;
-        break;
+        case VIA_PRA_NHS: /* port A, no handshake */
+            via_context->via[VIA_PRA_NHS] = byte;
+            addr = VIA_PRA;
+        case VIA_DDRA:
+            via_context->via[addr] = byte;
+            byte = via_context->via[VIA_PRA] | ~(via_context->via[VIA_DDRA]);
+            (via_context->store_pra)(via_context, byte, via_context->oldpa, addr);
+            via_context->oldpa = byte;
+            break;
 
-      case VIA_PRB:             /* port B */
-        via_context->ifr &= ~VIA_IM_CB1;
-        if ((via_context->via[VIA_PCR] & 0xa0) != 0x20) {
-            via_context->ifr &= ~VIA_IM_CB2;
-        }
-        if (IS_CB2_HANDSHAKE()) {
-            via_context->cb2_state = 0;
-            (via_context->set_cb2)(via_context, via_context->cb2_state);
-            if (IS_CB2_PULSE_MODE()) {
-                via_context->cb2_state = 1;
+        case VIA_PRB:           /* port B */
+            via_context->ifr &= ~VIA_IM_CB1;
+            if ((via_context->via[VIA_PCR] & 0xa0) != 0x20) {
+                via_context->ifr &= ~VIA_IM_CB2;
+            }
+            if (IS_CB2_HANDSHAKE()) {
+                via_context->cb2_state = 0;
                 (via_context->set_cb2)(via_context, via_context->cb2_state);
+                if (IS_CB2_PULSE_MODE()) {
+                    via_context->cb2_state = 1;
+                    (via_context->set_cb2)(via_context, via_context->cb2_state);
+                }
             }
-        }
-        if (via_context->ier & (VIA_IM_CB1 | VIA_IM_CB2))
-            update_myviairq(via_context);
+            if (via_context->ier & (VIA_IM_CB1 | VIA_IM_CB2)) {
+                update_myviairq(via_context);
+            }
 
-      case VIA_DDRB:
-        via_context->via[addr] = byte;
-        byte = via_context->via[VIA_PRB] | ~(via_context->via[VIA_DDRB]);
-        (via_context->store_prb)(via_context, byte, via_context->oldpb, addr);
-        via_context->oldpb = byte;
-        break;
+        case VIA_DDRB:
+            via_context->via[addr] = byte;
+            byte = via_context->via[VIA_PRB] | ~(via_context->via[VIA_DDRB]);
+            (via_context->store_prb)(via_context, byte, via_context->oldpb, addr);
+            via_context->oldpb = byte;
+            break;
 
-      case VIA_SR:              /* Serial Port output buffer */
-        via_context->via[addr] = byte;
-        if ((via_context->via[VIA_ACR] & 0x10)) {
-            /* TODO: proper shifting! */
-            via_context->ifr |= VIA_IM_SR;
-            update_myviairq(via_context);
-        }
-        (via_context->store_sr)(via_context, byte);
-        break;
+        case VIA_SR:            /* Serial Port output buffer */
+            via_context->via[addr] = byte;
+
+            /* shift state can only be reset once 8 bits are complete */
+            if (via_context->ifr & VIA_IM_SR) {
+                via_context->ifr &= ~VIA_IM_SR;
+                update_myviairq(via_context);
+                via_context->shift_state = 0;
+            }
+            (via_context->store_sr)(via_context, byte);
+            break;
 
         /* Timers */
 
-      case VIA_T1CL:
-      case VIA_T1LL:
-        via_context->via[VIA_T1LL] = byte;
-        update_myviatal(via_context, rclk);
-        break;
+        case VIA_T1CL:
+        case VIA_T1LL:
+            via_context->via[VIA_T1LL] = byte;
+            update_myviatal(via_context, rclk);
+            break;
 
-      case VIA_T1CH:    /* Write timer A high */
-        via_context->via[VIA_T1LH] = byte;
-        update_myviatal(via_context, rclk);
-        /* load counter with latch value */
-        via_context->tau = rclk + via_context->tal + 3 + TAUOFFSET;
-        via_context->tai = rclk + via_context->tal + 2;
-        alarm_set(via_context->t1_alarm, via_context->tai);
+        case VIA_T1CH:  /* Write timer A high */
+            via_context->via[VIA_T1LH] = byte;
+            update_myviatal(via_context, rclk);
+            /* load counter with latch value */
+            via_context->tau = rclk + via_context->tal + 3 + TAUOFFSET;
+            via_context->tai = rclk + via_context->tal + 2;
+            alarm_set(via_context->t1_alarm, via_context->tai);
 
-        /* set pb7 state */
-        via_context->pb7 = 0;
-        via_context->pb7o = 0;
+            /* set pb7 state */
+            via_context->pb7 = 0;
+            via_context->pb7o = 0;
 
-        /* Clear T1 interrupt */
-        via_context->ifr &= ~VIA_IM_T1;
-        update_myviairq(via_context);
-        break;
+            /* Clear T1 interrupt */
+            via_context->ifr &= ~VIA_IM_T1;
+            update_myviairq(via_context);
+            break;
 
-      case VIA_T1LH:            /* Write timer A high order latch */
-        via_context->via[addr] = byte;
-        update_myviatal(via_context, rclk);
+        case VIA_T1LH:          /* Write timer A high order latch */
+            via_context->via[addr] = byte;
+            update_myviatal(via_context, rclk);
+            /* IF: Does not change T1 interrupt, see Synertek notes */
+            break;
 
-        /* Clear T1 interrupt */
-        via_context->ifr &= ~VIA_IM_T1;
-        update_myviairq(via_context);
-        break;
+        case VIA_T2LL:          /* Write timer 2 low latch */
+            via_context->via[VIA_T2LL] = byte;
+            (via_context->store_t2l)(via_context, byte);
+            break;
 
-      case VIA_T2LL:            /* Write timer 2 low latch */
-        via_context->via[VIA_T2LL] = byte;
-        update_myviatbl(via_context);
-        (via_context->store_t2l)(via_context, byte);
-        break;
+        case VIA_T2CH:            /* Write timer 2 high counter/latch */
+            /* update counter and latch values */
+            via_context->via[VIA_T2LH] = byte;
+            via_context->t2cl = via_context->via[VIA_T2LL];
+            via_context->t2ch = byte;
 
-      case VIA_T2CH:            /* Write timer 2 high */
-        via_context->via[VIA_T2CH] = byte;
-        update_myviatbl(via_context);
-        via_context->tbu = rclk + via_context->tbl + 3;
-        via_context->tbi = rclk + via_context->tbl + 2;
-        alarm_set(via_context->t2_alarm, via_context->tbi);
+            /* start T2 only in timer mode, leave unchanged in pulse counting mode */
+            if (!(via_context->via[VIA_ACR] & 0x20)) {
+                /* set the next alarm to the low latch value as timer cascading mode change 
+                matters at each underflow of the T2 low counter */
+                via_context->tbu = rclk + via_context->t2cl + 3;
+                via_context->tbi = rclk + via_context->t2cl + 2;
+                alarm_set(via_context->t2_alarm, via_context->tbi);
+            }
 
-        /* Clear T2 interrupt */
-        via_context->ifr &= ~VIA_IM_T2;
-        update_myviairq(via_context);
-        break;
+            /* Clear T2 interrupt */
+            via_context->ifr &= ~VIA_IM_T2;
+            update_myviairq(via_context);
+            break;
 
         /* Interrupts */
 
-      case VIA_IFR:             /* 6522 Interrupt Flag Register */
-        via_context->ifr &= ~byte;
-        update_myviairq(via_context);
-        break;
+        case VIA_IFR:           /* 6522 Interrupt Flag Register */
+            via_context->ifr &= ~byte;
+            update_myviairq(via_context);
 
-      case VIA_IER:             /* Interrupt Enable Register */
-        if (byte & VIA_IM_IRQ) {
-            /* set interrupts */
-            via_context->ier |= byte & 0x7f;
-        } else {
-            /* clear interrupts */
-            via_context->ier &= ~byte;
-        }
-        update_myviairq(via_context);
-        break;
+            /* FIXME: clearing any timer interrupt should set the relevant timer alarm */
+            break;
+
+        case VIA_IER:           /* Interrupt Enable Register */
+            if (byte & VIA_IM_IRQ) {
+                /* set interrupts */
+                via_context->ier |= byte & 0x7f;
+            } else {
+                /* clear interrupts */
+                via_context->ier &= ~byte;
+            }
+            update_myviairq(via_context);
+            break;
 
         /* Control */
 
-      case VIA_ACR:
-        /* bit 7 timer 1 output to PB7 */
-        update_myviatal(via_context, rclk);
-        if ((via_context->via[VIA_ACR] ^ byte) & 0x80) {
-            if (byte & 0x80) {
-                via_context->pb7 = 1 ^ via_context->pb7x;
+        case VIA_ACR:
+            /* bit 7 timer 1 output to PB7 */
+            update_myviatal(via_context, rclk);
+            if ((via_context->via[VIA_ACR] ^ byte) & 0x80) {
+                if (byte & 0x80) {
+                    via_context->pb7 = 1 ^ via_context->pb7x;
+                }
             }
-        }
-        if ((via_context->via[VIA_ACR] ^ byte) & 0x40) {
-            via_context->pb7 ^= via_context->pb7sx;
-            if ((byte & 0x40)) {
-                if (via_context->pb7x || via_context->pb7xx) {
-                    if (via_context->tal) {
-                        via_context->pb7o = 1;
-                    } else {
-                        via_context->pb7o = 0;
-                        if ((via_context->via[VIA_ACR] & 0x80)
-                            && via_context->pb7x
-                            && (!(via_context->pb7xx)))
-                            via_context->pb7 ^= 1;
+            if ((via_context->via[VIA_ACR] ^ byte) & 0x40) {
+                via_context->pb7 ^= via_context->pb7sx;
+                if ((byte & 0x40)) {
+                    if (via_context->pb7x || via_context->pb7xx) {
+                        if (via_context->tal) {
+                            via_context->pb7o = 1;
+                        } else {
+                            via_context->pb7o = 0;
+                            if ((via_context->via[VIA_ACR] & 0x80)
+                                && via_context->pb7x
+                                && (!(via_context->pb7xx))) {
+                                via_context->pb7 ^= 1;
+                            }
+                        }
                     }
                 }
             }
-        }
-        via_context->pb7sx = via_context->pb7x;
+            via_context->pb7sx = via_context->pb7x;
 
-        /* bit 1, 0  latch enable port B and A */
+            /* bit 1, 0  latch enable port B and A */
 #ifdef MYVIA_NEED_LATCHING
-        /* switch on port A latching - FIXME: is this ok? */
-        if ( (!(via_context->via[addr] & 1)) && (byte & 1)) {
-            via_context->ila = (via_context->read_pra)(via_context, addr);
-        }
-        /* switch on port B latching - FIXME: is this ok? */
-        if ((!(via_context->via[addr] & 2)) && (byte & 2)) {
-            via_context->ilb = (via_context->read_prb)(via_context);
-        }
+            /* switch on port A latching - FIXME: is this ok? */
+            if ((!(via_context->via[addr] & 1)) && (byte & 1)) {
+                via_context->ila = (via_context->read_pra)(via_context, addr);
+            }
+            /* switch on port B latching - FIXME: is this ok? */
+            if ((!(via_context->via[addr] & 2)) && (byte & 2)) {
+                via_context->ilb = (via_context->read_prb)(via_context);
+            }
 #endif
 
-        via_context->via[addr] = byte;
-        (via_context->store_acr)(via_context, byte);
+            /* switch between timer and pulse counting mode if bit 5 changes */
+            if ((via_context->via[VIA_ACR] ^ byte) & 0x20) {
+                if (byte & 0x20) {
+                    /* Pulse counting mode: set t2 to the current T2 value; 
+                    PB6 should always update t2 and update irq on underflow */
+                    CLOCK stop = myviatb(via_context);
+                    via_context->t2cl = stop & 0xff;
+                    via_context->t2ch = (stop >> 8) & 0xff;
 
-        /* bit 5 timer 2 count mode */
-        if (byte & 32) {
-            /* TODO */
-            /* update_myviatb(0); *//* stop timer if mode == 1 */
-        }
+                    /* stop alarm to prevent t2 and T2 updates */
+                    alarm_unset(via_context->t2_alarm);
+                    via_context->tbi = 0;
+                } else {
+                    /* Timer mode; set the next alarm to the low latch value as timer cascading mode change 
+                    matters at each underflow of the T2 low counter */
+                    via_context->tbu = rclk + via_context->t2cl + 3;
+                    via_context->tbi = rclk + via_context->t2cl + 2;
+                    alarm_set(via_context->t2_alarm, via_context->tbi);
+                }
+            }
 
-        /* bit 4, 3, 2 shift register control */
+            /* bit 4, 3, 2 shift register control */
 
-        break;
+            via_context->via[addr] = byte;
+            (via_context->store_acr)(via_context, byte);
 
-      case VIA_PCR:
+            break;
 
-        /* bit 7, 6, 5  CB2 handshake/interrupt control */
-        /* bit 4  CB1 interrupt control */
+        case VIA_PCR:
 
-        /* bit 3, 2, 1  CA2 handshake/interrupt control */
-        /* bit 0  CA1 interrupt control */
+            /* bit 7, 6, 5  CB2 handshake/interrupt control */
+            /* bit 4  CB1 interrupt control */
 
-        if ((byte & 0x0e) == 0x0c) {  /* set output low */
-            via_context->ca2_state = 0;
-        } else
-        if ((byte & 0x0e) == 0x0e) {  /* set output high */
-            via_context->ca2_state = 1;
-        } else {                        /* set to toggle/pulse/input */
-            /* FIXME: is this correct if handshake is already active? */
-            via_context->ca2_state = 1;
-        }
-        (via_context->set_ca2)(via_context, via_context->ca2_state);
+            /* bit 3, 2, 1  CA2 handshake/interrupt control */
+            /* bit 0  CA1 interrupt control */
 
-        if ((byte & 0xe0) == 0xc0) {  /* set output low */
-            via_context->cb2_state = 0;
-        } else
-        if ((byte & 0xe0) == 0xe0) {  /* set output high */
-            via_context->cb2_state = 1;
-        } else {                        /* set to toggle/pulse/input */
-            /* FIXME: is this correct if handshake is already active? */
-            via_context->cb2_state = 1;
-        }
-        (via_context->set_cb2)(via_context, via_context->cb2_state);
+            if ((byte & 0x0e) == 0x0c) { /* set output low */
+                via_context->ca2_state = 0;
+            } else
+            if ((byte & 0x0e) == 0x0e) { /* set output high */
+                via_context->ca2_state = 1;
+            } else {                    /* set to toggle/pulse/input */
+                /* FIXME: is this correct if handshake is already active? */
+                via_context->ca2_state = 1;
+            }
+            (via_context->set_ca2)(via_context, via_context->ca2_state);
 
-        (via_context->store_pcr)(via_context, byte, addr);
+            if ((byte & 0xe0) == 0xc0) { /* set output low */
+                via_context->cb2_state = 0;
+            } else
+            if ((byte & 0xe0) == 0xe0) { /* set output high */
+                via_context->cb2_state = 1;
+            } else {                    /* set to toggle/pulse/input */
+                /* FIXME: is this correct if handshake is already active? */
+                via_context->cb2_state = 1;
+            }
+            (via_context->set_cb2)(via_context, via_context->cb2_state);
 
-        via_context->via[addr] = byte;
+            (via_context->store_pcr)(via_context, byte, addr);
 
-        break;
+            via_context->via[addr] = byte;
 
-      default:
-        via_context->via[addr] = byte;
+            break;
 
+        default:
+            via_context->via[addr] = byte;
     }                           /* switch */
 }
 
@@ -581,10 +625,11 @@ BYTE viacore_read(via_context_t *via_context, WORD addr)
     BYTE viacore_read_(via_context_t *via_context, WORD);
     BYTE retv = myvia_read_(via_context, addr);
     addr &= 0x0f;
-    if ((addr > 3 && addr < 10) || app_resources.debugFlag)
+    if ((addr > 3 && addr < 10) || app_resources.debugFlag) {
         log_message(via_context->log,
                     "myvia_read(%x) -> %02x, clk=%d", addr, retv,
                     *(via_context->clk_ptr));
+    }
     return retv;
 }
 BYTE viacore_read_(via_context_t *via_context, WORD addr)
@@ -600,122 +645,131 @@ BYTE viacore_read_(via_context_t *via_context, WORD addr)
     rclk = *(via_context->clk_ptr);
 
     if (addr >= VIA_T1CL && addr <= VIA_IER) {
-        if (via_context->tai && (via_context->tai < *(via_context->clk_ptr)))
+        if (via_context->tai && (via_context->tai < *(via_context->clk_ptr))) {
             viacore_intt1(*(via_context->clk_ptr) - via_context->tai,
                           (void *)via_context);
-        if (via_context->tbi && (via_context->tbi < *(via_context->clk_ptr)))
+        }
+        if (via_context->tbi && (via_context->tbi < *(via_context->clk_ptr))) {
             viacore_intt2(*(via_context->clk_ptr) - via_context->tbi,
                           (void *)via_context);
+        }
     }
 
     switch (addr) {
-
-      case VIA_PRA:             /* port A */
-        via_context->ifr &= ~VIA_IM_CA1;
-        if ((via_context->via[VIA_PCR] & 0x0a) != 0x02) {
-            via_context->ifr &= ~VIA_IM_CA2;
-        }
-        if (IS_CA2_HANDSHAKE()) {
-            via_context->ca2_state = 0;
-            (via_context->set_ca2)(via_context, via_context->ca2_state);
-            if (IS_CA2_PULSE_MODE()) {
-                via_context->ca2_state = 1;
-                (via_context->set_ca2)(via_context, via_context->ca2_state);
+        case VIA_PRA:           /* port A */
+            via_context->ifr &= ~VIA_IM_CA1;
+            if ((via_context->via[VIA_PCR] & 0x0a) != 0x02) {
+                via_context->ifr &= ~VIA_IM_CA2;
             }
-        }
-        if (via_context->ier & (VIA_IM_CA1 | VIA_IM_CA2))
-            update_myviairq(via_context);
+            if (IS_CA2_HANDSHAKE()) {
+                via_context->ca2_state = 0;
+                (via_context->set_ca2)(via_context, via_context->ca2_state);
+                if (IS_CA2_PULSE_MODE()) {
+                    via_context->ca2_state = 1;
+                    (via_context->set_ca2)(via_context, via_context->ca2_state);
+                }
+            }
+            if (via_context->ier & (VIA_IM_CA1 | VIA_IM_CA2)) {
+                update_myviairq(via_context);
+            }
 
-      case VIA_PRA_NHS: /* port A, no handshake */
-        /* WARNING: this pin reads the voltage of the output pins, not
-           the ORA value as the other port. Value read might be different
-           from what is expected due to excessive load. */
+        case VIA_PRA_NHS: /* port A, no handshake */
+            /* WARNING: this pin reads the voltage of the output pins, not
+               the ORA value as the other port. Value read might be different
+               from what is expected due to excessive load. */
 #ifdef MYVIA_NEED_LATCHING
-        if (IS_PA_INPUT_LATCH()) {
-            byte = via_context->ila;
-        } else {
+            if (IS_PA_INPUT_LATCH()) {
+                byte = via_context->ila;
+            } else {
+                byte = (via_context->read_pra)(via_context, addr);
+            }
+#else
             byte = (via_context->read_pra)(via_context, addr);
-        }
-#else
-        byte = (via_context->read_pra)(via_context, addr);
 #endif
-        via_context->ila = byte;
-        via_context->last_read = byte;
-        return byte;
+            via_context->ila = byte;
+            via_context->last_read = byte;
+            return byte;
 
-      case VIA_PRB:             /* port B */
-        via_context->ifr &= ~VIA_IM_CB1;
-        if ((via_context->via[VIA_PCR] & 0xa0) != 0x20)
-            via_context->ifr &= ~VIA_IM_CB2;
-        if (via_context->ier & (VIA_IM_CB1 | VIA_IM_CB2))
-            update_myviairq(via_context);
+        case VIA_PRB:           /* port B */
+            via_context->ifr &= ~VIA_IM_CB1;
+            if ((via_context->via[VIA_PCR] & 0xa0) != 0x20) {
+                via_context->ifr &= ~VIA_IM_CB2;
+            }
+            if (via_context->ier & (VIA_IM_CB1 | VIA_IM_CB2)) {
+                update_myviairq(via_context);
+            }
 
-        /* WARNING: this pin reads the ORA for output pins, not
-           the voltage on the pins as the other port. */
+            /* WARNING: this pin reads the ORA for output pins, not
+               the voltage on the pins as the other port. */
 #ifdef MYVIA_NEED_LATCHING
-        if (IS_PB_INPUT_LATCH()) {
-            byte = via_context->ilb;
-        } else {
-            byte = (via_context->read_prb)(via_context);
-        }
+            if (IS_PB_INPUT_LATCH()) {
+                byte = via_context->ilb;
+            } else {
+                byte = (via_context->read_prb)(via_context);
+            }
 #else
-        byte = (via_context->read_prb)(via_context);
+            byte = (via_context->read_prb)(via_context);
 #endif
-        via_context->ilb = byte;
-        byte = (byte & ~(via_context->via[VIA_DDRB]))
-               | (via_context->via[VIA_PRB] & via_context->via[VIA_DDRB]);
+            via_context->ilb = byte;
+            byte = (byte & ~(via_context->via[VIA_DDRB]))
+                   | (via_context->via[VIA_PRB] & via_context->via[VIA_DDRB]);
 
-        if (via_context->via[VIA_ACR] & 0x80) {
-            update_myviatal(via_context, rclk);
-            byte = (byte & 0x7f)
-                   | (((via_context->pb7 ^ via_context->pb7x)
-                   | via_context->pb7o) ? 0x80 : 0);
-        }
-        via_context->last_read = byte;
-        return byte;
+            if (via_context->via[VIA_ACR] & 0x80) {
+                update_myviatal(via_context, rclk);
+                byte = (byte & 0x7f)
+                       | (((via_context->pb7 ^ via_context->pb7x)
+                           | via_context->pb7o) ? 0x80 : 0);
+            }
+            via_context->last_read = byte;
+            return byte;
 
         /* Timers */
 
-      case VIA_T1CL /*TIMER_AL */ :     /* timer A low */
-        via_context->ifr &= ~VIA_IM_T1;
-        update_myviairq(via_context);
-        via_context->last_read = (BYTE)(myviata(via_context) & 0xff);
-        return via_context->last_read;
+        case VIA_T1CL /*TIMER_AL */:    /* timer A low */
+            via_context->ifr &= ~VIA_IM_T1;
+            update_myviairq(via_context);
+            via_context->last_read = (BYTE)(myviata(via_context) & 0xff);
+            return via_context->last_read;
 
-      case VIA_T1CH /*TIMER_AH */ :     /* timer A high */
-        via_context->last_read = (BYTE)((myviata(via_context) >> 8) & 0xff);
-        return via_context->last_read;
+        case VIA_T1CH /*TIMER_AH */:    /* timer A high */
+            via_context->last_read = (BYTE)((myviata(via_context) >> 8) & 0xff);
+            return via_context->last_read;
 
-      case VIA_T2CL /*TIMER_BL */ :     /* timer B low */
-        via_context->ifr &= ~VIA_IM_T2;
-        update_myviairq(via_context);
-        via_context->last_read = (BYTE)(myviatb(via_context) & 0xff);
-        return via_context->last_read;
+        case VIA_T2CL /*TIMER_BL */:    /* timer B low */
+            via_context->ifr &= ~VIA_IM_T2;
+            update_myviairq(via_context);
+            via_context->last_read = (BYTE)(myviatb(via_context) & 0xff);
+            return via_context->last_read;
 
-      case VIA_T2CH /*TIMER_BH */ :     /* timer B high */
-        via_context->last_read = (BYTE)((myviatb(via_context) >> 8) & 0xff);
-        return via_context->last_read;
+        case VIA_T2CH /*TIMER_BH */:    /* timer B high */
+            via_context->last_read = (BYTE)((myviatb(via_context) >> 8) & 0xff);
+            return via_context->last_read;
 
-      case VIA_SR:              /* Serial Port Shift Register */
-        via_context->ifr &= ~VIA_IM_SR;
-        via_context->last_read = via_context->via[addr];
-        return via_context->last_read;
+        case VIA_SR:            /* Serial Port Shift Register */
+            /* shift state can only be reset once 8 bits are complete */
+            if (via_context->ifr & VIA_IM_SR) {
+                via_context->ifr &= ~VIA_IM_SR;
+                update_myviairq(via_context);
+                via_context->shift_state = 0;
+            }
+            via_context->last_read = via_context->via[addr];
+            return via_context->last_read;
 
         /* Interrupts */
 
-      case VIA_IFR:             /* Interrupt Flag Register */
-        {
-            BYTE t = via_context->ifr;
-            if (via_context->ifr & via_context->ier /*[VIA_IER] */ )
-                t |= 0x80;
-            via_context->last_read = t;
-            return (t);
-        }
+        case VIA_IFR:           /* Interrupt Flag Register */
+            {
+                BYTE t = via_context->ifr;
+                if (via_context->ifr & via_context->ier /*[VIA_IER] */) {
+                    t |= 0x80;
+                }
+                via_context->last_read = t;
+                return (t);
+            }
 
-      case VIA_IER:             /* 6522 Interrupt Control Register */
-        via_context->last_read = (via_context->ier /*[VIA_IER] */  | 0x80);
-        return via_context->last_read;
-
+        case VIA_IER:           /* 6522 Interrupt Control Register */
+            via_context->last_read = (via_context->ier /*[VIA_IER] */ | 0x80);
+            return via_context->last_read;
     }                           /* switch */
 
     via_context->last_read = via_context->via[addr];
@@ -729,49 +783,51 @@ BYTE viacore_peek(via_context_t *via_context, WORD addr)
 
     addr &= 0xf;
 
-    if (via_context->tai && (via_context->tai <= *(via_context->clk_ptr)))
+    if (via_context->tai && (via_context->tai <= *(via_context->clk_ptr))) {
         viacore_intt1(*(via_context->clk_ptr) - via_context->tai,
                       (void *)via_context);
-    if (via_context->tbi && (via_context->tbi <= *(via_context->clk_ptr)))
+    }
+    if (via_context->tbi && (via_context->tbi <= *(via_context->clk_ptr))) {
         viacore_intt2(*(via_context->clk_ptr) - via_context->tbi,
                       (void *)via_context);
+    }
 
     switch (addr) {
-      case VIA_PRA:
-        return viacore_read(via_context, VIA_PRA_NHS);
+        case VIA_PRA:
+            return viacore_read(via_context, VIA_PRA_NHS);
 
-      case VIA_PRB:             /* port B */
-        {
-            BYTE byte;
+        case VIA_PRB:           /* port B */
+            {
+                BYTE byte;
 #ifdef MYVIA_NEED_LATCHING
-            if (IS_PB_INPUT_LATCH()) {
-                byte = via_context->ilb;
-            } else {
-                byte = (via_context->read_prb)(via_context);
-            }
+                if (IS_PB_INPUT_LATCH()) {
+                    byte = via_context->ilb;
+                } else {
+                    byte = (via_context->read_prb)(via_context);
+                }
 #else
-            byte = (via_context->read_prb)(via_context);
+                byte = (via_context->read_prb)(via_context);
 #endif
-            byte = (byte & ~(via_context->via[VIA_DDRB]))
-                   | (via_context->via[VIA_PRB] & via_context->via[VIA_DDRB]);
-            if (via_context->via[VIA_ACR] & 0x80) {
-                update_myviatal(via_context, rclk);
-                byte = (byte & 0x7f) | (((via_context->pb7 ^ via_context->pb7x) 
-                       | via_context->pb7o) ? 0x80 : 0);
+                byte = (byte & ~(via_context->via[VIA_DDRB]))
+                       | (via_context->via[VIA_PRB] & via_context->via[VIA_DDRB]);
+                if (via_context->via[VIA_ACR] & 0x80) {
+                    update_myviatal(via_context, rclk);
+                    byte = (byte & 0x7f) | (((via_context->pb7 ^ via_context->pb7x)
+                                             | via_context->pb7o) ? 0x80 : 0);
+                }
+                return byte;
             }
-            return byte;
-        }
 
         /* Timers */
 
-      case VIA_T1CL /*TIMER_AL */ :     /* timer A low */
-        return (BYTE)(myviata(via_context) & 0xff);
+        case VIA_T1CL /*TIMER_AL */:    /* timer A low */
+            return (BYTE)(myviata(via_context) & 0xff);
 
-      case VIA_T2CL /*TIMER_BL */ :     /* timer B low */
-        return (BYTE)(myviatb(via_context) & 0xff);
+        case VIA_T2CL /*TIMER_BL */:    /* timer B low */
+            return (BYTE)(myviatb(via_context) & 0xff);
 
-      default:
-        break;
+        default:
+            break;
     }                           /* switch */
 
     return viacore_read(via_context, addr);
@@ -789,8 +845,9 @@ static void viacore_intt1(CLOCK offset, void *data)
 
 
 #ifdef MYVIA_TIMER_DEBUG
-    if (app_resources.debugFlag)
+    if (app_resources.debugFlag) {
         log_message(via_context->log, "myvia timer A interrupt");
+    }
 #endif
 
     if (!(via_context->via[VIA_ACR] & 0x40)) {     /* one-shot mode */
@@ -804,7 +861,7 @@ static void viacore_intt1(CLOCK offset, void *data)
         /* load counter with latch value */
         via_context->tai += via_context->tal + 2;
         alarm_set(via_context->t1_alarm, via_context->tai);
-        
+
         /* Let tau also keep up with the cpu clock
            this should avoid "% (via_context->tal + 2)" case */
         via_context->tau += via_context->tal + 2;
@@ -816,27 +873,80 @@ static void viacore_intt1(CLOCK offset, void *data)
     /*(viaier & VIA_IM_T1) ? 1:0; */
 }
 
-/*
- * Timer B is always in one-shot mode
- */
-
+/* T2 can be switched between 8 and 16 bit modes ad-hoc, any time, by setting the shifter to be 
+   controlled by T2 via selecting the relevant ACR shift register operating mode. 
+   This change affects how the next T2 low underflow is handled */
 static void viacore_intt2(CLOCK offset, void *data)
 {
     CLOCK rclk;
+    int next_alarm;
     via_context_t *via_context = (via_context_t *)data;
 
     rclk = *(via_context->clk_ptr) - offset;
 
 #ifdef MYVIA_TIMER_DEBUG
-    if (app_resources.debugFlag)
+    if (app_resources.debugFlag) {
         log_message(via_context->log, "MYVIA timer B interrupt.");
+    }
 #endif
 
-    alarm_unset(via_context->t2_alarm);       /*int_clk[I_MYVIAT2] = 0; */
-    via_context->tbi = 0;
+    /* If the shifter is under T2 control, the T2 timer works differently, and have a period of T2 low.
+       T2 high is still cascaded though and decreases at each T2 low underflow */
+    if ((via_context->via[VIA_ACR] & 0x0c) == 0x04) {
+        /* 8 bit timer mode; reload T2 low from latch */
+        via_context->t2cl = via_context->via[VIA_T2LL];
 
-    via_context->ifr |= VIA_IM_T2;
-    update_myviairq_rclk(via_context, rclk);
+        /* set next alarm to T2 low period */
+        next_alarm = via_context->via[VIA_T2LL] + 2;
+
+        /* T2 acts as a pulse generator for CB1
+           every second underflow is a pulse updating the shift register, until all 8 bits are complete */
+        if (via_context->shift_state < 16) {
+            /* FIXME: CB1 should be toggled, and interrupt flag set according to edge detection in PCR */
+            if (via_context->shift_state & 1) {
+                if (via_context->via[VIA_ACR] & 0x10) {
+                    /* FIXME: shift out */
+                } else {
+                    /* shift in */
+                    /* FIXME: we should read CB2 here instead of 1, but CB2 state must not be controlled by PCR
+                       until the signalling function is correct with shifter active, just use 1 instead */
+                    via_context->via[VIA_SR] = (via_context->via[VIA_SR] << 1 ) | 1;
+                }
+            }
+
+            /* next shifter bit; set SR interrupt if 8 bits are complete */
+            if (++via_context->shift_state == 16) {
+                via_context->ifr |= VIA_IM_SR;
+                update_myviairq_rclk(via_context, rclk);
+            }
+        }
+    } else {
+        /* 16 bit timer mode; it is guaranteed that T2 low is in underflow */
+        via_context->t2cl = 0xff;
+
+        /* set next alarm to 256 cycles later, until t2 high underflow */
+        next_alarm = (via_context->t2ch) ? 256 : 0;
+    }
+
+    /* T2 low count underflow always decreases T2 high count */
+    via_context->t2ch--;
+
+    /* set the next T2 low underflow alarm, or turn off the alarm */
+    if (next_alarm) {
+        via_context->tbu += next_alarm;
+        via_context->tbi += next_alarm;
+        alarm_set(via_context->t2_alarm, via_context->tbi);
+    } else {
+        alarm_unset(via_context->t2_alarm);
+        via_context->tbi = 0;
+    }
+
+    /* 16 bit timer underflow generates an interrupt */
+    /* FIXME: does 16 bit underflow generate an IRQ in 8 bit mode? 8 bit underflow does not */
+    if (via_context->t2ch == 0xff) {
+        via_context->ifr |= VIA_IM_T2;
+        update_myviairq_rclk(via_context, rclk);
+    }
 }
 
 static void viacore_clk_overflow_callback(CLOCK sub, void *data)
@@ -851,11 +961,11 @@ static void viacore_clk_overflow_callback(CLOCK sub, void *data)
 
 #if 0
     via_context->tau = via_context->tal + 2 -
-                        ((*(via_context->clk_ptr) + sub - via_context->tau)
+                       ((*(via_context->clk_ptr) + sub - via_context->tau)
                         % (via_context->tal + 2));
 
     via_context->tbu = via_context->tbl + 2 -
-                        ((*(via_context->clk_ptr) + sub - via_context->tbu)
+                       ((*(via_context->clk_ptr) + sub - via_context->tbu)
                         % (via_context->tbl + 2));
 #else
     via_context->tau -= sub;
@@ -864,6 +974,10 @@ static void viacore_clk_overflow_callback(CLOCK sub, void *data)
 
     if (via_context->tai) {
         via_context->tai -= sub;
+    }
+
+    if (via_context->tbi) {
+        via_context->tbi -= sub;
     }
 
     if (via_context->read_clk > sub) {
@@ -891,8 +1005,9 @@ void viacore_init(via_context_t *via_context, alarm_context_t *alarm_context,
 {
     char *buffer;
 
-    if (via_context->log == LOG_ERR)
+    if (via_context->log == LOG_ERR) {
         via_context->log = log_open(via_context->my_module_name);
+    }
 
     buffer = lib_msprintf("%sT1", via_context->myname);
     via_context->t1_alarm = alarm_new(alarm_context, buffer, viacore_intt1,
@@ -939,7 +1054,7 @@ void viacore_set_sr(via_context_t *via_context, BYTE data)
 
 /* The name of the modul must be defined before including this file.  */
 #define VIA_DUMP_VER_MAJOR      1
-#define VIA_DUMP_VER_MINOR      0
+#define VIA_DUMP_VER_MINOR      1
 
 /*
  * The dump data:
@@ -950,7 +1065,10 @@ void viacore_set_sr(via_context_t *via_context, BYTE data)
  * UBYTE        DDRB
  * UWORD        T1L
  * UWORD        T1C
- * UBYTE        T2L
+ * UBYTE        T2LL
+ * UBYTE        T2LH
+ * UBYTE        T2CL
+ * UBYTE        T2CH
  * UWORD        T2C
  * UBYTE        SR
  * UBYTE        ACR
@@ -958,7 +1076,7 @@ void viacore_set_sr(via_context_t *via_context, BYTE data)
  * UBYTE        IFR              active interrupts
  * UBYTE        IER              interrupt masks
  * UBYTE        PB7              bit 7 = pb7 state
- * UBYTE        SRHBITS          number of half bits to shift out on SR
+ * UBYTE        SRHBITS          shift register state helper
  * UBYTE        CABSTATE         bit 7 = ca2 state, bi 6 = cb2 state
  * UBYTE        ILA              input latch port A
  * UBYTE        ILB              input latch port B
@@ -970,17 +1088,20 @@ int viacore_snapshot_write_module(via_context_t *via_context, snapshot_t *s)
 {
     snapshot_module_t *m;
 
-    if (via_context->tai && (via_context->tai <= *(via_context->clk_ptr)))
+    if (via_context->tai && (via_context->tai <= *(via_context->clk_ptr))) {
         viacore_intt1(*(via_context->clk_ptr) - via_context->tai,
                       (void *)via_context);
-    if (via_context->tbi && (via_context->tbi <= *(via_context->clk_ptr)))
+    }
+    if (via_context->tbi && (via_context->tbi <= *(via_context->clk_ptr))) {
         viacore_intt2(*(via_context->clk_ptr) - via_context->tbi,
                       (void *)via_context);
+    }
 
     m = snapshot_module_create(s, via_context->my_module_name,
                                VIA_DUMP_VER_MAJOR, VIA_DUMP_VER_MINOR);
-    if (m == NULL)
+    if (m == NULL) {
         return -1;
+    }
 
     SMW_B(m, via_context->via[VIA_PRA]);
     SMW_B(m, via_context->via[VIA_DDRA]);
@@ -990,6 +1111,9 @@ int viacore_snapshot_write_module(via_context_t *via_context, snapshot_t *s)
     SMW_W(m, (WORD)(via_context->tal));
     SMW_W(m, (WORD)myviata(via_context));
     SMW_B(m, via_context->via[VIA_T2LL]);
+    SMW_B(m, via_context->via[VIA_T2LH]);
+    SMW_B(m, via_context->t2cl);
+    SMW_B(m, via_context->t2ch);
     SMW_W(m, (WORD)myviatb(via_context));
 
     SMW_B(m, (BYTE)((via_context->tai ? 0x80 : 0) | (via_context->tbi ? 0x40 : 0)));
@@ -1000,12 +1124,14 @@ int viacore_snapshot_write_module(via_context_t *via_context, snapshot_t *s)
 
     SMW_B(m, (BYTE)(via_context->ifr));
     SMW_B(m, (BYTE)(via_context->ier));
-                                                /* FIXME! */
+    /* FIXME! */
     SMW_B(m, (BYTE)((((via_context->pb7 ^ via_context->pb7x)
-          | via_context->pb7o) ? 0x80 : 0)));
-    SMW_B(m, 0);           /* SRHBITS */
+                      | via_context->pb7o) ? 0x80 : 0)));
+
+    SMW_B(m, (BYTE)via_context->shift_state);           /* SRHBITS */
+
     SMW_B(m, (BYTE)((via_context->ca2_state ? 0x80 : 0)
-          | (via_context->cb2_state ? 0x40 : 0)));
+                    | (via_context->cb2_state ? 0x40 : 0)));
 
     SMW_B(m, via_context->ila);
     SMW_B(m, via_context->ilb);
@@ -1027,19 +1153,22 @@ int viacore_snapshot_read_module(via_context_t *via_context, snapshot_t *s)
     m = snapshot_module_open(s, via_context->my_module_name, &vmajor, &vminor);
 
     if (m == NULL) {
-        if (via_context->my_module_name_alt1 == NULL)
+        if (via_context->my_module_name_alt1 == NULL) {
             return -1;
+        }
 
         m = snapshot_module_open(s, via_context->my_module_name_alt1,
                                  &vmajor, &vminor);
         if (m == NULL) {
-            if (via_context->my_module_name_alt2 == NULL)
+            if (via_context->my_module_name_alt2 == NULL) {
                 return -1;
+            }
 
             m = snapshot_module_open(s, via_context->my_module_name_alt2,
                                      &vmajor, &vminor);
-            if (m == NULL)
-                return -1; 
+            if (m == NULL) {
+                return -1;
+            }
         }
     }
 
@@ -1082,6 +1211,9 @@ int viacore_snapshot_read_module(via_context_t *via_context, snapshot_t *s)
     via_context->tai = rclk + word + 1;
 
     SMR_B(m, &(via_context->via[VIA_T2LL]));
+    SMR_B(m, &(via_context->via[VIA_T2LH]));
+    SMR_B(m, &(via_context->t2cl));
+    SMR_B(m, &(via_context->t2ch));
     SMR_W(m, &word);
     via_context->tbu = rclk + word + 2 /* 3 */;
     via_context->tbi = rclk + word + 1;
@@ -1115,6 +1247,7 @@ int viacore_snapshot_read_module(via_context_t *via_context, snapshot_t *s)
     via_context->pb7x = 0;
     via_context->pb7o = 0;
     SMR_B(m, &byte);        /* SRHBITS */
+    via_context->shift_state = byte;
 
     SMR_B(m, &byte);        /* CABSTATE */
     via_context->ca2_state = byte & 0x80;

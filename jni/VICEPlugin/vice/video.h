@@ -58,8 +58,7 @@ struct viewport_s;
 struct geometry_s;
 struct palette_s;
 
-struct canvas_refresh_s
-{
+struct canvas_refresh_s {
     BYTE *draw_buffer;
     int draw_buffer_line_size;
 #ifdef __OS2__
@@ -126,8 +125,6 @@ struct video_chip_cap_s {
     unsigned int dscan_allowed;
     unsigned int hwscale_allowed;
     unsigned int scale2x_allowed;
-    unsigned int internal_palette_allowed;
-    unsigned int palemulation_allowed;
     unsigned int double_buffering_allowed;
     const char *external_palette_name;
     cap_render_t single_mode;
@@ -139,6 +136,7 @@ typedef struct video_chip_cap_s video_chip_cap_t;
 #define VIDEO_MAX_OUTPUT_WIDTH  2048
 
 struct video_render_color_tables_s {
+    int updated;                /* tables here are up to date */
     DWORD physical_colors[256];
     SDWORD ytableh[256];        /* y for current pixel */
     SDWORD ytablel[256];        /* y for neighbouring pixels */
@@ -152,16 +150,16 @@ struct video_render_color_tables_s {
     SDWORD cvtable_odd[256];    /* v component + phase shift */
 
     /* YUV table for hardware rendering: (Y << 16) | (U << 8) | V */
-    DWORD yuv_table[256];
+    int yuv_updated;            /* yuv table updated for packed mode */
+    DWORD yuv_table[512];
     SDWORD line_yuv_0[VIDEO_MAX_OUTPUT_WIDTH * 3];
     SWORD prevrgbline[VIDEO_MAX_OUTPUT_WIDTH * 3];
     BYTE rgbscratchbuffer[VIDEO_MAX_OUTPUT_WIDTH * 4];
 };
 typedef struct video_render_color_tables_s video_render_color_tables_t;
 
-/* options for the color generator and crt emulation */ 
-typedef struct video_resources_s
-{
+/* options for the color generator and crt emulation */
+typedef struct video_resources_s {
     /* parameters for color generation */
     int color_saturation;
     int color_contrast;
@@ -193,6 +191,7 @@ struct video_render_config_s {
     int external_palette;          /* Use an external palette?  */
     char *external_palette_name;   /* Name of the external palette.  */
     int double_buffer;             /* Double buffering enabled? */
+    int readable;                  /* reading of frame buffer is safe and fast */
     struct video_cbm_palette_s *cbm_palette; /* Internal palette.  */
     struct video_render_color_tables_s color_tables;
     int fullscreen_enabled;
@@ -219,8 +218,8 @@ extern int video_init(void);
 extern void video_shutdown(void);
 
 extern struct video_canvas_s *video_canvas_create(struct video_canvas_s *canvas,
-                                 unsigned int *width, unsigned int *height,
-                                 int mapped);
+                                                  unsigned int *width, unsigned int *height,
+                                                  int mapped);
 extern void video_arch_canvas_init(struct video_canvas_s *canvas);
 extern void video_canvas_shutdown(struct video_canvas_s *canvas);
 extern struct video_canvas_s *video_canvas_init(void);
@@ -257,8 +256,8 @@ typedef struct video_draw_buffer_callback_s {
                              unsigned int *fb_pitch);
     void (*draw_buffer_free)(struct video_canvas_s *canvas, BYTE *draw_buffer);
     void (*draw_buffer_clear)(struct video_canvas_s *canvas, BYTE *draw_buffer,
-                             BYTE value, unsigned int fb_width,
-                             unsigned int fb_height, unsigned int fb_pitch);
+                              BYTE value, unsigned int fb_width,
+                              unsigned int fb_height, unsigned int fb_pitch);
 } video_draw_buffer_callback_t;
 
 struct raster_s;
@@ -276,23 +275,30 @@ extern void video_arch_resources_shutdown(void);
 
 /* Video render interface */
 
-/* VIC/VIC-II/TED related color/palette types */
+/* Videochip related color/palette types */
+
+#define CBM_PALETTE_YUV  0
+#define CBM_PALETTE_RGB  1
+
 typedef struct video_cbm_color_s {
     float luminance;        /* luminance                      */
     float angle;            /* angle on color wheel           */
     int direction;          /* +1 (pos), -1 (neg) or 0 (grey) */
     char *name;             /* name of this color             */
 } video_cbm_color_t;
+/* note: to handle chips that output RGB (such as the VDC), the above structure
+         is currently abused for RGB colors also. */
 
 typedef struct video_cbm_palette_s {
     unsigned int num_entries;           /* number of colors in palette */
     video_cbm_color_t *entries;         /* array of colors             */
     float saturation; /* base saturation of all colors except the grey tones */
     float phase;      /* color phase (will be added to all color angles) */
+    int type;
 } video_cbm_palette_t;
 
 extern void video_color_palette_internal(struct video_canvas_s *canvas,
-            struct video_cbm_palette_s *cbm_palette);
+                                         struct video_cbm_palette_s *cbm_palette);
 extern int video_color_update_palette(struct video_canvas_s *canvas);
 extern void video_color_palette_free(struct palette_s *palette);
 

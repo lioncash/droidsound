@@ -47,6 +47,7 @@ extern const char machine_name[];
 #define VICE_MACHINE_C64DTV    8
 #define VICE_MACHINE_C64SC     9
 #define VICE_MACHINE_VSID      10
+#define VICE_MACHINE_SCPU64    11
 
 /* Sync factors.  */
 #define MACHINE_SYNC_PAL     -1
@@ -64,10 +65,9 @@ struct machine_timing_s {
 typedef struct machine_timing_s machine_timing_t;
 
 extern int machine_class;
-extern int vsid_mode;
 extern
 #ifdef __OS2__
-    const
+const
 #endif
 int console_mode;
 extern int video_disabled_mode;
@@ -186,4 +186,3 @@ extern int machine_addr_in_ram(unsigned int addr);
 extern const char *machine_get_name(void);
 
 #endif
-

@@ -60,6 +60,7 @@
 
 /* DIGIMAX address */
 int digimax_address;
+sound_dac_t digimax_dac[4];
 
 /* ---------------------------------------------------------------------*/
 
@@ -95,12 +96,12 @@ static void digimax_sound_reset(sound_t *psid, CLOCK cpu_clk);
 
 static int digimax_sound_machine_cycle_based(void)
 {
-	return 0;
+    return 0;
 }
 
 static int digimax_sound_machine_channels(void)
 {
-	return 1; /* FIXME: needs to become stereo for stereo capable ports */
+    return 1;     /* FIXME: needs to become stereo for stereo capable ports */
 }
 
 static sound_chip_t digimax_sound_chip = {
@@ -250,7 +251,7 @@ static int set_digimax_base(int val, void *param)
             if (machine_class == VICE_MACHINE_VIC20) {
                 digimax_device.start_address = (WORD)addr;
                 digimax_device.end_address = (WORD)(addr + 3);
-             } else {
+            } else {
                 return -1;
             }
             break;
@@ -263,7 +264,7 @@ static int set_digimax_base(int val, void *param)
     if (old) {
         set_digimax_enabled(1, NULL);
     }
-	return 0;
+    return 0;
 }
 
 void digimax_reset(void)
@@ -283,11 +284,11 @@ void digimax_detach(void)
 /* ---------------------------------------------------------------------*/
 
 static const resource_int_t resources_int[] = {
-  { "DIGIMAX", 0, RES_EVENT_STRICT, (resource_value_t)0,
-    &digimax_sound_chip.chip_enabled, set_digimax_enabled, NULL },
-  { "DIGIMAXbase", 0xffff, RES_EVENT_NO, NULL,
-    &digimax_address, set_digimax_base, NULL },
-  { NULL }
+    { "DIGIMAX", 0, RES_EVENT_STRICT, (resource_value_t)0,
+      &digimax_sound_chip.chip_enabled, set_digimax_enabled, NULL },
+    { "DIGIMAXbase", 0xffff, RES_EVENT_NO, NULL,
+      &digimax_address, set_digimax_base, NULL },
+    { NULL }
 };
 
 int digimax_resources_init(void)
@@ -339,36 +340,19 @@ static struct digimax_sound_s snd;
 
 static int digimax_sound_machine_calculate_samples(sound_t **psid, SWORD *pbuf, int nr, int soc, int scc, int *delta_t)
 {
-    int i;
-
-    /* FIXME: this should use bandlimited step synthesis. Sadly, VICE does not
-     * have an easy-to-use infrastructure for blep generation. We should write
-     * this code. */
-    switch (soc) {
-        default:
-        case 1:
-            for (i = 0; i < nr; i++) {
-                pbuf[i] = sound_audio_mix(pbuf[i],((int)snd.voice0) << 6);
-                pbuf[i] = sound_audio_mix(pbuf[i],((int)snd.voice1) << 6);
-                pbuf[i] = sound_audio_mix(pbuf[i],((int)snd.voice2) << 6);
-                pbuf[i] = sound_audio_mix(pbuf[i],((int)snd.voice3) << 6);
-            }
-            break;
-        case 2:
-            for (i = 0; i < nr; i++) {
-                pbuf[i * 2] = sound_audio_mix(pbuf[i * 2], ((int)snd.voice1) << 6);
-                pbuf[i * 2] = sound_audio_mix(pbuf[i * 2], ((int)snd.voice3) << 6);
-                pbuf[(i * 2) + 1] = sound_audio_mix(pbuf[(i * 2) + 1],((int)snd.voice0) << 6);
-                pbuf[(i * 2) + 1] = sound_audio_mix(pbuf[(i * 2) + 1],((int)snd.voice2) << 6);
-            }
-            break;
-
-    }
+    sound_dac_calculate_samples(&digimax_dac[0], pbuf, (int)snd.voice0 * 64, nr, soc, 1);
+    sound_dac_calculate_samples(&digimax_dac[1], pbuf, (int)snd.voice1 * 64, nr, soc, (soc > 1) ? 2 : 1);
+    sound_dac_calculate_samples(&digimax_dac[2], pbuf, (int)snd.voice2 * 64, nr, soc, 1);
+    sound_dac_calculate_samples(&digimax_dac[3], pbuf, (int)snd.voice3 * 64, nr, soc, (soc > 1) ? 2 : 1);
     return nr;
 }
 
 static int digimax_sound_machine_init(sound_t *psid, int speed, int cycles_per_sec)
 {
+    sound_dac_init(&digimax_dac[0], speed);
+    sound_dac_init(&digimax_dac[1], speed);
+    sound_dac_init(&digimax_dac[2], speed);
+    sound_dac_init(&digimax_dac[3], speed);
     snd.voice0 = 0;
     snd.voice1 = 0;
     snd.voice2 = 0;
@@ -423,7 +407,7 @@ int digimax_snapshot_write_module(snapshot_t *s)
     snapshot_module_t *m;
 
     m = snapshot_module_create(s, SNAP_MODULE_NAME,
-                          CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR);
+                               CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR);
     if (m == NULL) {
         return -1;
     }

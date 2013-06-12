@@ -35,48 +35,53 @@
 inline static int raster_cache_data_fill(BYTE *dest,
                                          const BYTE *src,
                                          const unsigned int length,
-                                         const int src_step,
                                          unsigned int *xs,
                                          unsigned int *xe,
                                          int no_check)
 {
     if (no_check) {
-        unsigned int i;
-
         *xs = 0;
         *xe = length - 1;
-        if (src_step == 1)
-            memcpy(dest, src, (size_t)length);
-        else
-            for (i = 0; i < length; i++, src += src_step)
-                dest[i] = src[0];
+        memcpy(dest, src, (size_t)length);
         return 1;
     } else {
         unsigned int x = 0, i;
 
-        for (i = 0; i < length && dest[i] == src[0]; i++, src += src_step)
-            /* do nothing */ ;
-
+#if defined(ALLOW_UNALIGNED_ACCESS)
+        for (i = 0; i < (length & ~3) && *((DWORD *)(dest + i)) == *((DWORD *)(src + i)); i += 4) {
+            /* do nothing */
+        }
+        if (i == length) {
+            return 0;
+        }
+        if (i < (length & ~1) && *((WORD *)(dest + i)) == *((WORD *)(src + i))) {
+            i += 2;
+        }
+        if (i < length && dest[i] == src[i]) {
+            i++;
+        }
+#else
+        for (i = 0; i < length && dest[i] == src[i]; i++) {
+            /* do nothing */
+        }
+#endif
         if (i < length) {
-            if (*xs > i)
+            if (*xs > i) {
                 *xs = i;
-
-            for (; i < length; i++, src += src_step) {
-                if (dest[i] != src[0]) {
-                    dest[i] = src[0];
+            }
+            for (; i < length; i++) {
+                if (dest[i] != src[i]) {
+                    dest[i] = src[i];
                     x = i;
                 }
             }
-
-            if (*xe < x)
+            if (*xe < x) {
                 *xe = x;
-
+            }
             return 1;
-        } else {
-            return 0;
         }
     }
+    return 0;
 }
 
 #endif
-

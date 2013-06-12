@@ -27,6 +27,13 @@
  *
  */
 
+/* Important requirements to arch specific mouse drivers for proper operation:
+ * - mousedrv_get_x and mousedrv_get_y MUST return a value with at
+ *   least 16 valid bits in LSB.
+ * - mousedrv_get_timestamp MUST give the time stamp when the last
+ *   mouse movement happened. A button press is not a movement!
+*/
+
 /* #define DEBUG_MOUSE */
 
 #ifdef DEBUG_MOUSE
@@ -94,51 +101,17 @@ void mouse_set_input(int port)
     to avoid strange side effects two things are done here:
 
     - max delta is limited to MOUSE_MAX_DIFF
-    - if the delta is limited, then the current position is linearly 
+    - if the delta is limited, then the current position is linearly
       interpolated towards the real position using MOUSE_MAX_DIFF for the axis
       with the largest delta
 */
-#define MOUSE_MAX_DIFF  31
 
+static int update_limit = 512;
 static int last_mouse_x = 0;
 static int last_mouse_y = 0;
-static CLOCK last_update = 0;
 static rtc_ds1202_1302_t *ds1202; /* smartmouse */
 static time_t rtc_offset;
 static char smart_ram[65];
-
-static void domove(void)
-{
-    SWORD dx, dy;
-    int ax, ay;
-    float f;
-    if (maincpu_clk >> 9 == last_update) {
-        return; /* update every 512 cycles */
-    }
-    last_update = maincpu_clk >> 9;
-
-    dx = (SWORD)(mousedrv_get_x() - last_mouse_x);
-    dy = (SWORD)(mousedrv_get_y() - last_mouse_y);
-    ax = abs((int)dx);
-    ay = abs((int)dy);
-
-    if ((ax > MOUSE_MAX_DIFF) || (ay > MOUSE_MAX_DIFF)) {
-        if (ay > ax) {
-            /* do big step in Y */
-            f = (float)ay / MOUSE_MAX_DIFF;
-        } else {
-            /* do big step in X */
-            f = (float)ax / MOUSE_MAX_DIFF;
-        }
-        last_mouse_x += (int)((float)dx / f);
-        last_mouse_y += (int)((float)dy / f);
-        DBG(("mousex %8d y %8d lastx %8d y %8d dx %d dy %d f:%f dxf:%f dxy:%f",
-            mousedrv_get_x(), mousedrv_get_y(), last_mouse_x, last_mouse_y, (int)dx, (int)dy, f, ((float)dx / f), ((float)dy / f)));
-    } else {
-        last_mouse_x += (int)dx;
-        last_mouse_y += (int)dy;
-    }
-}
 
 /*
     note: for the expected behaviour look at testprogs/SID/paddles/readme.txt
@@ -147,9 +120,6 @@ static void domove(void)
     is inserted (as in enabled) after it has started. so either enable mouse
     emulation on the commandline, or (re)start (or reset incase of a cart)
     after enabling it in the gui. (see testprogs/SID/paddles/fc3detect.asm)
-
-    FIXME: this is too simplistic as it doesn't take the sampling period into
-           account.
 
     HACK: when both ports are selected, a proper combined value should be
           returned. however, since we are currently only emulating a single
@@ -160,15 +130,15 @@ static void domove(void)
 static BYTE mouse_get_1351_x(void)
 {
     switch (input_port) {
-    case 3: /* both */
-        domove();
-        return (last_mouse_x & 0x7f) + 0x40; /* HACK: see above */
-    case 1: /* port1 */
-    case 2: /* port2 */
-        if (input_port == mouse_port) {
-            domove();
-            return (last_mouse_x & 0x7f) + 0x40;
-        }
+        case 3: /* both */
+            mouse_poll();
+            return (last_mouse_x & 0x7f) + 0x40; /* HACK: see above */
+        case 1: /* port1 */
+        case 2: /* port2 */
+            if (input_port == mouse_port) {
+                mouse_poll();
+                return (last_mouse_x & 0x7f) + 0x40;
+            }
     }
     return 0xff;
 }
@@ -176,15 +146,15 @@ static BYTE mouse_get_1351_x(void)
 static BYTE mouse_get_1351_y(void)
 {
     switch (input_port) {
-    case 3: /* both */
-        domove();
-        return (last_mouse_y & 0x7f) + 0x40; /* HACK: see above */
-    case 1: /* port1 */
-    case 2: /* port2 */
-        if (input_port == mouse_port) {
-            domove();
-            return (last_mouse_y & 0x7f) + 0x40;
-        }
+        case 3: /* both */
+            mouse_poll();
+            return (last_mouse_y & 0x7f) + 0x40; /* HACK: see above */
+        case 1: /* port1 */
+        case 2: /* port2 */
+            if (input_port == mouse_port) {
+                mouse_poll();
+                return (last_mouse_y & 0x7f) + 0x40;
+            }
     }
     return 0xff;
 }
@@ -297,17 +267,16 @@ static void neosmouse_alarm_handler(CLOCK offset, void *data)
  * successive readings. The estimated interval is then converted from
  * vsynchapi units to emulated cpu cycles which in turn are used to
  * clock the quardrature emulation. */
-static unsigned long latest_os_ts = 0; // in vsynchapi units
-static CLOCK done_emu = 0; // in machine cycles
+static unsigned long latest_os_ts = 0; /* in vsynchapi units */
 /* The mouse coordinates returned from the latest unique mousedrv
  * reading */
 static SWORD latest_x = 0;
 static SWORD latest_y = 0;
 
-static CLOCK update_x_emu_iv = 0; // in cpu cycle units
-static CLOCK update_y_emu_iv = 0; // in cpu cycle units
-static CLOCK next_update_x_emu_ts = 0; // in cpu cycle units
-static CLOCK next_update_y_emu_ts = 0; // in cpu cycle units
+static CLOCK update_x_emu_iv = 0;      /* in cpu cycle units */
+static CLOCK update_y_emu_iv = 0;      /* in cpu cycle units */
+static CLOCK next_update_x_emu_ts = 0; /* in cpu cycle units */
+static CLOCK next_update_y_emu_ts = 0; /* in cpu cycle units */
 static int sx, sy;
 
 /* the ratio between emulated cpu cycles and vsynchapi time units */
@@ -326,9 +295,6 @@ static const BYTE st_mouse_table[4] = { 0x0, 0x2, 0x3, 0x1 };
 /* Clock overflow handling.  */
 static void clk_overflow_callback(CLOCK sub, void *data)
 {
-    if (done_emu > (CLOCK) 0) {
-        done_emu -= sub;
-    }
     if (next_update_x_emu_ts > (CLOCK) 0) {
         next_update_x_emu_ts -= sub;
     }
@@ -340,44 +306,130 @@ static void clk_overflow_callback(CLOCK sub, void *data)
 BYTE mouse_poll(void)
 {
     SWORD new_x, new_y;
-    unsigned long os_now, os_iv;
-    CLOCK emu_now, emu_iv;
+    unsigned long os_now, os_iv, os_iv2;
+    CLOCK emu_now, emu_iv, emu_iv2;
     int diff_x, diff_y;
 
     /* get new mouse values */
-    new_x = mousedrv_get_x() >> 1;
-    new_y = mousedrv_get_y() >> 1;
+    new_x = mousedrv_get_x();
+    new_y = mousedrv_get_y();
     /* range of new_x and new_y are [0,63] */
     /* fetch now for both emu and os */
     os_now = mousedrv_get_timestamp();
     emu_now = maincpu_clk;
 
-    /* update the quadrature wheels unless we're done */
-    if (emu_now < done_emu) {
-        /* update x-wheel until we're ahead */
-        while (next_update_x_emu_ts <= emu_now) {
-            quadrature_x += sx;
-            next_update_x_emu_ts += update_x_emu_iv;
-            polled_joyval = 0; // signal that the wheel has changed
-        }
+    /* update x-wheel until we're ahead */
+    while (((latest_x ^ last_mouse_x) & 0xffff) && next_update_x_emu_ts <= emu_now) {
+        last_mouse_x += sx;
+        next_update_x_emu_ts += update_x_emu_iv;
+    }
 
-        /* update y-wheel until we're ahead */
-        while (next_update_y_emu_ts <= emu_now) {
-            quadrature_y += sy;
-            next_update_y_emu_ts += update_y_emu_iv;
-            polled_joyval = 0; // signal that the wheel has changed
+    /* update y-wheel until we're ahead */
+    while (((latest_y ^ last_mouse_y) & 0xffff) && next_update_y_emu_ts <= emu_now) {
+        last_mouse_y -= sy;
+        next_update_y_emu_ts += update_y_emu_iv;
+    }
+
+    /* check if the new values belong to a new mouse reading */
+    if (latest_os_ts == 0) {
+        /* only first time, init stuff */
+        last_mouse_x = latest_x = new_x;
+        last_mouse_y = latest_y = new_y;
+        latest_os_ts = os_now;
+    } else if (os_now != latest_os_ts && (new_x != latest_x || new_y != latest_y)) {
+        /* yes, we have a new unique mouse coordinate reading */
+
+        /* calculate the interval between the latest two mousedrv
+         * updates in emulated cycles */
+        os_iv = os_now - latest_os_ts;
+        if (os_iv > (unsigned long)vsyncarch_frequency()) {
+            os_iv = (unsigned long)vsyncarch_frequency(); /* more than a second response time?! */
+        }
+        emu_iv = (CLOCK)((float)os_iv * emu_units_per_os_units);
+        if (emu_iv > (unsigned long)machine_get_cycles_per_frame() * 2) {
+            emu_iv = machine_get_cycles_per_frame() * 2;   /* move in not more than 2 frames */
+        }
+#ifdef DEBUG_MOUSE
+        log_message(mouse_log,
+                    "New interval os_now %lu, os_iv %lu, emu_iv %lu",
+                    os_now, os_iv, emu_iv);
+#endif
+
+        /* Let's set up quadrature emulation */
+        diff_x = (SWORD)(new_x - last_mouse_x);
+        diff_y = (SWORD)(new_y - last_mouse_y);
+
+        if (diff_x != 0) {
+            sx = diff_x >= 0 ? 1 : -1;
+            /* lets calculate the interval between x-quad rotations */
+            update_x_emu_iv = emu_iv / abs(diff_x);
+            /* and the emulated cpu cycle count when to do the first one */
+            next_update_x_emu_ts = emu_now;
+        } else {
+            sx = 0;
+            update_x_emu_iv = update_limit;
+        }
+        if (diff_y != 0) {
+            sy = diff_y >= 0 ? -1 : 1;
+            /* lets calculate the interval between y-quad rotations */
+            update_y_emu_iv = emu_iv / abs(diff_y);
+            /* and the emulated cpu cycle count when to do the first one */
+            next_update_y_emu_ts = emu_now;
+        } else {
+            sy = 0;
+            update_y_emu_iv = update_limit;
+        }
+        if (update_x_emu_iv < (unsigned int)update_limit) {
+            if (update_x_emu_iv) {
+                update_y_emu_iv = update_y_emu_iv * update_limit / update_x_emu_iv;
+            }
+            update_x_emu_iv = update_limit;
+        }
+        if (update_y_emu_iv < (unsigned int)update_limit) {
+            if (update_y_emu_iv) {
+                update_x_emu_iv = update_x_emu_iv * update_limit / update_y_emu_iv;
+            }
+            update_y_emu_iv = update_limit;
         }
 
 #ifdef DEBUG_MOUSE
-        log_message(mouse_log, "cpu %u: quad %d,%d",
-                    emu_now, quadrature_x & 0x3, quadrature_y & 0x3);
+        log_message(mouse_log, "cpu %u iv %u,%u old %d,%d new %d,%d",
+                    emu_now, update_x_emu_iv, update_y_emu_iv,
+                    latest_x, latest_y, new_x, new_y);
 #endif
+
+        /* The mouse read is probably old. Do the movement since then */
+        os_iv2 = vsyncarch_gettime() - os_now;
+        if (os_iv2 > (unsigned long)vsyncarch_frequency()) {
+            os_iv2 = (unsigned long)vsyncarch_frequency(); /* more than a second response time?! */
+        }
+        emu_iv2 = (CLOCK)((float)os_iv2 * emu_units_per_os_units);
+        if (emu_iv2 > (unsigned long)machine_get_cycles_per_second()) {
+            emu_iv2 = machine_get_cycles_per_second();   /* more than a second? */
+        }
+
+        /* update x-wheel until we're ahead */
+        while (((new_x ^ last_mouse_x) & 0xffff) && next_update_x_emu_ts < emu_now + emu_iv2) {
+            last_mouse_x += sx;
+            next_update_x_emu_ts += update_x_emu_iv;
+        }
+
+        /* update y-wheel until we're ahead */
+        while (((new_y ^ last_mouse_y) & 0xffff) && next_update_y_emu_ts <= emu_now + emu_iv2) {
+            last_mouse_y -= sy;
+            next_update_y_emu_ts += update_y_emu_iv;
+        }
+
+        /* store the new coordinates for next time */
+        latest_x = new_x;
+        latest_y = new_y;
+        latest_os_ts = os_now;
     }
 
-    if (polled_joyval == 0) {
+    if ((quadrature_x != ((last_mouse_x >> 1) & 3)) || (quadrature_y != ((~last_mouse_y >> 1) & 3))) {
         /* keep within range */
-        quadrature_x &= 0x3;
-        quadrature_y &= 0x3;
+        quadrature_x = (last_mouse_x >> 1) & 3;
+        quadrature_y = (~last_mouse_y >> 1) & 3;
 
         switch (mouse_type) {
             case MOUSE_TYPE_AMIGA:
@@ -393,67 +445,6 @@ BYTE mouse_poll(void)
                 polled_joyval = 0xff;
         }
     }
-
-    /* check if the new values belong to a new mouse reading */
-    if (latest_os_ts == 0) {
-        /* only first time, init stuff */
-        latest_x = new_x;
-        latest_y = new_y;
-        latest_os_ts = os_now;
-    } else if (os_now != latest_os_ts && (new_x != latest_x || new_y != latest_y)) {
-        // yes, we have a new unique mouse coordinate reading
-
-        /* calculate the interval between the latest two mousedrv
-         * updates in emulated cycles */
-        os_iv = os_now - latest_os_ts;
-        if (os_iv > (unsigned long)vsyncarch_frequency()) {
-            os_iv = (unsigned long)vsyncarch_frequency(); /* more than a second response time?! */
-        }
-        emu_iv = (CLOCK)((float)os_iv * emu_units_per_os_units);
-#ifdef DEBUG_MOUSE
-        log_message(mouse_log,
-                    "New interval os_now %lu, os_iv %lu, emu_iv %lu",
-                    os_now, os_iv, emu_iv);
-#endif
-
-        /* Let's set up quadrature emulation */
-        diff_x = (SWORD)(new_x - latest_x);
-        diff_y = (SWORD)(new_y - latest_y);
-
-        if (diff_x != 0) {
-            sx = diff_x >= 0 ? 1 : -1;
-            /* lets calculate the interval between x-quad rotations */
-            update_x_emu_iv = emu_iv / abs(diff_x);
-            /* and the emulated cpu cycle count when to do the first one */
-            next_update_x_emu_ts = emu_now;
-        } else {
-            next_update_x_emu_ts = CLOCK_MAX; /* never */
-        }
-        if (diff_y != 0) {
-            sy = diff_y >= 0 ? -1 : 1;
-            /* lets calculate the interval between y-quad rotations */
-            update_y_emu_iv = emu_iv / abs(diff_y);
-            /* and the emulated cpu cycle count when to do the first one */
-            next_update_y_emu_ts = emu_now;
-        } else {
-            next_update_y_emu_ts = CLOCK_MAX; /* never */
-        }
-
-        /* calculate the timestamp when to stop emulating */
-        done_emu = emu_now + emu_iv;
-
-#ifdef DEBUG_MOUSE
-        log_message(mouse_log, "cpu %u iv %u,%u old %d,%d new %d,%d",
-                    emu_now, update_x_emu_iv, update_y_emu_iv,
-                    latest_x, latest_y, new_x, new_y);
-#endif
-
-        /* store the new coordinates for next time */
-        latest_x = new_x;
-        latest_y = new_y;
-        latest_os_ts = os_now;
-    }
-
     return polled_joyval;
 }
 
@@ -492,9 +483,6 @@ static inline BYTE mouse_paddle_update(BYTE paddle_v, SWORD *old_v, SWORD new_v)
 
 /*
     note: for the expected behaviour look at testprogs/SID/paddles/readme.txt
-
-    FIXME: this is too simplistic as it doesn't take the sampling period into
-           account.
 
     HACK: when both ports are selected, a proper combined value should be
           returned. however, since we are currently only emulating a single
@@ -541,7 +529,6 @@ static int set_mouse_enabled(int val, void *param)
     neos_lastx = (BYTE)(mousedrv_get_x() >> 1);
     neos_lasty = (BYTE)(mousedrv_get_y() >> 1);
     latest_os_ts = 0;
-    last_update = maincpu_clk >> 9;
     return 0;
 }
 
@@ -575,8 +562,13 @@ static int set_mouse_type(int val, void *param)
 }
 
 static const resource_int_t resources_int[] = {
+#ifdef ANDROID_COMPILE
+    { "Mouse", 1, RES_EVENT_SAME, NULL,
+      &_mouse_enabled, set_mouse_enabled, NULL },
+#else
     { "Mouse", 0, RES_EVENT_SAME, NULL,
       &_mouse_enabled, set_mouse_enabled, NULL },
+#endif
     { NULL }
 };
 
@@ -657,6 +649,7 @@ void mouse_init(void)
     }
 
     emu_units_per_os_units = (float)machine_get_cycles_per_second() / vsyncarch_frequency();
+    update_limit = machine_get_cycles_per_frame() / 31 / 2;
 #ifdef DEBUG_MOUSE
     mouse_log = log_open("Mouse");
     log_message(mouse_log, "cpu cycles / time unit %.5f",
@@ -683,7 +676,7 @@ void mouse_shutdown(void)
 
 void mouse_button_left(int pressed)
 {
-    BYTE joypin = ((mouse_type == MOUSE_TYPE_PADDLE) ? 4 : 16);
+    BYTE joypin = (((mouse_type == MOUSE_TYPE_PADDLE) || (mouse_type == MOUSE_TYPE_KOALAPAD)) ? 4 : 16);
 
     if (pressed) {
         joystick_set_value_or(mouse_port, joypin);
@@ -698,13 +691,16 @@ void mouse_button_right(int pressed)
         case MOUSE_TYPE_1351:
         case MOUSE_TYPE_SMART:
         case MOUSE_TYPE_MICROMYS:
+            /* "joystick up" */
             if (pressed) {
                 joystick_set_value_or(mouse_port, 1);
             } else {
                 joystick_set_value_and(mouse_port, ~1);
             }
             break;
+        case MOUSE_TYPE_KOALAPAD:
         case MOUSE_TYPE_PADDLE:
+            /* "joystick right" */
             if (pressed) {
                 joystick_set_value_or(mouse_port, 8);
             } else {
@@ -780,6 +776,8 @@ BYTE mouse_get_x(void)
             return mouse_get_1351_x();
         case MOUSE_TYPE_PADDLE:
             return mouse_get_paddle_x();
+        case MOUSE_TYPE_KOALAPAD:
+            return 255 - mouse_get_paddle_x();
         case MOUSE_TYPE_NEOS:
         case MOUSE_TYPE_AMIGA:
         case MOUSE_TYPE_ST:
@@ -804,6 +802,7 @@ BYTE mouse_get_y(void)
         case MOUSE_TYPE_SMART:
         case MOUSE_TYPE_MICROMYS:
             return mouse_get_1351_y();
+        case MOUSE_TYPE_KOALAPAD:
         case MOUSE_TYPE_PADDLE:
             return mouse_get_paddle_y();
         case MOUSE_TYPE_NEOS:

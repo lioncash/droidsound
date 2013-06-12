@@ -25,6 +25,8 @@
  *
  */
 
+/* #define DEBUG_CMDLINE */
+
 #include "vice.h"
 
 #include <stdio.h>
@@ -40,6 +42,11 @@
 #include "uicmdline.h"
 #include "util.h"
 
+#ifdef DEBUG_CMDLINE
+#define DBG(x)  printf x
+#else
+#define DBG(x)
+#endif
 
 static unsigned int num_options, num_allocated_options;
 static cmdline_option_ram_t *options;
@@ -74,14 +81,13 @@ int cmdline_register_options(const cmdline_option_t *c)
 
     p = options + num_options;
     for (; c->name != NULL; c++, p++) {
-
         if (lookup_exact(c->name)) {
             archdep_startup_log_error("CMDLINE: (%d) Duplicated option '%s'.\n", num_options, c->name);
             return -1;
         }
 
         if (c->use_description_id != USE_DESCRIPTION_ID) {
-            if(c->description == NULL) {
+            if (c->description == NULL) {
                 archdep_startup_log_error("CMDLINE: (%d) description id not used and description NULL for '%s'.\n", num_options, c->name);
                 return -1;
             }
@@ -170,9 +176,12 @@ static cmdline_option_ram_t *lookup(const char *name, int *is_ambiguous)
 int cmdline_parse(int *argc, char **argv)
 {
     int i = 1;
+    int j;
 
-    while (i < *argc) {
-        if (*argv[i] == '-' || *argv[i] == '+') {
+    DBG(("cmdline_parse (argc:%d)\n", *argc));
+    while ((i < *argc) && (argv[i] != NULL)) {
+        DBG(("%d:%s\n", i, argv[i]));
+        if ((argv[i][0] == '-') || (argv[i][0] == '+')) {
             int is_ambiguous, retval;
             cmdline_option_ram_t *p;
 
@@ -181,10 +190,16 @@ int cmdline_parse(int *argc, char **argv)
                 return -1;
             }
 
-            /* `--' delimits the end of the option list.  */
             if (argv[i][1] == '-') {
-                i++;
-                break;
+                /* `--' delimits the end of the option list.  */
+                if (argv[i][2] == '\0') {
+                    i++;
+                    break;
+                }
+                /* This is a kludge to allow --long options */
+                for (j = 0; j < (int)strlen(argv[i]); j++) {
+                    argv[i][j] = argv[i][j + 1];
+                }
             }
 
             p = lookup(argv[i], &is_ambiguous);
@@ -203,46 +218,49 @@ int cmdline_parse(int *argc, char **argv)
                                           p->name);
                 return -1;
             }
-            switch(p->type) {
-              case SET_RESOURCE:
-                if (p->need_arg)
-                    retval = resources_set_value_string(p->resource_name,
-                                                        argv[i + 1]);
-                else
-                    retval = resources_set_value(p->resource_name,
-                                                 p->resource_value);
-                break;
-              case CALL_FUNCTION:
-                retval = p->set_func(p->need_arg ? argv[i+1] : NULL,
-                         p->extra_param);
-                break;
-              default:
-                archdep_startup_log_error("Invalid type for option '%s'.\n",
-                                          p->name);
-                return -1;
+            switch (p->type) {
+                case SET_RESOURCE:
+                    if (p->need_arg) {
+                        retval = resources_set_value_string(p->resource_name, argv[i + 1]);
+                    } else {
+                        retval = resources_set_value(p->resource_name, p->resource_value);
+                    }
+                    break;
+                case CALL_FUNCTION:
+                    retval = p->set_func(p->need_arg ? argv[i + 1] : NULL,
+                                         p->extra_param);
+                    break;
+                default:
+                    archdep_startup_log_error("Invalid type for option '%s'.\n",
+                                              p->name);
+                    return -1;
             }
             if (retval < 0) {
-                if (p->need_arg)
+                if (p->need_arg) {
                     archdep_startup_log_error("Argument '%s' not valid for option `%s'.\n",
                                               argv[i + 1], p->name);
-                else
+                } else {
                     archdep_startup_log_error("Option '%s' not valid.\n", p->name);
+                }
                 return -1;
             }
 
             i += p->need_arg ? 2 : 1;
-        } else
+        } else {
             break;
+        }
     }
 
     /* Remove all the parsed options.  */
     {
-        int j;
-
-        for (j = 1; j <= (*argc - i); j++)
-            argv[j] = argv[i + j - 1];
-
-        *argc -= i;
+        int j, args;
+        DBG(("argc:%d i:%d\n", *argc, i));
+        for (j = 1, args = 1; (j < *argc) && (argv[i] != NULL); j++, i++, args++) {
+            argv[j] = argv[i];
+            DBG(("%d %d=%d:%s\n", args, j, i, argv[j]));
+        }
+        DBG(("new argc:%d\n", args));
+        *argc = args;
     }
 
     return 0;

@@ -44,7 +44,7 @@
  *   Spiro Trikaliotis <spiro.trikaliotis@gmx.de>
  *
  * Support for Final Cartridge III extensions to c64 2.0 basic
- *   Matti 'ccr' Hamalainen <ccr@tnsp.org>
+ *   Matti 'ccr' Hämäläinen <ccr@tnsp.org>
  *
  * Support for many of the other extensions by
  *   Marco van den Heuvel <blackystardust68@yahoo.com>
@@ -89,7 +89,7 @@ void ui_error(const char *format, ...)
 #define B_SPEECH         6
 #define B_ATBAS          7
 #define B_4              8
-#define B_4E             9	/* C64 extension, Expand only */
+#define B_4E             9      /* C64 extension, Expand only */
 
 #define B_35            10
 #define B_7             11
@@ -212,6 +212,8 @@ void ui_error(const char *format, ...)
 
 #define KW_NONE         0xFE    /* flag unused token */
 
+#define CODE_NONE       -1      /* flag unknown control code */
+
 #define CLARIF_LP       '{'     /* control code left delimiter */
 #define CLARIF_RP       '}'     /* control code right delimiter */
 
@@ -224,40 +226,40 @@ const char machine_name[] = "PETCAT";
 
 static const unsigned char MagicHeaderP00[8] = "C64File\0";
 
- /*
-  * Printer's control code symbols
-  */
+/*
+ * Printer's control code symbols
+ */
 
 /* all numeric codes */
-static const char *hexcodes[] = {
-    "$00","$01","$02","$03","$04","$05","$06","$07","$08","$09","$0a","$0b","$0c","$0d","$0e","$0f",
-    "$10","$11","$12","$13","$14","$15","$16","$17","$18","$19","$1a","$1b","$1c","$1d","$1e","$1f",
-    "$20","$21","$22","$23","$24","$25","$26","$27","$28","$29","$2a","$2b","$2c","$2d","$2e","$2f",
-    "$30","$31","$32","$33","$34","$35","$36","$37","$38","$39","$3a","$3b","$3c","$3d","$3e","$3f",
-    "$40","$41","$42","$43","$44","$45","$46","$47","$48","$49","$4a","$4b","$4c","$4d","$4e","$4f",
-    "$50","$51","$52","$53","$54","$55","$56","$57","$58","$59","$5a","$5b","$5c","$5d","$5e","$5f",
-    "$60","$61","$62","$63","$64","$65","$66","$67","$68","$69","$6a","$6b","$6c","$6d","$6e","$6f",
-    "$70","$71","$72","$73","$74","$75","$76","$77","$78","$79","$7a","$7b","$7c","$7d","$7e","$7f",
-    "$80","$81","$82","$83","$84","$85","$86","$87","$88","$89","$8a","$8b","$8c","$8d","$8e","$8f",
-    "$90","$91","$92","$93","$94","$95","$96","$97","$98","$99","$9a","$9b","$9c","$9d","$9e","$9f",
-    "$a0","$a1","$a2","$a3","$a4","$a5","$a6","$a7","$a8","$a9","$aa","$ab","$ac","$ad","$ae","$af",
-    "$b0","$b1","$b2","$b3","$b4","$b5","$b6","$b7","$b8","$b9","$ba","$bb","$bc","$bd","$be","$bf",
-    "$c0","$c1","$c2","$c3","$c4","$c5","$c6","$c7","$c8","$c9","$ca","$cb","$cc","$cd","$ce","$cf",
-    "$d0","$d1","$d2","$d3","$d4","$d5","$d6","$d7","$d8","$d9","$da","$db","$dc","$dd","$de","$df",
-    "$e0","$e1","$e2","$e3","$e4","$e5","$e6","$e7","$e8","$e9","$ea","$eb","$ec","$ed","$ee","$ef",
-    "$f0","$f1","$f2","$f3","$f4","$f5","$f6","$f7","$f8","$f9","$fa","$fb","$fc","$fd","$fe","$ff",
+static const char *hexcodes[0x100] = {
+    "$00", "$01", "$02", "$03", "$04", "$05", "$06", "$07", "$08", "$09", "$0a", "$0b", "$0c", "$0d", "$0e", "$0f",
+    "$10", "$11", "$12", "$13", "$14", "$15", "$16", "$17", "$18", "$19", "$1a", "$1b", "$1c", "$1d", "$1e", "$1f",
+    "$20", "$21", "$22", "$23", "$24", "$25", "$26", "$27", "$28", "$29", "$2a", "$2b", "$2c", "$2d", "$2e", "$2f",
+    "$30", "$31", "$32", "$33", "$34", "$35", "$36", "$37", "$38", "$39", "$3a", "$3b", "$3c", "$3d", "$3e", "$3f",
+    "$40", "$41", "$42", "$43", "$44", "$45", "$46", "$47", "$48", "$49", "$4a", "$4b", "$4c", "$4d", "$4e", "$4f",
+    "$50", "$51", "$52", "$53", "$54", "$55", "$56", "$57", "$58", "$59", "$5a", "$5b", "$5c", "$5d", "$5e", "$5f",
+    "$60", "$61", "$62", "$63", "$64", "$65", "$66", "$67", "$68", "$69", "$6a", "$6b", "$6c", "$6d", "$6e", "$6f",
+    "$70", "$71", "$72", "$73", "$74", "$75", "$76", "$77", "$78", "$79", "$7a", "$7b", "$7c", "$7d", "$7e", "$7f",
+    "$80", "$81", "$82", "$83", "$84", "$85", "$86", "$87", "$88", "$89", "$8a", "$8b", "$8c", "$8d", "$8e", "$8f",
+    "$90", "$91", "$92", "$93", "$94", "$95", "$96", "$97", "$98", "$99", "$9a", "$9b", "$9c", "$9d", "$9e", "$9f",
+    "$a0", "$a1", "$a2", "$a3", "$a4", "$a5", "$a6", "$a7", "$a8", "$a9", "$aa", "$ab", "$ac", "$ad", "$ae", "$af",
+    "$b0", "$b1", "$b2", "$b3", "$b4", "$b5", "$b6", "$b7", "$b8", "$b9", "$ba", "$bb", "$bc", "$bd", "$be", "$bf",
+    "$c0", "$c1", "$c2", "$c3", "$c4", "$c5", "$c6", "$c7", "$c8", "$c9", "$ca", "$cb", "$cc", "$cd", "$ce", "$cf",
+    "$d0", "$d1", "$d2", "$d3", "$d4", "$d5", "$d6", "$d7", "$d8", "$d9", "$da", "$db", "$dc", "$dd", "$de", "$df",
+    "$e0", "$e1", "$e2", "$e3", "$e4", "$e5", "$e6", "$e7", "$e8", "$e9", "$ea", "$eb", "$ec", "$ed", "$ee", "$ef",
+    "$f0", "$f1", "$f2", "$f3", "$f4", "$f5", "$f6", "$f7", "$f8", "$f9", "$fa", "$fb", "$fc", "$fd", "$fe", "$ff",
 };
 
 /* 0x00 - 0x1f */
-static const char *ctrl1[] = {
-    "",     "",     "",     "",     "",    "wht",  "",     "",
-    "dish", "ensh", "\n",   "",     "\f",  "\n",   "swlc", "",
-    "",     "down", "rvon", "home", "del", "",     "",     "",
-    "",     "",     "",     "esc",  "red", "rght", "grn",  "blu"
+static const char *ctrl1[0x20] = {
+    "",       "CTRL-A", "CTRL-B", "stop",   "CTRL-D", "wht",    "CTRL-F", "CTRL-G",
+    "dish",   "ensh",   "\n",     "CTRL-K", "CTRL-L", "\n",     "swlc",   "CTRL-O",
+    "CTRL-P", "down",   "rvon",   "home",   "del",    "CTRL-U", "CTRL-V", "CTRL-W",
+    "CTRL-X", "CTRL-Y", "CTRL-Z", "esc",    "red",    "rght",   "grn",    "blu"
 };
 
 /* 0x80 - 0x9f */
-static const char *ctrl2[] = {
+static const char *ctrl2[0x20] = {
     "",     "orng", "",     "",     "",     "F1",   "F3",   "F5",
     "F7",   "F2",   "F4",   "F6",   "F8",   "sret", "swuc", "",
     "blk",  "up",   "rvof", "clr",  "inst", "brn",  "lred", "gry1",
@@ -270,7 +272,7 @@ static const char *ctrl2[] = {
  */
 
 /* 0x00 - 0x1f */
-const char *a_ctrl1[] = {
+const char *a_ctrl1[0x20] = {
     "",              "",               "",       "",     "",       "wht",    "",           "",
     "up/lo lock on", "up/lo lock off", "",       "",     "",       "return", "lower case", "",
     "",              "down",           "rvs on", "home", "delete", "",       "",           "",
@@ -278,7 +280,7 @@ const char *a_ctrl1[] = {
 };
 
 /* 0x00 - 0x1f */
-const char *b_ctrl1[] = {
+const char *b_ctrl1[0x20] = {
     "", "", "",           "", "", "", "", "",
     "", "", "",           "", "", "", "", "",
     "", "", "REVERSE ON", "", "", "", "", "",
@@ -286,7 +288,7 @@ const char *b_ctrl1[] = {
 };
 
 /* 0x20 - 0x3f */
-const char *cbmchars[] = {
+const char *cbmchars[0x20] = {
     "space", "", "", "", "", "", "", "",
     "",      "", "", "", "", "", "", "",
     "",      "", "", "", "", "", "", "",
@@ -294,7 +296,7 @@ const char *cbmchars[] = {
 };
 
 /* 0x80 - 0x9f */
-const char *a_ctrl2[] = {
+const char *a_ctrl2[0x20] = {
     "",      "orange",   "",        "",      "",       "f1",           "f3",         "f5",
     "f7",    "f2",       "f4",      "f6",    "f8",     "shift return", "upper case", "",
     "blk",   "up",       "rvs off", "clear", "insert", "brown",        "lt red",     "grey1",
@@ -302,7 +304,7 @@ const char *a_ctrl2[] = {
 };
 
 /* keys for charcodes 0xa0-0xe0 */
-static const char *cbmkeys[] = {
+static const char *cbmkeys[0x40] = {
     "SHIFT-SPACE", "CBM-K",       "CBM-I",   "CBM-T",   "CBM-@",   "CBM-G",   "CBM-+",   "CBM-M", 
     "CBM-POUND",   "SHIFT-POUND", "CBM-N",   "CBM-Q",   "CBM-D",   "CBM-Z",   "CBM-S",   "CBM-P",
     "CBM-A",       "CBM-E",       "CBM-R",   "CBM-W",   "CBM-H",   "CBM-J",   "CBM-L",   "CBM-Y",
@@ -314,7 +316,7 @@ static const char *cbmkeys[] = {
 };
 
 /* alternative keys for charcodes 0xa0-0xe0 */
-static const char *a_cbmkeys[] = {
+static const char *a_cbmkeys[0x40] = {
     "", "", "", "", "", "", "",      "",
     "", "", "", "", "", "", "",      "",
     "", "", "", "", "", "", "",      "",
@@ -420,7 +422,7 @@ const char *keyword[] = {
  */
 
 const char *kwce[] = {
-    "",    "",        "pot", "bump", "pen", "rsppos", "rsprite", "rspcolor",
+    "",    "",        "pot",     "bump", "pen", "rsppos", "rsprite", "rspcolor",
     "xor", "rwindow", "pointer"
 };
 
@@ -579,7 +581,7 @@ const char *warsawkwdb[] = {
 };
 
 
-/* @Basic (Atbasic) Keywords (Tokens CC - F6) -- Andre Fachat */
+/* @Basic (Atbasic) Keywords (Tokens CC - F6) -- André Fachat */
 
 const char *atbasickwcc[] = {
     "trace",  "delete",  "auto",      "old",     "dump",    "find",    "renumber", "dload",
@@ -644,7 +646,7 @@ const char *wsfbasickwcc[] = {
 
 
 /* Pegasus basic 4.0 (c64) Keywords (Tokens CC - EC) -- Marco van den Heuvel */
- 
+
 const char *pegbasickwcc[] = {
     "off",      "asc(",     "sin(",    "cos(",  "tan(",     "atn(",     "deg(",     "rad(",
     "frac(",    "mod(",     "round(",  "dec(",  "bin(",     "deek(",    "instr(",   "joy(",
@@ -767,7 +769,7 @@ const char *simonskw[] = {
 };
 
 
-/* Final Cartridge III Keywords -- Matti 'ccr' Hamalainen */
+/* Final Cartridge III Keywords -- Matti 'ccr' Hämäläinen */
 
 const char *fc3kw[] = {
     "off",     "auto",  "del",     "renum",   "?ERROR?", "find", "old",   "dload",
@@ -805,17 +807,18 @@ const char *supergrakw[] = {
 static int parse_version(char *str);
 static void list_keywords(int version);
 static void pet_2_asc (int ctrls);
+static void asc_2_pet (int ctrls);
 static void _p_toascii(int c, int ctrls);
 static int p_expand(int version, int addr, int ctrls);
 static void p_tokenize(int version, unsigned int addr, int ctrls);
 static unsigned char sstrcmp(unsigned char *line, const char **wordlist, int token, int maxitems);
-static unsigned char sstrcmp_codes(unsigned char *line, const char **wordlist, int token, int maxitems);
+static int sstrcmp_codes(unsigned char *line, const char **wordlist, int token, int maxitems);
 
 /* ------------------------------------------------------------------------- */
 
 static FILE *source, *dest;
-static int kwlen;
-static int codesnocase=0; /* flag, =1 if controlcodes should be interpreted case insensitive */
+static int kwlen = 0;
+static int codesnocase = 0; /* flag, =1 if controlcodes should be interpreted case insensitive */
 
 /* dummy functions */
 int cmdline_register_options(const cmdline_option_t *c)
@@ -854,7 +857,7 @@ int main(int argc, char **argv)
 
     long offset = 0;
     int wr_mode = 0, version = B_7;         /* best defaults */
-    int load_addr = 0, ctrls= -1, hdr = -1, show_words = 0;
+    int load_addr = 0, ctrls = -1, hdr = -1, show_words = 0;
     int fil = 0, outf = 0, overwrt = 0, textmode = 0;
     int flg = 0;                            /* files on stdin */
 
@@ -919,30 +922,25 @@ int main(int argc, char **argv)
                 continue;
             }
             /* Fall to error */
-
         } else if (!strcmp(argv[0], "-text")) {   /* force text mode */
             ++textmode;
             continue;
-
         } else if (!strcmp(argv[0], "-help") || !strncmp(argv[0], "-v", 2)) {  /* version ID */
             fprintf(stdout,
-                    "\n\t%s V%4.2f PL %d -- Basic list/crunch utility.\n\tPart of "PACKAGE" "VERSION"\n",
+                    "\n\t%s V%4.2f PL %d -- Basic list/crunch utility.\n\tPart of "PACKAGE " "VERSION "\n",
                     progname, (float)PETCATVERSION, PETCATLEVEL );
 
             /* Fall to error for Usage */
 
-        /* Basic version */
-
+            /* Basic version */
         } else if (!strncmp(argv[0], "-w", 2) && !wr_mode) {
             version = parse_version((strlen(argv[0]) > 2 ? &argv[0][2] : NULL));
             ++wr_mode;
             continue;
-
         } else if (!strncmp(argv[0], "-k", 2) && !wr_mode) {
             version = parse_version((strlen(argv[0]) > 2 ? &argv[0][2] : NULL));
             ++show_words;
             continue;
-
         } else if ((version = parse_version(&argv[0][1])) >= 0) {
             continue;
         }
@@ -1089,15 +1087,14 @@ int main(int argc, char **argv)
     }
 
     if (wr_mode) {
-        fprintf(stderr, "\nLoad address %04x\n", load_addr);
-        if ((load_addr & 255) != 1) {
-            fprintf (stderr, "I'm afraid I cannot accept that.\n");
-            exit(1);
+        if (!textmode) {
+            fprintf(stderr, "\nLoad address %04x\n", load_addr);
+            if ((load_addr & 255) != 1) {
+                fprintf (stderr, "Warning: odd load address (are you sure?)\n");
+            }
         }
-
         fprintf(stderr, "Control code set: %s\n\n", (ctrls ? "enabled" : "disabled"));
     }
-
 
     /*
      * Loop all files
@@ -1122,11 +1119,11 @@ int main(int argc, char **argv)
 
             source = stdin;
 
-            for (plen = 0, p = MagicHeaderP00; plen < 8 && (c = getc(source)) != EOF && (unsigned)c == *p; ++plen, ++p);
+            for (plen = 0, p = MagicHeaderP00; plen < 8 && (c = getc(source)) != EOF && (unsigned)c == *p; ++plen, ++p) {}
 
             if (plen == 8) {
                 /* skip the rest of header */
-                for (plen = 18; plen > 0 && getc(source) != EOF; --plen);
+                for (plen = 18; plen > 0 && getc(source) != EOF; --plen) {}
             } else {
                 /*printf("P00 failed at location %d.\n", plen);*/
                 ungetc(c, source);
@@ -1150,7 +1147,11 @@ int main(int argc, char **argv)
 
 
         if (wr_mode) {
-            p_tokenize(version, load_addr, ctrls);
+            if (textmode) {
+                asc_2_pet(ctrls);
+            } else {
+                p_tokenize(version, load_addr, ctrls);
+            }
         } else {
             if (hdr) { /* iAN: name as comment when using petcat name.prg > name.txt */
                 fprintf(dest, "\n\n;%s ", (fil ? argv[0] : "<stdin>"));
@@ -1162,8 +1163,7 @@ int main(int argc, char **argv)
              * Explicitly selected textmode overrules these conditions.
              */
 
-            if (textmode || ((offset & 255) !=1 && ((c = getc(source)) != EOF && ungetc(c, source) != EOF && c && c != 1))) {
-
+            if (textmode || ((offset & 255) != 1 && ((c = getc(source)) != EOF && ungetc(c, source) != EOF && c && c != 1))) {
                 /* Print the bytes lost in header check */
                 if (plen > 0 && plen < 8) {
                     for (c = 0; c < plen; ++c) {
@@ -1173,10 +1173,9 @@ int main(int argc, char **argv)
 
                 pet_2_asc(ctrls);
             } else {
-
                 /* get load address */
                 /* iAN: load_addr split into 2 lines, when compiled with VC7.1 I got ==0108== instead of ==0801== !! */
-                load_addr = (getc(source) & 0xff) ;
+                load_addr = (getc(source) & 0xff);
                 load_addr |= (getc(source) & 0xff) << 8;
                 if (hdr) {
                     fprintf(dest, "==%04x==\n", load_addr);
@@ -1204,7 +1203,7 @@ int main(int argc, char **argv)
         if (outf) {
             fclose(dest);
         }
-    } while (flg || (fil && --argc && ++argv));         /* next file */
+    } while (flg || (fil && --argc && ++argv));           /* next file */
     return(0);
 }
 
@@ -1231,199 +1230,199 @@ static int parse_version(char *str)
             }
             break;
 
-      case '2':
-          version = B_2;
-          break;
+        case '2':
+            version = B_2;
+            break;
 
-      case '3':
-          version = B_35; /* 3.5 */
-          break;
+        case '3':
+            version = B_35; /* 3.5 */
+            break;
 
-      case '4':
-          version = ((util_toupper(str[1]) == 'E') ? B_4E : ((util_toupper(str[1]) == 'v') ? B_VIC4 : B_4)); /* Basic 4.0 */
-          break;
+        case '4':
+            version = ((util_toupper(str[1]) == 'E') ? B_4E : ((util_toupper(str[1]) == 'v') ? B_VIC4 : B_4)); /* Basic 4.0 */
+            break;
 
-      case '5':
-          version = B_VIC5; /* 5.0 */
-          break;
+        case '5':
+            version = B_VIC5; /* 5.0 */
+            break;
 
-      case '7':
-          switch (str[1]) {
-              case '0':
-                  version = B_7;
-                  break;
-              case '1':
-                  version = B_71;
-                  break;
-              default:
-                  fprintf(stderr, "Please, select one of the following: 70, 71\n");
-          }
-          break;
+        case '7':
+            switch (str[1]) {
+                case '0':
+                    version = B_7;
+                    break;
+                case '1':
+                    version = B_71;
+                    break;
+                default:
+                    fprintf(stderr, "Please, select one of the following: 70, 71\n");
+            }
+            break;
 
-      case 'A':
-          version = B_ATBAS;
-          break;
+        case 'A':
+            version = B_ATBAS;
+            break;
 
-      case 'B':
-          switch (util_toupper(str[1])) {
-              case 'L':
-                  version = B_BLARG;
-                  break;
-              case 'S':
-                  version = B_BSX;
-                  break;
-              default:
-                  fprintf(stderr, "Please, select one of the following: blarg, bsx\n");
-          }
-          break;
+        case 'B':
+            switch (util_toupper(str[1])) {
+                case 'L':
+                    version = B_BLARG;
+                    break;
+                case 'S':
+                    version = B_BSX;
+                    break;
+                default:
+                    fprintf(stderr, "Please, select one of the following: blarg, bsx\n");
+            }
+            break;
 
-      case 'D':
-          version = B_DRAGO;
-          break;
+        case 'D':
+            version = B_DRAGO;
+            break;
 
-      case 'E':
-          switch (util_toupper(str[1])) {
-              case 'A':
-                  version = B_EASY;
-                  break;
-              case 'X':
-                  if (util_toupper(str[2]) != 'P') {
-                      fprintf(stderr, "Please, select one of the following: exp20, exp64\n");
-                  } else {
-                      switch (util_toupper(str[3])) {
-                          case '2':
-                              version = B_EXPBAS20;
-                              break;
-                          case '6':
-                              version = B_EXPBAS64;
-                              break;
-                          default:
-                              fprintf(stderr, "Please, select one of the following: exp20, exp64\n");
-                      }
-                  }
-                  break;
-          }
-          break;
+        case 'E':
+            switch (util_toupper(str[1])) {
+                case 'A':
+                    version = B_EASY;
+                    break;
+                case 'X':
+                    if (util_toupper(str[2]) != 'P') {
+                        fprintf(stderr, "Please, select one of the following: exp20, exp64\n");
+                    } else {
+                        switch (util_toupper(str[3])) {
+                            case '2':
+                                version = B_EXPBAS20;
+                                break;
+                            case '6':
+                                version = B_EXPBAS64;
+                                break;
+                            default:
+                                fprintf(stderr, "Please, select one of the following: exp20, exp64\n");
+                        }
+                    }
+                    break;
+            }
+            break;
 
-      case 'F':
-          version = B_FC3;
-          break;
+        case 'F':
+            version = B_FC3;
+            break;
 
-      case 'G':
-          switch (util_toupper(str[1])) {
-              case 'R':
-                  version = B_GRAPH;
-                  break;
-              case 'A':
-                  version = B_GB;
-                  break;
-              default:
-                  fprintf (stderr, "Please, select one of the following: graphics, game\n");
-          }
-          break;
+        case 'G':
+            switch (util_toupper(str[1])) {
+                case 'R':
+                    version = B_GRAPH;
+                    break;
+                case 'A':
+                    version = B_GB;
+                    break;
+                default:
+                    fprintf (stderr, "Please, select one of the following: graphics, game\n");
+            }
+            break;
 
-      case 'L':
-          version = B_BASL;
-          break;
+        case 'L':
+            version = B_BASL;
+            break;
 
-      case 'M':
-          switch (util_toupper(str[1])) {
-              case 'I':
-                  version = B_MIGHTY;
-                  break;
-              case 'A':
-                  version = B_MAGIC;
-                  break;
-              default:
-                  fprintf (stderr, "Please, select one of the following: magic, mighty\n");
-          }
-          break;
+        case 'M':
+            switch (util_toupper(str[1])) {
+                case 'I':
+                    version = B_MIGHTY;
+                    break;
+                case 'A':
+                    version = B_MAGIC;
+                    break;
+                default:
+                    fprintf (stderr, "Please, select one of the following: magic, mighty\n");
+            }
+            break;
 
-      case 'P':
-          version = B_PEG;
-          break;
+        case 'P':
+            version = B_PEG;
+            break;
 
-      case 'R':
-          version = B_REU;
-          break;
+        case 'R':
+            version = B_REU;
+            break;
 
-      case 'S':
-          switch (util_toupper(str[1])) {
-              case 'U':
-                  if (util_toupper(str[2]) != 'P' || util_toupper(str[3]) != 'E' || util_toupper(str[4]) != 'R') {
-                      fprintf(stderr, "Please, select one of the following: superbas, superexp, supergra\n");
-                  } else {
-                      switch(util_toupper(str[5])) {
-                          case 'B':
-                              version = B_SUPERBAS;
-                              break;
-                          case 'E':
-                              version = B_SUPEREXP;
-                              break;
-                          case 'G':
-                              version = B_SUPERGRA;
-                              break;
-                          default:
-                              fprintf(stderr, "Please, select one of the following: superbas, superexp, supergra\n");
-                      }
-                  }
-                  break;
-              case 'B':
-                  version = B_SUPERBAS;
-                  break;
-              case 'E':
-                  version = B_SUPEREXP;
-                  break;
-              case 'I':
-                  version = B_SIMON;
-                  break;
-              case 'P':
-                  version = B_SPEECH;
-                  break;
-              case 'X':
-                  version = B_SXC;
-                  break;
-              default:
-                  fprintf (stderr, "Please, select one of the following: superbas, superexp, simon, speech, sxc\n");
-          }
-          break;
+        case 'S':
+            switch (util_toupper(str[1])) {
+                case 'U':
+                    if (util_toupper(str[2]) != 'P' || util_toupper(str[3]) != 'E' || util_toupper(str[4]) != 'R') {
+                        fprintf(stderr, "Please, select one of the following: superbas, superexp, supergra\n");
+                    } else {
+                        switch (util_toupper(str[5])) {
+                            case 'B':
+                                version = B_SUPERBAS;
+                                break;
+                            case 'E':
+                                version = B_SUPEREXP;
+                                break;
+                            case 'G':
+                                version = B_SUPERGRA;
+                                break;
+                            default:
+                                fprintf(stderr, "Please, select one of the following: superbas, superexp, supergra\n");
+                        }
+                    }
+                    break;
+                case 'B':
+                    version = B_SUPERBAS;
+                    break;
+                case 'E':
+                    version = B_SUPEREXP;
+                    break;
+                case 'I':
+                    version = B_SIMON;
+                    break;
+                case 'P':
+                    version = B_SPEECH;
+                    break;
+                case 'X':
+                    version = B_SXC;
+                    break;
+                default:
+                    fprintf (stderr, "Please, select one of the following: superbas, superexp, simon, speech, sxc\n");
+            }
+            break;
 
-      case 'T':
-          version = B_TURTLE;
-          break;
+        case 'T':
+            version = B_TURTLE;
+            break;
 
-      case 'U':
-          version = B_ULTRA;
-          break;
+        case 'U':
+            version = B_ULTRA;
+            break;
 
-      case 'W':
-          switch (util_toupper(str[1])) {
-              case 'A':
-                  version = B_WARSAW;
-                  break;
-              case 'S':
-                  if (util_toupper(str[2]) != 'B') {
-                      fprintf(stderr, "Please, select one of the following: WSB, WSBF\n");
-                  } else {
-                      if (util_toupper(str[3]) == 'F') {
-                          version = B_WSF;
-                      } else {
-                          version = B_WS;
-                      }
-                  }
-                  break;
-              default:
-                  fprintf(stderr, "Please, select one of the following: Warsaw, WSB, WSBF\n");
-                  break;
-          }
+        case 'W':
+            switch (util_toupper(str[1])) {
+                case 'A':
+                    version = B_WARSAW;
+                    break;
+                case 'S':
+                    if (util_toupper(str[2]) != 'B') {
+                        fprintf(stderr, "Please, select one of the following: WSB, WSBF\n");
+                    } else {
+                        if (util_toupper(str[3]) == 'F') {
+                            version = B_WSF;
+                        } else {
+                            version = B_WS;
+                        }
+                    }
+                    break;
+                default:
+                    fprintf(stderr, "Please, select one of the following: Warsaw, WSB, WSBF\n");
+                    break;
+            }
 
-      case 'X':
-          version = B_X;
-          break;
+        case 'X':
+            version = B_X;
+            break;
 
-      default:
-          fprintf (stderr, "\nUnimplemented version '%s'\n", str);
-          version = -1;
+        default:
+            fprintf (stderr, "\nUnimplemented version '%s'\n", str);
+            version = -1;
     }
 
     return (version);
@@ -1447,7 +1446,7 @@ static void list_keywords(int version)
 
     if (version == B_1) {
         max = NUM_B_1;
-    } else if (version==B_35 || version==B_7 || version==B_71 || version == B_10) {
+    } else if (version == B_35 || version == B_7 || version == B_71 || version == B_10) {
         max = 0x7E;
     } else {
         max = NUM_COMM;
@@ -1601,7 +1600,7 @@ static void list_keywords(int version)
                     printf("%s\t", atbasickwcc[n] /*, n + 0xcc*/);
                 }
                 break;
-        
+
             case B_ULTRA:
                 for (n = 0; n < NUM_ULTRCC; n++) {
                     printf("%s\t", ultrabasic64kwcc[n] /*, n + 0xcc*/);
@@ -1655,7 +1654,7 @@ static void list_keywords(int version)
                     printf("%s\t", fc3kw[n] /*, n + 0xcc*/);
                 }
                 break;
-      
+
             case B_BASL:
                 for (n = 0; n < NUM_BASLCC; n++) {
                     printf("%s\t", baslkwcc[n] /*, n + 0xcc*/);
@@ -1667,7 +1666,6 @@ static void list_keywords(int version)
                     printf("%s\t", supergrakw[n] /*, n + 0xcc*/);
                 }
                 break;
-
         }  /* switch */
     }
 
@@ -1690,21 +1688,28 @@ static void pet_2_asc(int ctrls)
     }      /* line */
 }
 
-/*
-      translate petscii code into an ascii representation
+/*******************************************************************************
+    translate petscii code into an ascii representation
 
-29/01/2009 gpz
-- fixed $5b,$5d
-*/
-/*
-iAN: "left arrow" petscii 0x5f was converted as ascii 0x7f and not translated back correctly
-*/
+    notes:
+    - petscii codes 0x61-0x7f and (*) 0xc1-0xdf produce the same screencodes
+    - petscii codes (*) 0xa1-0xbe and 0xe1-0xfe produce the same screencodes
+    - petscii codes (*) 0xff, 0x7e and 0xde (PI) produces the same screencode
+    
+ ******************************************************************************/
 static void _p_toascii(int c, int ctrls)
 {
+    /* fprintf(stderr, "<%02x:%d>", c, ctrls); */
     switch (c) {
-        case 0x00:                          /* 00 for SEQ */
+        case 0x00: /* 00 for SEQ */
         case 0x0a:
-        case 0x0d:
+            if (!ctrls) {
+                fputc('\n', dest);
+            } else {
+                fprintf(dest, CLARIF_LP_ST "$%02x" CLARIF_RP_ST, c & 0xff);
+            }
+            break;
+        case 0x0d: /* CBM carriage return */
             fputc('\n', dest);
             break;
         case 0x40:
@@ -1722,49 +1727,76 @@ static void _p_toascii(int c, int ctrls)
         case 0x5e:
             fputc('^', dest);
             break;
-        case 0x5f:
+        case 0x5f: /* left arrow */
             fputc('_', dest);
             break;
         case 0x60: /* produces the same screencode as $c0! */
             fprintf(dest, CLARIF_LP_ST "$%02x" CLARIF_RP_ST, c & 0xff);
             break;
+
+        case 0x7b: /* produces the same screencode as $db! */
+        case 0x7c: /* produces the same screencode as $dc! */
+        case 0x7d: /* produces the same screencode as $dd! */
+        case 0x7e: /* PI produces the same screencode as $de! */
+        case 0x7f: /* produces the same screencode as $df! */
+            fprintf(dest, CLARIF_LP_ST "$%02x" CLARIF_RP_ST, c & 0xff); /* shift+arrow up */
+            break;
+
         case 0xc0:
             fprintf(dest, CLARIF_LP_ST "SHIFT-*" CLARIF_RP_ST);
             break;
-        case 0x7c:
+        case 0xdb: /* (*) produces the same screencode as $7b! */
+            fprintf(dest, CLARIF_LP_ST "SHIFT-+" CLARIF_RP_ST);
+            break;
+        case 0xdc: /* (*) produces the same screencode as $7c! */
             fprintf(dest, CLARIF_LP_ST "CBM--" CLARIF_RP_ST); /* Conflicts with Scandinavian Chars */
             break;
-        case 0x7f:
+        case 0xdd: /* (*) produces the same screencode as $7d! */
+            fprintf(dest, CLARIF_LP_ST "SHIFT--" CLARIF_RP_ST);
+            break;
+        case 0xde: /* PI produces the same screencode as $7e and $ff! */
+            fprintf(dest, CLARIF_LP_ST "$%02x" CLARIF_RP_ST, c & 0xff);
+            break;
+        case 0xdf: /* (*) produces the same screencode as $7f! */
             fprintf(dest, CLARIF_LP_ST "CBM-*" CLARIF_RP_ST);
             break;
-        case 0xa0:                          /* CBM: Shifted Space */
-        case 0xe0:
+
+        case 0xa0: /* shifted Space */
+        case 0xe0: /* produces the same screencode as $a0! */
             if (!ctrls) {
                 fputc(' ', dest);
             } else {
                 fprintf(dest, CLARIF_LP_ST "$%02x" CLARIF_RP_ST, c & 0xff);
             }
             break;
-        case 0xff:
-            fputc(0x7e, dest);
+        case 0xff: /* (*) PI produces the same screencode as $7e and $de! */
+            fputc(0x7e, dest); /*  '~' is ASCII for 'pi' */
             break;
 
         default:
             switch (c & 0xe0) {
-                case 0x40:                /* 41 - 7F */
-                case 0x60:
+                case 0x40:                /* 41 - 5F */
                     fputc(c ^ 0x20, dest);
                     break;
-                case 0xa0:                /* A1 - BF */
-                case 0xe0:                /* E1 - FE */
+                case 0x60:                /* 61 - 7F (produces same screencodes as C1...) */
+                    if (ctrls) {
+                        fprintf(dest, CLARIF_LP_ST "$%02x" CLARIF_RP_ST, c & 0xff);
+                    } else {
+                        fputc(c ^ 0x20, dest);
+                    }
+                    break;
+                case 0xa0:                /* (*) A1 - BF (produces same screencodes as E1...) */
                     fprintf(dest, CLARIF_LP_ST "%s" CLARIF_RP_ST, cbmkeys[c & 0x1f]);
                     break;
-                case 0xc0:                /* C0 - DF */
+                case 0xe0:                /* E1 - FE (produces same screencodes as A1...) */
+                    fprintf(dest, CLARIF_LP_ST "$%02x" CLARIF_RP_ST, c & 0xff);
+                    break;
+                case 0xc0:                /* (*) C0 - DF (produces same screencodes as 61...) */
                     fputc(c ^ 0x80, dest);
                     break;
 
                 default:
-                    if (isprint(c)) {
+                    if ((c > 0x1f) && isprint(c)) {
                         fputc(c, dest);
                     } else if (ctrls) {
                         if ((c < 0x20) && *ctrl1[c]) {
@@ -1779,6 +1811,21 @@ static void _p_toascii(int c, int ctrls)
     }  /* switch */
 }
 
+static int _a_topetscii(int c, int ctrls)
+{
+    if (c == '\n') {
+        return 0x0d;
+    } else if (c == 0x7e) {              /*  '~' is ASCII for 'pi' */
+        return 0xff;
+    } else if ((c >= 0x5b) && (c <= 0x5f)) { /* iAN: '_' -> left arrow, no char value change */
+        return c;
+    } else if ((c >= 0x60) && (c <= 0x7e)) {
+        return c ^ 0x20;
+    } else if ((c >= 'A') && (c <= 'Z')) {
+        return c | 0x80;
+    }
+    return c;
+}
 
 /*
  * This routine starts from the beginning of Basic, and not from the
@@ -1817,7 +1864,8 @@ static int p_expand(int version, int addr, int ctrls)
 
         /* prevent list protection from terminating listing */
 
-        while ((c = getc(source)) != EOF && !c);
+        while ((c = getc(source)) != EOF && !c) {
+        }
 
         if (c == 0x12 && !line[2] && !line[3]) {  /* 00 00 12 22 */
             directory++;
@@ -1857,7 +1905,7 @@ static int p_expand(int version, int addr, int ctrls)
                 if (version != B_35 && version != B_FC3) {
                     if (c == 0xce) {            /* 'rlum' on V3.5*/
                         if ((c = getc(source)) <= MAX_KWCE) {
-                            fprintf(dest,"%s", kwce[c]);
+                            fprintf(dest, "%s", kwce[c]);
                         } else {
                             fprintf(dest, "($ce%02x)", c);
                         }
@@ -1871,7 +1919,7 @@ static int p_expand(int version, int addr, int ctrls)
                             }
                         } else {
                             if ((c = getc(source)) <= MAX_V10FE) {
-                                fprintf(dest, "%s", (version==B_71) ? kwfe71[c] : kwfe[c]);
+                                fprintf(dest, "%s", (version == B_71) ? kwfe71[c] : kwfe[c]);
                             } else {
                                 fprintf(dest, "($fe%02x)", c);
                             }
@@ -2062,14 +2110,12 @@ static int p_expand(int version, int addr, int ctrls)
             }
 
             _p_toascii((int)c, ctrls);  /* convert character */
-
         } while ((c = getc(source)) != EOF && c);
         fprintf(dest, "\n");
-
     }      /* line */
 
 #ifdef DEBUG
-    printf("\n c %02x  EOF %d  *line %d  sysflg %d\n", c, feof(source), *line, sysflg);
+    fprintf(stderr, "\n c %02x  EOF %d  *line %d  sysflg %d\n", c, feof(source), *line, sysflg);
 #endif
 
     return (!feof(source) && (*line | line[1]) && sysflg);
@@ -2096,14 +2142,15 @@ static int p_expand(int version, int addr, int ctrls)
    note: this is still ugly =P
 - added recognition of control codes in the form {123} (decimal number)
 */
-#define MAX_INLINE_LEN	(256*8)
+#define MAX_INLINE_LEN  (256 * 8)
 #define MAX_OUTLINE_LEN 256
 
 static void p_tokenize(int version, unsigned int addr, int ctrls)
 {
     static char line[MAX_INLINE_LEN + 1];
     static char tokenizedline[MAX_OUTLINE_LEN + 1];
-    unsigned char *p1, *p2, quote, c;
+    unsigned char *p1, *p2, quote;
+    int c;
     unsigned char rem_data_mode, rem_data_endchar = '\0';
     int len = 0, match;
     unsigned int linum = 10;
@@ -2120,8 +2167,8 @@ static void p_tokenize(int version, unsigned int addr, int ctrls)
             continue;
         }
 
-	memset(tokenizedline, 0, MAX_OUTLINE_LEN);
-	p1 = (unsigned char *)tokenizedline;
+        memset(tokenizedline, 0, MAX_OUTLINE_LEN);
+        p1 = (unsigned char *)tokenizedline;
 
 #ifndef GEMDOS
         if (sscanf(line, "%d%n", &linum, &len) == 1) {
@@ -2136,7 +2183,7 @@ static void p_tokenize(int version, unsigned int addr, int ctrls)
 #endif
 
 #ifdef DEBUG
-	fprintf(stderr, "line: %d [%s]\n", linum, line);
+        fprintf(stderr, "line: %d [%s]\n", linum, line);
 #endif
         quote = 0;
         rem_data_mode = 0;
@@ -2175,119 +2222,113 @@ static void p_tokenize(int version, unsigned int addr, int ctrls)
                         p += kwlen;
 #else
                     if (sscanf(++p, "%d", &len) == 1) {
-                        while (isspace(*p) || isdigit(*p)) p++;
+                        while (isspace(*p) || isdigit(*p)) {
+                            p++;
+                        }
 #endif
 
 #ifdef DEBUG
-	fprintf(stderr,"controlcode repeat count: len:%d kwlen:%d\n", len,kwlen);
+                        fprintf(stderr, "controlcode repeat count: len:%d kwlen:%d\n", len, kwlen);
 #endif
-			/* if we are already at the closing brace, then the previous
-			   value wasnt the repeat count but an actual decimal charactercode */
-                        if (*p == CLARIF_RP)
-			{
+                        /* if we are already at the closing brace, then the previous
+                           value wasnt the repeat count but an actual decimal charactercode */
+                        if (*p == CLARIF_RP) {
+                            *p1++ = len;
+                            p2 = p + (++kwlen);
+                            continue;
+                        }
 
-				*p1++ = len;
-				p2 = p + (++kwlen);
- 				continue;				
-			}
-	
 
-                        if (*p == ' ')
+                        if (*p == ' ') {
                             ++p;
+                        }
                     }
 
 #ifdef DEBUG
-	fprintf(stderr,"controlcode test: %s\n", p);
+                    fprintf(stderr, "controlcode test: %s\n", p);
 #endif
-		    
-		if (
-		    ( 
-			((c = sstrcmp_codes(p,hexcodes, 0, 0x100)) != KW_NONE) || /* 0x00-0xff */
 
-			((c = sstrcmp_codes(p,   ctrl1, 0, 0x20)) != KW_NONE) || /* 0x00-0x1f */
-                        ((c = sstrcmp_codes(p, a_ctrl1, 0, 0x20)) != KW_NONE) || /* 0x00-0x1f */
-                        ((c = sstrcmp_codes(p, b_ctrl1, 0, 0x20)) != KW_NONE) || /* 0x00-0x1f */
+                    if (
+                        (
+                            ((c = sstrcmp_codes(p, hexcodes, 0, 0x100)) != CODE_NONE) || /* 0x00-0xff */
 
-                       (( ((c = sstrcmp_codes(p,cbmchars, 0, 0x20)) != KW_NONE)  /* 0x20-0x3f */
-                         ) && (c += 0x20)) ||
+                            ((c = sstrcmp_codes(p, ctrl1, 0, 0x20)) != CODE_NONE) || /* 0x00-0x1f */
+                            ((c = sstrcmp_codes(p, a_ctrl1, 0, 0x20)) != CODE_NONE) || /* 0x00-0x1f */
+                            ((c = sstrcmp_codes(p, b_ctrl1, 0, 0x20)) != CODE_NONE) || /* 0x00-0x1f */
 
-                       (( ((c = sstrcmp_codes(p,   ctrl2, 0, 0x20)) != KW_NONE) ||
-                          ((c = sstrcmp_codes(p, a_ctrl2, 0, 0x20)) != KW_NONE)
-                         ) && (c += 0x80)) ||
+                            ((((c = sstrcmp_codes(p, cbmchars, 0, 0x20)) != CODE_NONE) /* 0x20-0x3f */
+                              ) && (c += 0x20)) ||
 
-                       (( ((c = sstrcmp_codes(p, cbmkeys, 0, 0x40)) != KW_NONE) ||
-			  ((c = sstrcmp_codes(p,a_cbmkeys, 0, 0x40)) != KW_NONE)
-			) && (c += 0xA0)) 
+                            ((((c = sstrcmp_codes(p, ctrl2, 0, 0x20)) != CODE_NONE) ||
+                              ((c = sstrcmp_codes(p, a_ctrl2, 0, 0x20)) != CODE_NONE)
+                              ) && (c += 0x80)) ||
+
+                            ((((c = sstrcmp_codes(p, cbmkeys, 0, 0x40)) != CODE_NONE) ||
+                              ((c = sstrcmp_codes(p, a_cbmkeys, 0, 0x40)) != CODE_NONE)
+                              ) && (c += 0xA0))
 
 
-                    )
-		   ) {
+                        )
+                        ) {
 #ifdef DEBUG
-	fprintf(stderr,"controlcode test 2: %c %s %d\n", p[kwlen],p,kwlen);
+                        fprintf(stderr, "controlcode test 2: %c %s %d\n", p[kwlen], p, kwlen);
 #endif
-				if (p[kwlen] == '*')
-				{
-				    /* repetition count */
-					p+=(kwlen);
-					
+                        if (p[kwlen] == '*') {
+                            /* repetition count */
+                            p += (kwlen);
+
 #ifdef DEBUG
-	fprintf(stderr,"controlcode test rpt: %s\n", p);
+                            fprintf(stderr, "controlcode test rpt: %s\n", p);
 #endif
-				    len = 1;
+                            len = 1;
 #ifndef GEMDOS
-				    if (sscanf((char *)++p, "%d%n", &len, &kwlen) == 1) {
-					p += kwlen;
+                            if (sscanf((char *)++p, "%d%n", &len, &kwlen) == 1) {
+                                p += kwlen;
 #else
-				    if (sscanf(++p, "%d", &len) == 1) {
-					while (isspace(*p) || isdigit(*p)) p++;
+                            if (sscanf(++p, "%d", &len) == 1) {
+                                while (isspace(*p) || isdigit(*p)) {
+                                    p++;
+                                }
 #endif
 
 #ifdef DEBUG
-	fprintf(stderr,"controlcode repeat count: len:%d kwlen:%d\n", len,kwlen);
+                                fprintf(stderr, "controlcode repeat count: len:%d kwlen:%d\n", len, kwlen);
 #endif
-					kwlen=0;
-				    }
-
-				}
+                                kwlen = 0;
+                            }
+                        }
 
 #ifdef DEBUG
-	fprintf(stderr,"controlcode test 3: %c %s %d\n", p[0],p,kwlen);
+                        fprintf(stderr, "controlcode test 3: %c %s %d\n", p[0], p, kwlen);
 #endif
-				
-				if (p[kwlen] == CLARIF_RP)
-				{
-					for (; len-- > 0;)
-					{
-					    *p1++ = c;
-					}
-					p2 = p + (++kwlen);
+
+                        if (p[kwlen] == CLARIF_RP) {
+                            for (; len-- > 0; ) {
+                                *p1++ = c;
+                            }
+                            p2 = p + (++kwlen);
 
 #ifdef DEBUG
-	fprintf(stderr,"controlcode continue\n");
+                            fprintf(stderr, "controlcode continue\n");
 #endif
 
-					continue;
-				}
-			
-                    	}
+                            continue;
+                        }
+                    }
 
-			fprintf(stderr,"error: line %d - unknown control code: %s\n",linum,p);
-			exit(-1);
+                    fprintf(stderr, "error: line %d - unknown control code: %s\n", linum, p);
+                    exit(-1);
                 }
 #ifdef DEBUG
 /*	fprintf(stderr,"controlcode end\n"); */
 #endif
-
-            }
-            else if (rem_data_mode) {
-                /* if we have already encountered a REM or a DATA, 
+            } else if (rem_data_mode) {
+                /* if we have already encountered a REM or a DATA,
                    simply copy the char */
 
                 /* DO NOTHING! As we do not set "match", the if (!match) will be true,
                  * and this part will copy the char over to the new buffer */
-            }
-            else if (isalpha(*p2) || strchr("+-*/^>=<", *p2)) {
-
+            } else if (isalpha(*p2) || strchr("+-*/^>=<", *p2)) {
                 /* FE and CE prefixes are checked first */
                 if (version == B_7 || version == B_71 || version == B_10 || version == B_SXC) {
                     switch (version) {
@@ -2338,7 +2379,6 @@ static void p_tokenize(int version, unsigned int addr, int ctrls)
                                 match++;
                             }
                             break;
-                       
                     }
                 }
 
@@ -2349,15 +2389,15 @@ static void p_tokenize(int version, unsigned int addr, int ctrls)
                 if (!match) {
                     int max;
 
-                    if (version == B_1)
+                    if (version == B_1) {
                         max = NUM_B_1;
-                    else if (version==B_35 || version==B_7 || version==B_71 || version==B_10 || version==B_SXC)
+                    } else if (version == B_35 || version == B_7 || version == B_71 || version == B_10 || version == B_SXC) {
                         max = 0x7E;
-                    else
+                    } else {
                         max = NUM_COMM;
+                    }
 
                     if ((c = sstrcmp(p2, keyword, 0, max)) != KW_NONE) {
-
                         if (version == B_35 || c != 0x4e) {  /* Skip prefix */
                             *p1++ = c | 0x80;
                             p2 += kwlen;
@@ -2365,314 +2405,440 @@ static void p_tokenize(int version, unsigned int addr, int ctrls)
 
                             /* Check if the keyword is a REM or a DATA */
                             switch (c) {
-                            case TOKEN_DATA:
-                                rem_data_mode = 1;
-                                rem_data_endchar = ':';
-                                break;
+                                case TOKEN_DATA:
+                                    rem_data_mode = 1;
+                                    rem_data_endchar = ':';
+                                    break;
 
-                            case TOKEN_REM:
-                                rem_data_mode = 1;
-                                rem_data_endchar = '\0';
-                                break;
+                                case TOKEN_REM:
+                                    rem_data_mode = 1;
+                                    rem_data_endchar = '\0';
+                                    break;
                             }
                         }
                     }
                 }
 
-                if (!match)
-                  switch (version) {
-                  case B_SUPEREXP:
-                    if ((c = sstrcmp(p2, superexpkwcc, 0, NUM_SECC)) != KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                if (!match) {
+                    switch (version) {
+                        case B_SUPEREXP:
+                            if ((c = sstrcmp(p2, superexpkwcc, 0, NUM_SECC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_TURTLE:
-                    if ((c = sstrcmp(p2, turtlekwcc, 0, NUM_TUCC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_TURTLE:
+                            if ((c = sstrcmp(p2, turtlekwcc, 0, NUM_TUCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_EASY:
-                    if ((c = sstrcmp(p2, easykwcc, 0, NUM_EASYCC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_EASY:
+                            if ((c = sstrcmp(p2, easykwcc, 0, NUM_EASYCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_BLARG:
-                    if ((c = sstrcmp(p2, blargkwe0, 0, NUM_BLARGE0)) !=KW_NONE) {
-                        *p1++ = c + 0xe0;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_BLARG:
+                            if ((c = sstrcmp(p2, blargkwe0, 0, NUM_BLARGE0)) != KW_NONE) {
+                                *p1++ = c + 0xe0;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_SUPERBAS:
-                    if ((c = sstrcmp(p2, superbaskwdb, 0, NUM_SUPERBASDB)) !=KW_NONE) {
-                        *p1++ = c + 0xdb;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_SUPERBAS:
+                            if ((c = sstrcmp(p2, superbaskwdb, 0, NUM_SUPERBASDB)) != KW_NONE) {
+                                *p1++ = c + 0xdb;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_WARSAW:
-                    if ((c = sstrcmp(p2, warsawkwdb, 0, NUM_WARSAWDB)) !=KW_NONE) {
-                        *p1++ = c + 0xdb;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_WARSAW:
+                            if ((c = sstrcmp(p2, warsawkwdb, 0, NUM_WARSAWDB)) != KW_NONE) {
+                                *p1++ = c + 0xdb;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_EXPBAS20:
-                    if ((c = sstrcmp(p2, expbas20kwcc, 0, NUM_EXPBAS20CC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_EXPBAS20:
+                            if ((c = sstrcmp(p2, expbas20kwcc, 0, NUM_EXPBAS20CC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_EXPBAS64:
-                    if ((c = sstrcmp(p2, expbas64kwcc, 0, NUM_EXPBAS64CC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_EXPBAS64:
+                            if ((c = sstrcmp(p2, expbas64kwcc, 0, NUM_EXPBAS64CC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_GB:
-                    if ((c = sstrcmp(p2, gbkwcc, 0, NUM_GBCC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p1 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_GB:
+                            if ((c = sstrcmp(p2, gbkwcc, 0, NUM_GBCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p1 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_BSX:
-                    if ((c = sstrcmp(p2, bsxkwcc, 0, NUM_BSXCC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p1 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_BSX:
+                            if ((c = sstrcmp(p2, bsxkwcc, 0, NUM_BSXCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p1 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_MIGHTY:
-                    if ((c = sstrcmp(p2, mightykwcc, 0, NUM_MIGHTYCC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_MIGHTY:
+                            if ((c = sstrcmp(p2, mightykwcc, 0, NUM_MIGHTYCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_MAGIC:
-                    if ((c = sstrcmp(p2, magickwcc, 0, NUM_MAGICCC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_MAGIC:
+                            if ((c = sstrcmp(p2, magickwcc, 0, NUM_MAGICCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_4:
-                  case B_4E:
-                    if ((c = sstrcmp(p2, petkwcc, 0,
-                        ((version == B_4) ? NUM_V4CC : NUM_4ECC)))
-                        != KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_4:
+                        case B_4E:
+                            if ((c = sstrcmp(p2, petkwcc, 0,
+                                             ((version == B_4) ? NUM_V4CC : NUM_4ECC)))
+                                != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_VIC4:
-                    if ((c = sstrcmp(p2, vic4kwcc, 0, NUM_VIC4)) != KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_VIC4:
+                            if ((c = sstrcmp(p2, vic4kwcc, 0, NUM_VIC4)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_VIC5:
-                    if ((c = sstrcmp(p2, vic5kwcc, 0, NUM_VIC5)) != KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_VIC5:
+                            if ((c = sstrcmp(p2, vic5kwcc, 0, NUM_VIC5)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_SIMON:
-                    if ((c = sstrcmp(p2, simonskw, 1, 0x80)) != KW_NONE) {
-                        *p1++ = 0x64;
-                        *p1++ = c;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_SIMON:
+                            if ((c = sstrcmp(p2, simonskw, 1, 0x80)) != KW_NONE) {
+                                *p1++ = 0x64;
+                                *p1++ = c;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_SPEECH:
-                    if ((c = sstrcmp(p2, speechkwcc, 0, NUM_SPECC)) != KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_SPEECH:
+                            if ((c = sstrcmp(p2, speechkwcc, 0, NUM_SPECC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_ATBAS:
-                    if ((c = sstrcmp(p2, atbasickwcc, 0, NUM_ATBCC)) != KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_ATBAS:
+                            if ((c = sstrcmp(p2, atbasickwcc, 0, NUM_ATBCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_FC3:
-                    if ((c = sstrcmp(p2, fc3kw, 0, NUM_FC3CC)) != KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_FC3:
+                            if ((c = sstrcmp(p2, fc3kw, 0, NUM_FC3CC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_ULTRA:
-                    if ((c = sstrcmp(p2 , ultrabasic64kwcc, 0, NUM_ULTRCC)) != KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_ULTRA:
+                            if ((c = sstrcmp(p2, ultrabasic64kwcc, 0, NUM_ULTRCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_GRAPH:
-                    if ((c = sstrcmp(p2 , graphicsbasickwcc, 0, NUM_GRAPHCC)) != KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_GRAPH:
+                            if ((c = sstrcmp(p2, graphicsbasickwcc, 0, NUM_GRAPHCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_WS:
-                    if ((c = sstrcmp(p2 , wsbasickwcc, 0, NUM_WSCC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_WS:
+                            if ((c = sstrcmp(p2, wsbasickwcc, 0, NUM_WSCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_WSF:
-                    if ((c = sstrcmp(p2 , wsfbasickwcc, 0, NUM_WSCC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_WSF:
+                            if ((c = sstrcmp(p2, wsfbasickwcc, 0, NUM_WSCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_PEG:
-                    if ((c = sstrcmp(p2 , pegbasickwcc, 0, NUM_PEGCC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_PEG:
+                            if ((c = sstrcmp(p2, pegbasickwcc, 0, NUM_PEGCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_X:
-                    if ((c = sstrcmp(p2 , xbasickwcc, 0, NUM_XCC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_X:
+                            if ((c = sstrcmp(p2, xbasickwcc, 0, NUM_XCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_DRAGO:
-                    if ((c = sstrcmp(p2 , dragobasickwcc, 0, NUM_DRAGOCC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_DRAGO:
+                            if ((c = sstrcmp(p2, dragobasickwcc, 0, NUM_DRAGOCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_REU:
-                    if ((c = sstrcmp(p2 , reubasickwcc, 0, NUM_REUCC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_REU:
+                            if ((c = sstrcmp(p2, reubasickwcc, 0, NUM_REUCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_BASL:
-                    if ((c = sstrcmp(p2 , baslkwcc, 0, NUM_BASLCC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
+                        case B_BASL:
+                            if ((c = sstrcmp(p2, baslkwcc, 0, NUM_BASLCC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
 
-                  case B_SUPERGRA:
-                    if ((c = sstrcmp(p2, supergrakw, 0, NUM_SUPERGRACC)) !=KW_NONE) {
-                        *p1++ = c + 0xcc;
-                        p2 += kwlen;
-                        match++;
-                    }
-                    break;
-
-
-                }  /* switch */
+                        case B_SUPERGRA:
+                            if ((c = sstrcmp(p2, supergrakw, 0, NUM_SUPERGRACC)) != KW_NONE) {
+                                *p1++ = c + 0xcc;
+                                p2 += kwlen;
+                                match++;
+                            }
+                            break;
+                    } /* switch */
+                }
             } /* !quote */
 
             if (!match) {
-                if (*p2 == 0x7e)                /*  '~' is ASCII for 'pi' */
-                    *p1++ = 0xff;
-
-                else if ((*p2 >= 0x5b) && (*p2 <= 0x5f)) /* iAN: '_' -> left arrow, no char value change */
-                    *p1++ = *p2;
-
-                else if ((*p2 >= 0x60) && (*p2 <= 0x7e))
-                    *p1++ = *p2 ^ 0x20;
-
-                else if ((*p2 >= 'A') && (*p2 <= 'Z'))
-                    *p1++ = *p2 | 0x80;
-
-                else
-                    *p1++ = *p2;
+                /* convert character */
+                *p1++ = _a_topetscii(*p2 & 0xff, ctrls);
 
                 /* check if the REM/DATA mode has to be stopped: */
-                if (*p2 == rem_data_endchar)
+                if (*p2 == rem_data_endchar) {
                     rem_data_mode = 0;
+                }
 
                 ++p2;
             } /* match */
         } /* while */
 
 #ifdef DEBUG
-	fprintf(stderr,"output line start: %s\n", line);
+        fprintf(stderr, "output line start: %s\n", line);
         /*  fprintf(stderr,"output line petscii: %s\n", tokenizedline); */
 #endif
 
         *p1 = 0;
-        if ((len = (int)strlen(tokenizedline) ) > 0) {
+        if ((len = (int)strlen(tokenizedline)) > 0) {
             addr += len + 5;
-            fprintf(dest, "%c%c%c%c%s%c", addr & 255, (addr>>8) & 255,
-                   linum & 255, (linum>>8) & 255, tokenizedline, '\0');
+            fprintf(dest, "%c%c%c%c%s%c", addr & 255, (addr >> 8) & 255,
+                    linum & 255, (linum >> 8) & 255, tokenizedline, '\0');
 
             linum += 2; /* auto line numbering by default */
         }
 
 #ifdef DEBUG
-	fprintf(stderr,"output line end\n");
+        fprintf(stderr, "output line end\n");
 #endif
-
     } /* while */
 
     fprintf(dest, "%c%c", 0, 0);        /* program end marker */
 }
 
+
+static void asc_2_pet(int ctrls)
+{
+    static unsigned char line[MAX_INLINE_LEN + 1];
+    int c, d;
+    int len = 0;
+
+    /* Copies from p2 to p1 */
+    while ((c = fgetc(source)) != EOF) {
+
+            {
+                /* control code evaluation */
+
+                if (ctrls && (c == CLARIF_LP)) {
+                    unsigned char *p;
+                    int pos;
+                    pos = ftell(source);
+                    if (fread(line, 1, 0x20, source) < 1) {
+                        break;
+                    }
+                    p = line;
+#ifdef DEBUG
+                    fprintf(stderr, "controlcode start: %c\n", c);
+#endif
+
+                    /* repetition count */
+                    len = 1;
+#ifndef GEMDOS
+                    if (sscanf((char *)p, "%d%n", &len, &kwlen) == 1) {
+                        p += kwlen;
+#else
+                    if (sscanf(p, "%d", &len) == 1) {
+                        while (isspace(*p) || isdigit(*p)) {
+                            p++;
+                        }
+#endif
+
+#ifdef DEBUG
+                        fprintf(stderr, "controlcode repeat count: len:%d kwlen:%d\n", len, kwlen);
+#endif
+                        /* if we are already at the closing brace, then the previous
+                           value wasnt the repeat count but an actual decimal charactercode */
+                        if (*p == CLARIF_RP) {
+                            fputc(len, dest);
+                            fseek(source, pos + ((int)(&p[0] - &line[0])), SEEK_SET);
+                            continue;
+                        }
+
+                        if (*p == ' ') {
+                            ++p;
+                        }
+                    }
+
+#ifdef DEBUG
+                    fprintf(stderr, "controlcode test: %s\n", p);
+#endif
+
+                    if (
+                        (
+                            ((c = sstrcmp_codes(p, hexcodes, 0, 0x100)) != CODE_NONE) || /* 0x00-0xff */
+
+                            ((c = sstrcmp_codes(p, ctrl1, 0, 0x20)) != CODE_NONE) || /* 0x00-0x1f */
+                            ((c = sstrcmp_codes(p, a_ctrl1, 0, 0x20)) != CODE_NONE) || /* 0x00-0x1f */
+                            ((c = sstrcmp_codes(p, b_ctrl1, 0, 0x20)) != CODE_NONE) || /* 0x00-0x1f */
+
+                            ((((c = sstrcmp_codes(p, cbmchars, 0, 0x20)) != CODE_NONE) /* 0x20-0x3f */
+                              ) && (c += 0x20)) ||
+
+                            ((((c = sstrcmp_codes(p, ctrl2, 0, 0x20)) != CODE_NONE) ||
+                              ((c = sstrcmp_codes(p, a_ctrl2, 0, 0x20)) != CODE_NONE)
+                              ) && (c += 0x80)) ||
+
+                            ((((c = sstrcmp_codes(p, cbmkeys, 0, 0x40)) != CODE_NONE) ||
+                              ((c = sstrcmp_codes(p, a_cbmkeys, 0, 0x40)) != CODE_NONE)
+                              ) && (c += 0xA0))
+
+
+                        )
+                        ) {
+#ifdef DEBUG
+                        fprintf(stderr, "controlcode test 2: %c %s %d\n", p[kwlen], p, kwlen);
+#endif
+                        if (p[kwlen] == '*') {
+                            /* repetition count */
+                            p += (kwlen);
+
+#ifdef DEBUG
+                            fprintf(stderr, "controlcode test rpt: %s\n", p);
+#endif
+                            len = 1;
+#ifndef GEMDOS
+                            if (sscanf((char *)++p, "%d%n", &len, &kwlen) == 1) {
+                                p += kwlen;
+#else
+                            if (sscanf(++p, "%d", &len) == 1) {
+                                while (isspace(*p) || isdigit(*p)) {
+                                    p++;
+                                }
+#endif
+
+#ifdef DEBUG
+                                fprintf(stderr, "controlcode repeat count: len:%d kwlen:%d\n", len, kwlen);
+#endif
+                                kwlen = 0;
+                            }
+                        }
+
+#ifdef DEBUG
+                        fprintf(stderr, "controlcode test 3: %c %s %d\n", p[0], p, kwlen);
+#endif
+
+                        if (p[kwlen] == CLARIF_RP) {
+                            for (; len-- > 0; ) {
+                                fputc(c, dest);
+                            }
+#ifdef DEBUG
+                            fprintf(stderr, "controlcode continue\n");
+#endif
+
+                            fseek(source, pos + kwlen + 1, SEEK_SET);
+                            continue;
+                        }
+                    }
+
+                    fprintf(stderr, "error: unknown control code: %s\n", p);
+                    exit(-1);
+                }
+            }
+
+#ifdef DEBUG
+        fprintf(stderr,"convert character (%02x)\n", c);
+#endif
+        /* convert character */
+        d = _a_topetscii(c, ctrls);
+        fputc(d, dest);
+    }
+}
+
 /*
      look up a controlcode
+
+     sets kwlen
 */
-static unsigned char sstrcmp_codes(unsigned char *line, const char **wordlist,
-                            int token, int maxitems)
+static int sstrcmp_codes(unsigned char *line, const char **wordlist, int token, int maxitems)
 {
     int j;
     const char *p, *q;
@@ -2681,38 +2847,35 @@ static unsigned char sstrcmp_codes(unsigned char *line, const char **wordlist,
     /* search for keyword */
     for (; token < maxitems; token++)
     {
-        if (codesnocase)
-        {
+        if (codesnocase) {
             for (p = wordlist[token], q = (char *)line, j = 0;
-                *p && *q && util_tolower(*p) == util_tolower(*q); p++, q++, j++);
-        }
-        else
-        {
+                 *p && *q && util_tolower(*p) == util_tolower(*q); p++, q++, j++) {}
+        } else {
             for (p = wordlist[token], q = (char *)line, j = 0;
-                *p && *q && *p == *q; p++, q++, j++);
+                 *p && *q && *p == *q; p++, q++, j++) {}
         }
 
-        /*fprintf (stderr,
-                 "compare %s %s - %d %d\n", wordlist[token], line, j, kwlen);*/
+        /* fprintf (stderr,
+                 "compare %s %s - %d %d\n", wordlist[token], line, j, kwlen); */
 
         /* found an exact or abbreviated keyword
          */
-        if (j && (!*p) )
-        {
+        if (j && (!*p)) {
             kwlen = j;
-            /*fprintf (stderr, "found %s %2x\n", wordlist[token], token);*/
+            /* fprintf (stderr, "found %s %2x\n", wordlist[token], token); */
             return token;
         }
-    } /* for */
+    } /* for */ 
 
-    return (KW_NONE);
+    return (CODE_NONE);
 }
 
 /*
      look up a keyword
+
+     sets kwlen
 */
-static unsigned char sstrcmp(unsigned char *line, const char **wordlist,
-                            int token, int maxitems)
+static unsigned char sstrcmp(unsigned char *line, const char **wordlist, int token, int maxitems)
 {
     int j;
     const char *p, *q;
@@ -2722,14 +2885,14 @@ static unsigned char sstrcmp(unsigned char *line, const char **wordlist,
     for (; token < maxitems; token++)
     {
         for (p = wordlist[token], q = (char *)line, j = 0;
-             *p && *q && *p == *q; p++, q++, j++);
+             *p && *q && *p == *q; p++, q++, j++) {}
 
         /*fprintf (stderr,
                  "compare %s %s - %d %d\n", wordlist[token], line, j, kwlen);*/
 
         /* found an exact or abbreviated keyword
          */
-        if (j && (!*p || (*p && (*p ^ *q) == 0x20 && j++)) ) {
+        if (j && (!*p || (*p && (*p ^ *q) == 0x20 && j++))) {
             kwlen = j;
             /*fprintf (stderr, "found %s %2x\n", wordlist[token], token);*/
             return token;
@@ -2769,8 +2932,9 @@ char *system_mbstowcs_alloc(const char *mbs)
 {
     char *wcs;
 
-    if (mbs == NULL)
+    if (mbs == NULL) {
         return NULL;
+    }
 
     wcs = lib_malloc((strlen(mbs) + 1) * sizeof(char));
     system_mbstowcs(wcs, mbs, strlen(mbs) + 1);

@@ -64,7 +64,7 @@ typedef struct gfxoutputdrv_s {
 /* Functions called by external emulator code.  */
 extern int gfxoutput_resources_init(void);
 extern int gfxoutput_cmdline_options_init(void);
-extern int gfxoutput_early_init(void);
+extern int gfxoutput_early_init(int drivers);
 extern int gfxoutput_init(void);
 extern void gfxoutput_shutdown(void);
 extern int gfxoutput_num_drivers(void);
@@ -97,6 +97,9 @@ extern void gfxoutput_init_gif(void);
 #define NATIVE_SS_OVERSIZE_CROP_LEFT_BOTTOM     7
 #define NATIVE_SS_OVERSIZE_CROP_CENTER_BOTTOM   8
 #define NATIVE_SS_OVERSIZE_CROP_RIGHT_BOTTOM    9
+
+#define NATIVE_SS_UNDERSIZE_SCALE       0
+#define NATIVE_SS_UNDERSIZE_BORDERIZE   1
 
 #define NATIVE_SS_MC2HR_BLACK_WHITE   0
 #define NATIVE_SS_MC2HR_2_COLORS      1

@@ -29,8 +29,7 @@
 #define VICE_VICII_RESOURCES_H
 
 /* VIC-II resources.  */
-struct vicii_resources_s
-{
+struct vicii_resources_s {
     /* VIC-II border mode, 0..3 */
     int border_mode;
 

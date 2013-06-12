@@ -2,7 +2,7 @@
  * parallel.h
  *
  * Written by
- *  Andre Fachat <a.fachat@physik.tu-chemnitz.de>
+ *  André Fachat <a.fachat@physik.tu-chemnitz.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -83,17 +83,17 @@ extern void parallel_restore_clr_atn(BYTE mask);
 
 
 /* methods to set output lines for the computer */
-#define PARALLEL_SET_LINE(line,dev,mask)                      \
-    static inline void parallel_##dev##_set_##line(BYTE val)  \
-    {                                                         \
-        if (val) {                                            \
-            parallel_set_##line(PARALLEL_##mask);             \
-        } else {                                              \
-            parallel_clr_##line(~PARALLEL_##mask);            \
-        }                                                     \
+#define PARALLEL_SET_LINE(line, dev, mask)                   \
+    static inline void parallel_##dev##_set_##line(BYTE val) \
+    {                                                        \
+        if (val) {                                           \
+            parallel_set_##line(PARALLEL_##mask);            \
+        } else {                                             \
+            parallel_clr_##line(~PARALLEL_##mask);           \
+        }                                                    \
     }
 
-#define PARALLEL_RESTORE_LINE(line,dev,mask)                      \
+#define PARALLEL_RESTORE_LINE(line, dev, mask)                    \
     static inline void parallel_##dev##_restore_##line(BYTE val)  \
     {                                                             \
         if (val) {                                                \

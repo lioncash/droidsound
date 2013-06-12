@@ -27,9 +27,8 @@
 #ifndef VICE_VIDEO_COLOR_H
 #define VICE_VIDEO_COLOR_H
 
+#include "palette.h"
 #include "types.h"
-
-struct palette_s;
 
 /* shared gamma table for renderers */
 extern DWORD gamma_red[256 * 3];
@@ -47,4 +46,3 @@ extern DWORD alpha;
 extern void video_color_palette_free(struct palette_s *palette);
 
 #endif
-

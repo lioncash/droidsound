@@ -505,7 +505,7 @@ static const cmdline_option_t cmdline_options[] =
 
 int cart_cmdline_options_init(void)
 {
-        /* "Slot 0" */
+    /* "Slot 0" */
     if (mmc64_cmdline_options_init() < 0
         || tpi_cmdline_options_init() < 0
         /* "Slot 1" */
@@ -547,7 +547,7 @@ int cart_cmdline_options_init(void)
 */
 int cart_resources_init(void)
 {
-        /* "Slot 0" */
+    /* "Slot 0" */
     if (mmc64_resources_init() < 0
         || magicvoice_resources_init() < 0
         || tpi_resources_init() < 0
@@ -627,7 +627,7 @@ void cart_resources_shutdown(void)
 */
 int cart_is_slotmain(int type)
 {
-   switch (type) {
+    switch (type) {
         /* slot 0 */
         case CARTRIDGE_MMC64:
         case CARTRIDGE_MAGIC_VOICE:
@@ -747,7 +747,7 @@ int cart_type_enabled(int type)
         case CARTRIDGE_TURBO232:
             return aciacart_cart_enabled();
 #endif
-        /* Main Slot handled in c64cart.c:cartridge_type_enabled */
+            /* Main Slot handled in c64cart.c:cartridge_type_enabled */
     }
     return 0;
 }
@@ -797,9 +797,9 @@ const char *cart_get_file_name(int type)
 #ifdef HAVE_RS232
         case CARTRIDGE_TURBO232:
 #endif
-          break;
+            break;
 
-        /* Main Slot handled in c64cart.c:cartridge_get_file_name */
+            /* Main Slot handled in c64cart.c:cartridge_get_file_name */
     }
     return ""; /* FIXME: NULL or empty string? */
 }
@@ -825,7 +825,7 @@ void cartridge_setup_context(machine_context_t *machine_context)
 
 int cart_bin_attach(int type, const char *filename, BYTE *rawcart)
 {
-    switch(type) {
+    switch (type) {
         /* "Slot 0" */
         case CARTRIDGE_IEEE488:
             return tpi_bin_attach(filename, rawcart);
@@ -1171,7 +1171,7 @@ void cart_attach(int type, BYTE *rawcart)
 }
 
 /* only one of the "Slot 0" carts can be enabled at a time */
-static int slot0conflicts[]=
+static int slot0conflicts[] =
 {
     CARTRIDGE_IEEE488,
     CARTRIDGE_MAGIC_VOICE,
@@ -1180,7 +1180,7 @@ static int slot0conflicts[]=
 };
 
 /* only one of the "Slot 1" carts can be enabled at a time */
-static int slot1conflicts[]=
+static int slot1conflicts[] =
 {
     CARTRIDGE_EXPERT,
     CARTRIDGE_ISEPIC,
@@ -1831,7 +1831,6 @@ void cartridge_init_config(void)
     } else if (tpi_cart_enabled()) {
         tpi_config_init((struct export_s*)&export_passthrough);
     }
-
 }
 
 /*
@@ -2208,6 +2207,123 @@ void cartridge_sound_chip_init(void)
 }
 
 /* ------------------------------------------------------------------------- */
+/* Perform MMU translation for simple cartridge RAM/ROM/FLASH mappings.
+   This function returns a pointer to a continuous memory area where addr
+   points into. The boundary of the area are returned in start and limit,
+   where limit is the last address where a dword read can be performed (last-3).
+
+   The CPU uses this information to read data from the defined area quickly by
+   using base[addr] instead of going through chains of various memory mapping
+   hooks.
+
+   It's important to know that this mapping optimization is valid until
+   there's no memory mapping configuration change, then the translation is
+   performed again. A memory configuration change can be signaled by calling
+   maincpu_resync_limits directly, or preferably by calling one of these:
+   - mem_pla_config_changed
+   - cart_config_changed
+   - cart_port_config_changed_slot0
+   - cart_config_changed_slot0
+   - cart_port_config_changed_slot1
+   - cart_config_changed_slot1
+   - cart_port_config_changed_slotmain
+   - cart_config_changed_slotmain
+
+   If such caching is not desired or not possible a base of NULL with start and
+   limit of 0 shall be returned, then all CPU reads go through the normal
+   hooks. There could be various reasons to do so:
+   - the cartridge has no hooks yet
+   - the address does not fall into a continuous memory area (RAM/ROM) managed
+     by the cartridge in it's current configuration or banking
+   - side effects should happen when the area is accessed (e.g. capacitor discharge,
+     i/o area)
+   - the memory area is programmable flash and it's not in it's "idle" mode now
+
+   TODO: add more cartridges
+*/
+void cartridge_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
+{
+    int res = CART_READ_THROUGH;
+    /* "Slot 0" */
+
+    if (mmc64_cart_enabled()) {
+        if ((res = mmc64_mmu_translate(addr, base, start, limit)) == CART_READ_VALID) {
+            return;
+        }
+    } else if (magicvoice_cart_enabled()) {
+        if ((res = magicvoice_mmu_translate(addr, base, start, limit)) == CART_READ_VALID) {
+            return;
+        }
+    } else if (tpi_cart_enabled()) {
+        if ((res = tpi_mmu_translate(addr, base, start, limit)) == CART_READ_VALID) {
+            return;
+        }
+    }
+
+    switch (res) {
+        case CART_READ_C64MEM:
+            *base = NULL;
+            *start = 0;
+            *limit = 0;
+            return;
+        case CART_READ_THROUGH_NO_ULTIMAX:
+            break;
+    }
+
+    /* continue with "Slot 1" */
+    if (isepic_cart_active()) {
+        isepic_mmu_translate(addr, base, start, limit);
+        return;
+    }
+    if (expert_cart_enabled()) {
+        expert_mmu_translate(addr, base, start, limit);
+        return;
+    }
+    if (ramcart_cart_enabled()) {
+        ramcart_mmu_translate(addr, base, start, limit);
+        return;
+    }
+    if (dqbb_cart_enabled()) {
+        dqbb_mmu_translate(addr, base, start, limit);
+        return;
+    }
+
+    /* continue with "Main Slot" */
+    switch (mem_cartridge_type) {
+        case CARTRIDGE_ACTION_REPLAY4:
+        case CARTRIDGE_FINAL_III:
+        case CARTRIDGE_GENERIC_16KB:
+        case CARTRIDGE_GENERIC_8KB:
+        case CARTRIDGE_KCS_POWER:
+        case CARTRIDGE_SIMONS_BASIC:
+        case CARTRIDGE_ULTIMAX:
+            generic_mmu_translate(addr, base, start, limit);
+            return;
+        case CARTRIDGE_ATOMIC_POWER:
+            atomicpower_mmu_translate(addr, base, start, limit);
+            return;
+        case CARTRIDGE_EASYFLASH:
+            easyflash_mmu_translate(addr, base, start, limit);
+            return;
+        case CARTRIDGE_IDE64:
+            ide64_mmu_translate(addr, base, start, limit);
+            return;
+        case CARTRIDGE_RETRO_REPLAY:
+            retroreplay_mmu_translate(addr, base, start, limit);
+            return;
+        case CARTRIDGE_SUPER_SNAPSHOT_V5:
+            supersnapshot_v5_mmu_translate(addr, base, start, limit);
+            return;
+        case CARTRIDGE_EPYX_FASTLOAD: /* must go through roml_read to discharge capacitor */
+        default:
+            *base = NULL;
+            *start = 0;
+            *limit = 0;
+            return;
+    }
+}
+
+/* ------------------------------------------------------------------------- */
 
 /*
     Snapshot reading and writing
@@ -2248,7 +2364,7 @@ int cartridge_snapshot_write_modules(struct snapshot_s *s)
     }
 
     m = snapshot_module_create(s, SNAP_MODULE_NAME,
-                          C64CART_DUMP_VER_MAJOR, C64CART_DUMP_VER_MINOR);
+                               C64CART_DUMP_VER_MAJOR, C64CART_DUMP_VER_MINOR);
     if (m == NULL) {
         return -1;
     }
@@ -3134,7 +3250,7 @@ int cartridge_snapshot_read_modules(struct snapshot_s *s)
 
             default:
                 DBG(("CART snapshot read: cart %i handler missing\n", cart_ids[i]));
-                    goto fail2;
+                goto fail2;
         }
 
         cart_attach_from_snapshot(cart_ids[i]);

@@ -60,7 +60,7 @@ static void c64_song_init()
     resources_set_int("SidModel", sid);
 
     /* Reset C64, which also initializes PSID for us. */
-    machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
+    maincpu_mainloop();
 
     /* Now force video mode if we are asked to. */
     if (videomode_is_forced)
@@ -168,7 +168,7 @@ JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_VICEPlugin_N_1setDataDir(
     machine_early_init();
     sysfile_init("C64");
 
-    gfxoutput_early_init();
+    gfxoutput_early_init(0);
 
     if (init_resources() < 0)
     {

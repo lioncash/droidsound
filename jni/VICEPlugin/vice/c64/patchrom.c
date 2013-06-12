@@ -64,7 +64,6 @@
 #define PATCH_VERSIONS 3   /* counting from 0 */
 
 static const unsigned short patch_bytes[] = {
-
     3, 0xE42D,
         0x20, 0x1E, 0xAB,
         0x20, 0x1E, 0xAB,
@@ -237,7 +236,7 @@ static const unsigned short patch_bytes[] = {
 
 int patch_rom(const char *str)
 {
-    int rev, curr, num, lcount, isnum;
+    int rev, curr, num, isnum;
     short bytes, n, i = 0;
     WORD a;
 
@@ -270,7 +269,7 @@ int patch_rom(const char *str)
     }
 
     if (rev < 0) {
-          rev = 0;
+        rev = 0;
     }
 
     /* create index */
@@ -297,7 +296,6 @@ int patch_rom(const char *str)
 
     log_message(LOG_DEFAULT, "Installing ROM patch for revision #%d:", num);
 
-    lcount = 0;
     i = 0;
     while ((bytes = patch_bytes[i++]) > 0) {
         a = (WORD)patch_bytes[i++];
@@ -305,7 +303,7 @@ int patch_rom(const char *str)
         log_message(LOG_DEFAULT, "%.4X (%d byte%s)", a & 0xFFFF, bytes, ((bytes > 1) ? "s" : ""));
 
         i += (bytes * rev);     /* select patch */
-        for (n = bytes; n--;) {
+        for (n = bytes; n--; ) {
             c64memrom_rom64_store(a++, (BYTE)patch_bytes[i++]);
         }
 

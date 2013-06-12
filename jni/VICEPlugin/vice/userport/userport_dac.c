@@ -3,6 +3,8 @@
  *
  * Written by
  *  Marco van den Heuvel <blackystardust68@yahoo.com>
+ * Filtering by
+ *  Kajtar Zsolt <soci@c64.rulez.org>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -40,6 +42,8 @@
 #include "userport_dac.h"
 
 /* ------------------------------------------------------------------------- */
+
+static sound_dac_t userport_dac_dac;
 
 /* Some prototypes are needed */
 static int userport_dac_sound_machine_init(sound_t *psid, int speed, int cycles_per_sec);
@@ -129,8 +133,7 @@ void userport_dac_store(BYTE value)
     }
 }
 
-struct userport_dac_sound_s
-{
+struct userport_dac_sound_s {
     BYTE voice0;
 };
 
@@ -138,32 +141,12 @@ static struct userport_dac_sound_s snd;
 
 static int userport_dac_sound_machine_calculate_samples(sound_t **psid, SWORD *pbuf, int nr, int soc, int scc, int *delta_t)
 {
-    int i;
-    int off = 0;
-
-    for (i = 0; i < nr; i++) {
-        /*
-         * The userport has unsigned 8-bit values.
-         * The mixer expects signed 16-bit values.
-         * Expanding 8 to 16 bits is easy, but you get a range [0, ffff],
-         * not [-8000, 7fff].
-         * Just shifting the range won't work properly, since the neutral
-         * value would become the most negative value and that doesn't
-         * mix well with other sound sources such as CB2 sound.
-         */
-        /*int sample = snd.voice0 + (snd.voice0 << 8) - 0x8000;*/
-        int sample = (snd.voice0 >> 1) + (snd.voice0 << 7);
-        pbuf[off] = sound_audio_mix(pbuf[off], sample);
-        if (soc > 1) {
-            pbuf[off + 1] = sound_audio_mix(pbuf[off + 1], sample);
-        }
-        off += soc;
-    }
-    return nr;
+    return sound_dac_calculate_samples(&userport_dac_dac, pbuf, (int)snd.voice0 * 128, nr, soc, (soc > 1) ? 3 : 1);
 }
 
 static int userport_dac_sound_machine_init(sound_t *psid, int speed, int cycles_per_sec)
 {
+    sound_dac_init(&userport_dac_dac, speed);
     snd.voice0 = 0;
 
     return 1;

@@ -32,36 +32,37 @@
 #include "viewport.h"
 
 struct video_render_config_s;
+struct video_canvas_s;
 
 extern void video_render_main(struct video_render_config_s *config, BYTE *src,
                               BYTE *trg, int width, int height,
                               int xs, int ys, int xt, int yt,
                               int pitchs, int pitcht, int depth,
                               viewport_t *viewport);
+extern void video_render_update_palette(struct video_canvas_s *canvas);
 
-extern void video_render_1x2func_set(void(*func)(struct video_render_config_s *,
-                                     const BYTE *, BYTE *,
-                                     unsigned int, const unsigned int,
-                                     const unsigned int, const unsigned int,
-                                     const unsigned int, const unsigned int,
-                                     const unsigned int, const unsigned int,
-                                     int));
+extern void video_render_1x2func_set(void (*func)(struct video_render_config_s *,
+                                                  const BYTE *, BYTE *,
+                                                  unsigned int, const unsigned int,
+                                                  const unsigned int, const unsigned int,
+                                                  const unsigned int, const unsigned int,
+                                                  const unsigned int, const unsigned int,
+                                                  int));
 
-extern void video_render_2x2func_set(void(*func)(struct video_render_config_s *,
-                                     const BYTE *, BYTE *,
-                                     unsigned int, const unsigned int,
-                                     const unsigned int, const unsigned int,
-                                     const unsigned int, const unsigned int,
-                                     const unsigned int, const unsigned int,
-                                     int));
+extern void video_render_2x2func_set(void (*func)(struct video_render_config_s *,
+                                                  const BYTE *, BYTE *,
+                                                  unsigned int, const unsigned int,
+                                                  const unsigned int, const unsigned int,
+                                                  const unsigned int, const unsigned int,
+                                                  const unsigned int, const unsigned int,
+                                                  int));
 
-extern void video_render_palfunc_set(void(*func)(struct video_render_config_s *,
-                                     BYTE *, BYTE *, int, int, int, int,
-                                     int, int, int, int, int, viewport_t *));
+extern void video_render_palfunc_set(void (*func)(struct video_render_config_s *,
+                                                  BYTE *, BYTE *, int, int, int, int,
+                                                  int, int, int, int, int, viewport_t *));
 
-extern void video_render_crtfunc_set(void(*func)(struct video_render_config_s *,
-                                     BYTE *, BYTE *, int, int, int, int,
-                                     int, int, int, int, int, viewport_t *));
+extern void video_render_crtfunc_set(void (*func)(struct video_render_config_s *,
+                                                  BYTE *, BYTE *, int, int, int, int,
+                                                  int, int, int, int, int, viewport_t *));
 
 #endif
-

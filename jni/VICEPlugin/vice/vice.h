@@ -1,5 +1,5 @@
 
-/*! \file vice.h 
+/*! \file vice.h
  *
  *  \brief Main header file for VICE.
  *
@@ -41,7 +41,11 @@
 #ifdef IDE_COMPILE
 # include <ide-config.h> /* standard config file for IDE based compiles. */
 #else
-# include <config.h> /* Automagically created by the `configure' script.  */
+# ifdef ANDROID_COMPILE
+#  include <config.android.h>
+# else
+#  include <config.h> /* Automagically created by the `configure' script.  */
+# endif
 #endif
 
 /* ------------------------------------------------------------------------- */
@@ -105,7 +109,7 @@
 #if defined(sun) || defined(__sun)
 #  if !defined(__SVR4) && !defined(__svr4__)
 #    include <unistd.h>
-     typedef int ssize_t;
+typedef int ssize_t;
 #  endif
 #endif
 

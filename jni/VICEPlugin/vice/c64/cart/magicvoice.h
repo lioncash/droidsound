@@ -1,7 +1,7 @@
 /*
  * magicvoice.h - Speech Cartridge
  *
- * Written by 
+ * Written by
  *  groepaz <groepaz@gmx.net>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -67,6 +67,7 @@ extern int magicvoice_crt_attach(FILE *fd, BYTE *rawcart);
 extern int magicvoice_enable(void);
 extern void magicvoice_detach(void);
 extern const char *magicvoice_get_file_name(void);
+extern int magicvoice_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit);
 
 extern void magicvoice_sound_chip_init(void);
 

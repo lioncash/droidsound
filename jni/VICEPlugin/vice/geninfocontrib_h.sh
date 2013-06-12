@@ -4,8 +4,28 @@
 #
 # written by Marco van den Heuvel <blackystardust68@yahoo.com>
 
-# use system echo as it supports backslash expansion
-ECHO=/bin/echo
+# use system echo if possible, as it supports backslash expansion
+if test -f /bin/echo; then
+  ECHO=/bin/echo
+else
+  if test -f /usr/bin/echo; then
+    ECHO=/usr/bin/echo
+  else
+    ECHO=echo
+  fi
+fi
+
+rm -f try.tmp
+$ECHO "\\\\n" >try.tmp
+n1=`cat	try.tmp	| wc -c`
+n2=`expr $n1 + 0`
+
+if test x"$n2" = "x3"; then
+    linefeed="\\\\n"
+else
+    linefeed="\\n"
+fi
+rm -f try.tmp
 
 $ECHO "/*"
 $ECHO " * infocontrib.h - Text of contributors to VICE, as used in info.c"
@@ -52,7 +72,7 @@ outputok=no
 while read data
 do
   if test x"$data" = "x@node Copyright, Contacts, Acknowledgments, Top"; then
-    $ECHO "\"\\n\";"
+    $ECHO "\"$linefeed\";"
     $ECHO "#endif"
     outputok=no
   fi
@@ -60,9 +80,9 @@ do
     checkoutput
     if test x"$dooutput" = "xyes"; then
       if test x"$data" = "x"; then
-        $ECHO "\"\\n\""
+        $ECHO "\"$linefeed\""
       else
-        $ECHO "\"  $data\\n\""
+        $ECHO "\"  $data$linefeed\""
       fi
     fi
   fi

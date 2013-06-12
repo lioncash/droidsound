@@ -3,7 +3,7 @@
  *
  * Written by
  *  Marco van den Heuvel <blackystardust68@yahoo.com>
- * 
+ *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
  *
@@ -198,7 +198,7 @@ static BYTE ramcart_io1_read(WORD addr)
         retval = vicii_read_phi1() & 0x7e;
         retval += ramcart[addr];
     } else {
-      retval = ramcart[addr];
+        retval = ramcart[addr];
     }
 
     return retval;
@@ -311,7 +311,7 @@ static int ramcart_deactivate(void)
 
 static int set_ramcart_enabled(int val, void *param)
 {
-    if(!ramcart_enabled && val) {
+    if (!ramcart_enabled && val) {
         cart_power_off();
         if (ramcart_activate() < 0) {
             return -1;
@@ -324,7 +324,7 @@ static int set_ramcart_enabled(int val, void *param)
         ramcart_enabled = 1;
         cart_set_port_exrom_slot1(1);
         cart_port_config_changed_slot1();
-    } else if(ramcart_enabled && !val) {
+    } else if (ramcart_enabled && !val) {
         cart_power_off();
         if (ramcart_deactivate() < 0) {
             return -1;
@@ -343,8 +343,8 @@ static int set_ramcart_enabled(int val, void *param)
 
 static int set_ramcart_readonly(int val, void *param)
 {
-  ramcart_readonly = val;
-  return 0;
+    ramcart_readonly = val;
+    return 0;
 }
 
 static int set_ramcart_size(int val, void *param)
@@ -492,6 +492,19 @@ const char *ramcart_get_file_name(void)
     return ramcart_filename;
 }
 
+void ramcart_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
+{
+    if (ramcart_readonly == 1 && ramcart_size_kb == 128 && addr >= 0x8000 && addr <= 0x80ff) {
+        *base = &ramcart_ram[((ramcart[1] & 1) * 65536) + (ramcart[0] * 256)] - 0x8000;
+        *start = 0x8000;
+        *limit = 0x80fd;
+        return;
+    }
+    *base = NULL;
+    *start = 0;
+    *limit = -1;
+}
+
 void ramcart_init_config(void)
 {
     if (ramcart_enabled) {
@@ -533,9 +546,9 @@ int ramcart_bin_attach(const char *filename, BYTE *rawcart)
 {
     int size = 128;
 
-    if (util_file_load(filename, rawcart, 128*1024, UTIL_FILE_LOAD_SKIP_ADDRESS) < 0) {
+    if (util_file_load(filename, rawcart, 128 * 1024, UTIL_FILE_LOAD_SKIP_ADDRESS) < 0) {
         size = 64;
-        if (util_file_load(filename, rawcart, 64*1024, UTIL_FILE_LOAD_SKIP_ADDRESS) < 0) {
+        if (util_file_load(filename, rawcart, 64 * 1024, UTIL_FILE_LOAD_SKIP_ADDRESS) < 0) {
             return -1;
         }
     }
@@ -606,7 +619,7 @@ int ramcart_snapshot_write_module(snapshot_t *s)
     snapshot_module_t *m;
 
     m = snapshot_module_create(s, SNAP_MODULE_NAME,
-                          CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR);
+                               CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR);
     if (m == NULL) {
         return -1;
     }

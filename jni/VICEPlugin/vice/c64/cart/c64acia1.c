@@ -2,7 +2,7 @@
  * c64acia1.c - Definitions for a 6551 ACIA interface
  *
  * Written by
- *  Andre Fachat <fachat@physik.tu-chemnitz.de>
+ *  Andre' Fachat <fachat@physik.tu-chemnitz.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -109,12 +109,13 @@ static const c64export_resource_t export_res = {
 
 /* ------------------------------------------------------------------------- */
 
-int aciacart_cart_enabled(void) {
+int aciacart_cart_enabled(void)
+{
 #ifdef HAVE_RS232
     return acia_enabled;
 #else
     return 0;
-#endif 
+#endif
 }
 
 #ifdef HAVE_RS232

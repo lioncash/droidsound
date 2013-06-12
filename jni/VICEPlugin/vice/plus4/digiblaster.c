@@ -50,12 +50,12 @@ static void digiblaster_sound_reset(sound_t *psid, CLOCK cpu_clk);
 
 static int digiblaster_sound_machine_cycle_based(void)
 {
-	return 0;
+    return 0;
 }
 
 static int digiblaster_sound_machine_channels(void)
 {
-	return 1;
+    return 1;
 }
 
 static sound_chip_t digiblaster_sound_chip = {
@@ -72,6 +72,7 @@ static sound_chip_t digiblaster_sound_chip = {
 };
 
 static WORD digiblaster_sound_chip_offset = 0;
+static sound_dac_t digiblaster_dac;
 
 void digiblaster_sound_chip_init(void)
 {
@@ -127,8 +128,7 @@ int digiblaster_cmdline_options_init(void)
 
 static BYTE digiblaster_sound_data;
 
-struct digiblaster_sound_s
-{
+struct digiblaster_sound_s {
     BYTE voice0;
 };
 
@@ -136,19 +136,12 @@ static struct digiblaster_sound_s snd;
 
 static int digiblaster_sound_machine_calculate_samples(sound_t **psid, SWORD *pbuf, int nr, int soc, int scc, int *delta_t)
 {
-    int i;
-
-    for (i = 0; i < nr; i++) {
-        pbuf[i * soc] = sound_audio_mix(pbuf[i * soc], snd.voice0 << 8);
-        if (soc > 1) {
-            pbuf[(i * soc) + 1] = sound_audio_mix(pbuf[(i * soc) + 1], snd.voice0 << 8);
-        }
-    }
-    return nr;
+    return sound_dac_calculate_samples(&digiblaster_dac, pbuf, (int)snd.voice0 * 128, nr, soc, (soc > 1) ? 3 : 1);
 }
 
 static int digiblaster_sound_machine_init(sound_t *psid, int speed, int cycles_per_sec)
 {
+    sound_dac_init(&digiblaster_dac, speed);
     snd.voice0 = 0;
 
     return 1;

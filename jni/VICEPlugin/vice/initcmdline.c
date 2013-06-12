@@ -25,6 +25,8 @@
  *
  */
 
+/* #define DEBUG_CMDLINE */
+
 #include "vice.h"
 
 #include <ctype.h>
@@ -46,6 +48,11 @@
 #include "translate.h"
 #include "util.h"
 
+#ifdef DEBUG_CMDLINE
+#define DBG(x)  printf x
+#else
+#define DBG(x)
+#endif
 
 static char *autostart_string = NULL;
 static char *startup_disk_images[4];
@@ -83,10 +90,10 @@ static int cmdline_help(const char *param, void *extra_param)
     return 0;   /* OSF1 cc complains */
 }
 
-static int cmdline_dummy_callback(const char *param, void *extra_param)
+static int cmdline_config(const char *param, void *extra_param)
 {
     /* "-config" needs to be handled before this gets called
-       but they also need to be registered as cmdline options,
+       but it also needs to be registered as a cmdline option,
        hence this kludge. */
     return 0;
 }
@@ -131,20 +138,19 @@ static int cmdline_attach(const char *param, void *extra_param)
     int unit = vice_ptr_to_int(extra_param);
 
     switch (unit) {
-      case 1:
-        lib_free(startup_tape_image);
-        startup_tape_image = lib_stralloc(param);
-        break;
-      case 8:
-      case 9:
-      case 10:
-      case 11:
-        lib_free(startup_disk_images[unit - 8]);
-        startup_disk_images[unit - 8] = lib_stralloc(param);
-        break;
-      default:
-        archdep_startup_log_error("cmdline_attach(): unexpected unit number %d?!\n",
-                                  unit);
+        case 1:
+            lib_free(startup_tape_image);
+            startup_tape_image = lib_stralloc(param);
+            break;
+        case 8:
+        case 9:
+        case 10:
+        case 11:
+            lib_free(startup_disk_images[unit - 8]);
+            startup_disk_images[unit - 8] = lib_stralloc(param);
+            break;
+        default:
+            archdep_startup_log_error("cmdline_attach(): unexpected unit number %d?!\n", unit);
     }
 
     return 0;
@@ -167,7 +173,7 @@ static const cmdline_option_t common_cmdline_options[] = {
       IDCLS_UNUSED, IDCLS_SHOW_COMMAND_LINE_OPTIONS,
       NULL, NULL },
     { "-config", CALL_FUNCTION, 1,
-      cmdline_dummy_callback, NULL, NULL, NULL,
+      cmdline_config, NULL, NULL, NULL,
       USE_PARAM_ID, USE_DESCRIPTION_ID,
       IDCLS_P_FILE, IDCLS_SPECIFY_CONFIG_FILE,
       NULL, NULL },
@@ -289,27 +295,34 @@ int initcmdline_check_psid(void)
 
 int initcmdline_check_args(int argc, char **argv)
 {
+    DBG(("initcmdline_check_args (argc:%d)\n", argc));
     if (cmdline_parse(&argc, argv) < 0) {
         archdep_startup_log_error("Error parsing command-line options, bailing out. For help use '-help'\n");
         return -1;
     }
+    DBG(("initcmdline_check_args 1 (argc:%d)\n", argc));
 
     /* The last orphan option is the same as `-autostart'.  */
-    if (argc >= 1 && autostart_string == NULL) {
+    if ((argc > 1) && (autostart_string == NULL)) {
         autostart_string = lib_stralloc(argv[1]);
         argc--, argv++;
     }
+    DBG(("initcmdline_check_args 2 (argc:%d)\n", argc));
 
     if (argc > 1) {
         int len = 0, j;
 
-        for (j = 1; j < argc; j++)
-            len += (int)strlen(argv[j]);
+        for (j = 1; j < argc; j++) {
+            len += argv[j] ? (int)strlen(argv[j]) : 0;
+        }
 
         {
             char *txt = lib_calloc(1, len + argc + 1);
-            for (j = 1; j < argc; j++)
-                strcat(strcat(txt, " "), argv[j]);
+            for (j = 1; j < argc; j++) {
+                if (argv[j]) {
+                    strcat(strcat(txt, " "), argv[j]);
+                }
+            }
             archdep_startup_log_error("Extra arguments on command-line: %s\n",
                                       txt);
             lib_free(txt);
@@ -336,20 +349,20 @@ void initcmdline_check_attach(void)
             for (i = 0; i < 4; i++) {
                 if (startup_disk_images[i] != NULL
                     && file_system_attach_disk(i + 8, startup_disk_images[i])
-                    < 0)
+                    < 0) {
                     log_error(LOG_DEFAULT,
                               "Cannot attach disk image `%s' to unit %d.",
                               startup_disk_images[i], i + 8);
+                }
             }
         }
 
         /* `-1': Attach specified tape image.  */
-        if (startup_tape_image && tape_image_attach(1, startup_tape_image) < 0)
+        if (startup_tape_image && tape_image_attach(1, startup_tape_image) < 0) {
             log_error(LOG_DEFAULT, "Cannot attach tape image `%s'.",
                       startup_tape_image);
-
+        }
     }
 
     cmdline_free_autostart_string();
 }
-

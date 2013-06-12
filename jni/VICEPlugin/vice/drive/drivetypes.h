@@ -45,9 +45,8 @@ struct drive_context_s;         /* forward declaration */
 struct monitor_interface_s;
 
 /* This defines the memory access for the drive CPU.  */
-typedef BYTE drive_read_func_t(struct drive_context_s *, WORD);
-typedef void drive_store_func_t(struct drive_context_s *, WORD,
-                                         BYTE);
+typedef BYTE drive_read_func_t (struct drive_context_s *, WORD);
+typedef void drive_store_func_t (struct drive_context_s *, WORD, BYTE);
 
 /*
  *  The private CPU data.
@@ -80,7 +79,8 @@ typedef struct drivecpu_context_s {
 
     CLOCK cycle_accum;
     BYTE *d_bank_base;
-    int d_bank_limit;     /* init to -1 */
+    unsigned int d_bank_start;
+    unsigned int d_bank_limit;
 
     /* Information about the last executed opcode.  */
     unsigned int last_opcode_info;
@@ -120,7 +120,7 @@ typedef struct drivecpud_context_s {
     drive_read_func_t  *read_func_nowatch[0x101];
     drive_store_func_t *store_func_nowatch[0x101];
 
-	int sync_factor;
+    int sync_factor;
 } drivecpud_context_t;
 
 
@@ -142,9 +142,9 @@ extern drivefunc_context_t drive_funcs[DRIVE_NUM];
  * Helper macros for dual disk drives.
  */
 #define is_drive0(d)    (!is_drive1(d))
-#define is_drive1(d)    ((d) &  1)
+#define is_drive1(d)    ((d) & 1)
 #define mk_drive0(d)    ((d) & ~1)
-#define mk_drive1(d)    ((d) |  1)
+#define mk_drive1(d)    ((d) | 1)
 
 /*
  * The context for an entire drive.

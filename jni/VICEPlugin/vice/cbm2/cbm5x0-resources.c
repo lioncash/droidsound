@@ -2,7 +2,7 @@
  * cbm5x0-resources.c - CBM-5x0 resources.
  *
  * Written by
- *  Andre Fachat <fachat@physik.tu-chemnitz.de>
+ *  André Fachat <fachat@physik.tu-chemnitz.de>
  *  Andreas Boose <viceteam@t-online.de>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -95,8 +95,9 @@ int ramsize;
 
 static int set_ramsize(int rs, void *param)
 {
-    if (rs!=64 && rs!=128 && rs!=256 && rs!=512 && rs!=1024)
+    if (rs != 64 && rs != 128 && rs != 256 && rs != 512 && rs != 1024) {
         return -1;
+    }
 
     ramsize = rs;
     vsync_suspend_speed_eval();
@@ -108,24 +109,27 @@ static int set_ramsize(int rs, void *param)
 
 static int set_chargen_rom_name(const char *val, void *param)
 {
-    if (util_string_set(&chargen_name, val))
+    if (util_string_set(&chargen_name, val)) {
         return 0;
+    }
 
     return cbm2rom_load_chargen(chargen_name);
 }
 
 static int set_kernal_rom_name(const char *val, void *param)
 {
-    if (util_string_set(&kernal_rom_name, val))
+    if (util_string_set(&kernal_rom_name, val)) {
         return 0;
+    }
 
     return cbm2rom_load_kernal(kernal_rom_name);
 }
 
 static int set_basic_rom_name(const char *val, void *param)
 {
-    if (util_string_set(&basic_rom_name, val))
+    if (util_string_set(&basic_rom_name, val)) {
         return 0;
+    }
 
     return cbm2rom_load_basic(basic_rom_name);
 }
@@ -155,22 +159,25 @@ static int cbm5x0_set_sync_factor(int val, void *param)
     int change_timing = 0;
     int border_mode = VICII_BORDER_MODE(vicii_resources.border_mode);
 
-    if (sync_factor != val)
+    if (sync_factor != val) {
         change_timing = 1;
+    }
 
     switch (val) {
-      case MACHINE_SYNC_PAL:
-        sync_factor = val;
-        if (change_timing)
-            machine_change_timing(MACHINE_SYNC_PAL ^ border_mode);
-        break;
-      case MACHINE_SYNC_NTSC:
-        sync_factor = val;
-        if (change_timing)
-            machine_change_timing(MACHINE_SYNC_NTSC ^ border_mode);
-        break;
-      default:
-        return -1;
+        case MACHINE_SYNC_PAL:
+            sync_factor = val;
+            if (change_timing) {
+                machine_change_timing(MACHINE_SYNC_PAL ^ border_mode);
+            }
+            break;
+        case MACHINE_SYNC_NTSC:
+            sync_factor = val;
+            if (change_timing) {
+                machine_change_timing(MACHINE_SYNC_NTSC ^ border_mode);
+            }
+            break;
+        default:
+            return -1;
     }
     return 0;
 }

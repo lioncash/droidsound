@@ -104,7 +104,6 @@ void rotation_init(int freq, unsigned int dnr)
     rotation[dnr].so_delay = 0;
     rotation[dnr].cycle_index = 0;
     rotation[dnr].ref_advance = 0;
-
 }
 
 void rotation_reset(drive_t *drive)
@@ -173,9 +172,8 @@ void rotation_table_get(DWORD *rotation_table_ptr)
         drive->snap_cycle_index = rotation[dnr].cycle_index;
         drive->snap_ref_advance = rotation[dnr].ref_advance;
         drive->snap_req_ref_cycles = drive->req_ref_cycles;
-
     }
- }
+}
 
 void rotation_table_set(DWORD *rotation_table_ptr)
 {
@@ -270,20 +268,23 @@ inline static int read_next_bit(drive_t *dptr)
     return (dptr->GCR_track_start_ptr[byte_offset] >> bit) & 1;
 }
 
-inline static SDWORD RANDOM_nextInt(rotation_t *rptr) {
+inline static SDWORD RANDOM_nextInt(rotation_t *rptr)
+{
     DWORD bits = rptr->seed >> 15;
     rptr->seed ^= rptr->accum;
     rptr->seed = rptr->seed << 17 | bits;
     return (SDWORD) rptr->seed;
 }
 
-inline static DWORD RANDOM_nextUInt(rotation_t *rptr) {
+inline static DWORD RANDOM_nextUInt(rotation_t *rptr)
+{
     rptr->xorShift32 ^= (rptr->xorShift32 << 13);
     rptr->xorShift32 ^= (rptr->xorShift32 >> 17);
     return rptr->xorShift32 ^= (rptr->xorShift32 << 5);
 }
 
-void rotation_begins(drive_t *dptr) {
+void rotation_begins(drive_t *dptr)
+{
     unsigned int dnr = dptr->mynumber;
     rotation[dnr].rotation_last_clk = *(dptr->clk);
     rotation[dnr].cycle_index = 0;
@@ -297,7 +298,7 @@ void rotation_1541_gcr(drive_t *dptr, int ref_cycles)
     int clk_ref_per_rev, cyc_act_frv;
     unsigned int todo;
     SDWORD delta;
-    DWORD count_new_bitcell, cyc_sum_frv/*, sum_new_bitcell*/;
+    DWORD count_new_bitcell, cyc_sum_frv /*, sum_new_bitcell*/;
     unsigned int dnr = dptr->mynumber;
 
     rptr = &rotation[dptr->mynumber];
@@ -318,29 +319,27 @@ void rotation_1541_gcr(drive_t *dptr, int ref_cycles)
     cyc_sum_frv = cyc_sum_frv ? cyc_sum_frv : 1;
 
     if (dptr->read_write_mode) {
-
         /* emulate the number of reference clocks requested */
         while (ref_cycles > 0) {
-
             /* calculate how much cycles can we do in one single pass */
             todo = 1;
             delta = count_new_bitcell - rptr->accum;
-            if ((delta > 0) && ((cyc_sum_frv << 1) <= delta)) {
+            if ((delta > 0) && ((cyc_sum_frv << 1) <= (DWORD)delta)) {
                 todo = delta / cyc_sum_frv;
-                if (ref_cycles < todo) {
-                   todo = ref_cycles;
+                if (ref_cycles < (int)todo) {
+                    todo = ref_cycles;
                 }
-                if ((rptr->ue7_counter < 16) && ((16 - rptr->ue7_counter) < todo)) {
-                   todo = 16 - rptr->ue7_counter;
+                if ((rptr->ue7_counter < 16) && ((16 - rptr->ue7_counter) < (int)todo)) {
+                    todo = 16 - rptr->ue7_counter;
                 }
-                if ((rptr->filter_counter < 40) && ((40 - rptr->filter_counter) < todo)) {
-                   todo = 40 - rptr->filter_counter;
+                if ((rptr->filter_counter < 40) && ((40 - rptr->filter_counter) < (int)todo)) {
+                    todo = 40 - rptr->filter_counter;
                 }
                 if ((rptr->fr_randcount > 0) && (rptr->fr_randcount < todo)) {
-                   todo = rptr->fr_randcount;
+                    todo = rptr->fr_randcount;
                 }
-                if ((rptr->so_delay > 0) && (rptr->so_delay < todo)) {
-                   todo = rptr->so_delay;
+                if ((rptr->so_delay > 0) && (rptr->so_delay < (int)todo)) {
+                    todo = rptr->so_delay;
                 }
             }
 
@@ -405,14 +404,13 @@ void rotation_1541_gcr(drive_t *dptr, int ref_cycles)
                             dptr->GCR_read = (BYTE) rptr->last_read_data;
                             rptr->last_write_data = dptr->GCR_read;
 
-                           /* BYTE READY signal if enabled */
-                           if ((dptr->byte_ready_active & 2) != 0) {
+                            /* BYTE READY signal if enabled */
+                            if ((dptr->byte_ready_active & 2) != 0) {
                                 rptr->so_delay = 16 - ((rptr->cycle_index + (todo - 1)) & 15);
                                 if (rptr->so_delay < 10) {
                                     rptr->so_delay += 16;
                                 }
-                           }
-
+                            }
                         }
                     }
                 }
@@ -436,25 +434,22 @@ void rotation_1541_gcr(drive_t *dptr, int ref_cycles)
             rptr->cycle_index += todo;
             ref_cycles -= todo;
         }
-
     } else {
-
         /* emulate the number of reference clocks requested */
         while (ref_cycles > 0) {
-
             /* calculate how much cycles can we do in one single pass */
             todo = 1;
             delta = count_new_bitcell - rptr->accum;
-            if ((delta > 0) && ((cyc_sum_frv << 1) <= delta)) {
+            if ((delta > 0) && ((cyc_sum_frv << 1) <= (DWORD)delta)) {
                 todo = delta / cyc_sum_frv;
-                if (ref_cycles < todo) {
-                   todo = ref_cycles;
+                if (ref_cycles < (int)todo) {
+                    todo = ref_cycles;
                 }
-                if ((rptr->ue7_counter < 16) && ((16 - rptr->ue7_counter) < todo)) {
-                   todo = 16 - rptr->ue7_counter;
+                if ((rptr->ue7_counter < 16) && ((16 - rptr->ue7_counter) < (int)todo)) {
+                    todo = 16 - rptr->ue7_counter;
                 }
-                if ((rptr->so_delay > 0) && (rptr->so_delay < todo)) {
-                   todo = rptr->so_delay;
+                if ((rptr->so_delay > 0) && (rptr->so_delay < (int)todo)) {
+                    todo = rptr->so_delay;
                 }
             }
 
@@ -506,7 +501,6 @@ void rotation_1541_gcr(drive_t *dptr, int ref_cycles)
                                 rptr->so_delay += 16;
                             }
                         }
-
                     }
                 }
             }
@@ -514,47 +508,46 @@ void rotation_1541_gcr(drive_t *dptr, int ref_cycles)
             rptr->cycle_index += todo;
             ref_cycles -= todo;
         }
-
     }
-
 }
 
 void rotation_1541_gcr_cycle(drive_t *dptr)
 {
-	rotation_t *rptr;
-	CLOCK cpu_cycles;
-	int ref_cycles, ref_advance_cycles;
+    rotation_t *rptr = &rotation[dptr->mynumber];
+    CLOCK cpu_cycles;
+    int ref_cycles, ref_advance_cycles;
+    CLOCK one_rotation = rptr->frequency ? 400000 : 200000;
 
-	rptr = &rotation[dptr->mynumber];
+    /* cpu cycles since last call */
+    cpu_cycles = *(dptr->clk) - rptr->rotation_last_clk;
+    rptr->rotation_last_clk = *(dptr->clk);
+    /* modulo, at least one revolution, but not more than two */
+    while (cpu_cycles > one_rotation * 2) {
+        cpu_cycles -= one_rotation;
+    }
 
-	/* cpu cycles since last call */
-	cpu_cycles = *(dptr->clk) - rptr->rotation_last_clk;
-	rptr->rotation_last_clk = *(dptr->clk);
-        /* modulo, at least one revolution, but not more than two */
-        while (cpu_cycles > 400000) cpu_cycles -= 200000;
+    /* Calculate the reference clock cycles from the cpu clock cycles - hw works the other way around...
+             The reference clock is actually 16MHz, and the cpu clock is the result of dividing that by 16 */
+    ref_cycles = cpu_cycles << (rptr->frequency ? 3 : 4);
 
-	/* Calculate the reference clock cycles from the cpu clock cycles - hw works the other way around...
-		 The reference clock is actually 16MHz, and the cpu clock is the result of dividing that by 16 */
-	ref_cycles = cpu_cycles << 4;
+    /* add additional R cycles requested; R must be less than a complete C cycle */
+    ref_advance_cycles = dptr->req_ref_cycles;
+    dptr->req_ref_cycles = 0;
+    ref_advance_cycles &= 15;
+    ref_cycles += ref_advance_cycles;
 
-	/* add additional R cycles requested; R must be less than a complete C cycle */
-	ref_advance_cycles = dptr->req_ref_cycles;
-	dptr->req_ref_cycles = 0;
-	ref_advance_cycles &= 15;
-	ref_cycles += ref_advance_cycles;
-
-	/* run simulation if at least 1 R cycle has elapsed */
-	if (ref_cycles > 0) {
-		if (ref_cycles > rptr->ref_advance) {
-			/* run simulation without the extra reference cycles already simmulated */
-			ref_cycles -= rptr->ref_advance;
-			rptr->ref_advance = ref_advance_cycles;
-			rotation_1541_gcr(dptr, ref_cycles);
-		} else {
-			/* nothing to do as we are ahead of the cpu simulation; update the delay not catched up by the cpu yet */
-			rptr->ref_advance -= ref_cycles;
-		}
-	}
+    /* run simulation if at least 1 R cycle has elapsed */
+    if (ref_cycles > 0) {
+        if (ref_cycles > rptr->ref_advance) {
+            /* run simulation without the extra reference cycles already simmulated */
+            ref_cycles -= rptr->ref_advance;
+            rptr->ref_advance = ref_advance_cycles;
+            rotation_1541_gcr(dptr, ref_cycles);
+        } else {
+            /* nothing to do as we are ahead of the cpu simulation; update the delay not catched up by the cpu yet */
+            rptr->ref_advance -= ref_cycles;
+        }
+    }
 }
 
 /* 1541 circuit simulation for NZRI transition flux pulse-based images, see 1541 circuit description in this file for details */
@@ -597,9 +590,7 @@ void rotation_1541_p64(drive_t *dptr, int ref_cycles)
     }
 
     if (dptr->read_write_mode) {
-
         while (ref_cycles > 0) {
-
             /****************************************************************************************************************************************/
             {
                 /* How-Much-16MHz-Clock-Cycles-ToDo-Count logic */
@@ -608,20 +599,20 @@ void rotation_1541_p64(drive_t *dptr, int ref_cycles)
                 if (ToDo <= 1) {
                     ToDo = 1;
                 } else {
-                    if (ref_cycles < ToDo) {
+                    if (ref_cycles < (int)ToDo) {
                         ToDo = ref_cycles;
                     }
-                    if ((rptr->ue7_counter < 16) && ((16 - rptr->ue7_counter) < ToDo)) {
+                    if ((rptr->ue7_counter < 16) && ((16 - rptr->ue7_counter) < (int)ToDo)) {
                         ToDo = 16 - rptr->ue7_counter;
                     }
-                    if ((rptr->filter_counter < 40) && ((40 - rptr->filter_counter) < ToDo)) {
+                    if ((rptr->filter_counter < 40) && ((40 - rptr->filter_counter) < (int)ToDo)) {
                         ToDo = 40 - rptr->filter_counter;
                     }
                     if ((rptr->fr_randcount > 0) && (rptr->fr_randcount < ToDo)) {
                         ToDo = rptr->fr_randcount;
                     }
-                    if ((rptr->so_delay > 0) && (rptr->so_delay < ToDo)) {
-                       ToDo = rptr->so_delay;
+                    if ((rptr->so_delay > 0) && (rptr->so_delay < (int)ToDo)) {
+                        ToDo = rptr->so_delay;
                     }
                 }
             }
@@ -649,10 +640,10 @@ void rotation_1541_p64(drive_t *dptr, int ref_cycles)
                     rptr->fr_randcount = ((RANDOM_nextUInt(rptr) >> 16) % 31) + 289;
                 } else {
                     rptr->fr_randcount -= ToDo;
-                    if(!rptr->fr_randcount) {
-                      rptr->uf4_counter = 0;
-                      rptr->ue7_counter = rptr->ue7_dcba;
-                      rptr->fr_randcount = ((RANDOM_nextUInt(rptr) >> 16) % 367) + 33;
+                    if (!rptr->fr_randcount) {
+                        rptr->uf4_counter = 0;
+                        rptr->ue7_counter = rptr->ue7_dcba;
+                        rptr->fr_randcount = ((RANDOM_nextUInt(rptr) >> 16) % 367) + 33;
                     }
                 }
 
@@ -661,15 +652,13 @@ void rotation_1541_p64(drive_t *dptr, int ref_cycles)
                 */
                 rptr->ue7_counter += ToDo;
                 if (rptr->ue7_counter == 16) {
-
                     rptr->ue7_counter = rptr->ue7_dcba;
 
                     rptr->uf4_counter = (rptr->uf4_counter + 1) & 0xf;
                     if ((rptr->uf4_counter & 3) == 2) {
-
                         /****************************************************************************************************************************************/
                         {
-                            // Decoder logic
+                            /* Decoder logic */
 
                             rptr->last_read_data = ((rptr->last_read_data << 1) & 0x3fe) | (((rptr->uf4_counter + 0x1c) >> 4) & 1);
 
@@ -679,8 +668,7 @@ void rotation_1541_p64(drive_t *dptr, int ref_cycles)
                             if (rptr->last_read_data == 0x3ff) {
                                 rptr->bit_counter = 0;
                             } else {
-                                if (++ rptr->bit_counter == 8) {
-
+                                if (++rptr->bit_counter == 8) {
                                     rptr->bit_counter = 0;
 
                                     dptr->GCR_read = (BYTE) rptr->last_read_data;
@@ -694,11 +682,10 @@ void rotation_1541_p64(drive_t *dptr, int ref_cycles)
                                     if ((dptr->byte_ready_active & 2) != 0) {
                                         rptr->so_delay = 16 - ((rptr->cycle_index + (ToDo - 1)) & 15);
                                         if (rptr->so_delay < 10) {
-                                           rptr->so_delay += 16;
+                                            rptr->so_delay += 16;
                                         }
                                     }
-
-                               }
+                                }
                             }
                         }
                         /****************************************************************************************************************************************/
@@ -719,11 +706,11 @@ void rotation_1541_p64(drive_t *dptr, int ref_cycles)
                     P64PulseStream->CurrentIndex = P64PulseStream->UsedFirst;
                     while ((P64PulseStream->CurrentIndex >= 0) &&
                            (P64PulseStream->Pulses[P64PulseStream->CurrentIndex].Position < rptr->PulseHeadPosition)) {
-                      P64PulseStream->CurrentIndex = P64PulseStream->Pulses[P64PulseStream->CurrentIndex].Next;
+                        P64PulseStream->CurrentIndex = P64PulseStream->Pulses[P64PulseStream->CurrentIndex].Next;
                     }
                     if (P64PulseStream->CurrentIndex >= 0) {
                         DeltaPositionToNextPulse = P64PulseStream->Pulses[P64PulseStream->CurrentIndex].Position - rptr->PulseHeadPosition;
-                    }else{
+                    } else {
                         DeltaPositionToNextPulse = P64PulseSamplesPerRotation - rptr->PulseHeadPosition;
                     }
                 }
@@ -734,40 +721,35 @@ void rotation_1541_p64(drive_t *dptr, int ref_cycles)
                         (P64PulseStream->Pulses[P64PulseStream->CurrentIndex].Position == rptr->PulseHeadPosition)) {
                         DWORD Strength = P64PulseStream->Pulses[P64PulseStream->CurrentIndex].Strength;
 
-                        // Forward pulse high hit to the decoder logic
+                        /* Forward pulse high hit to the decoder logic */
                         if ((Strength == 0xffffffffUL) ||                                   /* Strong pulse */
                             (((DWORD)(RANDOM_nextInt(rptr) ^ 0x80000000UL)) < Strength)) {  /* Weak pulse */
-                           rptr->filter_state ^= 1;
-                           rptr->filter_counter = 0;
+                            rptr->filter_state ^= 1;
+                            rptr->filter_counter = 0;
                         }
 
                         P64PulseStream->CurrentIndex = P64PulseStream->Pulses[P64PulseStream->CurrentIndex].Next;
                     }
                     if (P64PulseStream->CurrentIndex >= 0) {
                         DeltaPositionToNextPulse = P64PulseStream->Pulses[P64PulseStream->CurrentIndex].Position - rptr->PulseHeadPosition;
-                    }else{
+                    } else {
                         DeltaPositionToNextPulse = P64PulseSamplesPerRotation - rptr->PulseHeadPosition;
                     }
                 }
-
             }
             /****************************************************************************************************************************************/
 
             rptr->cycle_index += ToDo;
             ref_cycles -= ToDo;
         }
-
     } else {
-
         int head_write;
 
         head_write = 0;
 
         while (ref_cycles > 0) {
-
             /****************************************************************************************************************************************/
             {
-
                 /* How-Much-16MHz-Clock-Cycles-ToDo-Count logic */
 
                 ToDo = DeltaPositionToNextPulse;
@@ -775,19 +757,18 @@ void rotation_1541_p64(drive_t *dptr, int ref_cycles)
                     ToDo = 1;
                 } else {
                     if ((rptr->PulseHeadPosition + ToDo) >= P64PulseSamplesPerRotation) {
-                       ToDo = P64PulseSamplesPerRotation - rptr->PulseHeadPosition;
+                        ToDo = P64PulseSamplesPerRotation - rptr->PulseHeadPosition;
                     }
-                    if (ref_cycles < ToDo) {
+                    if (ref_cycles < (int)ToDo) {
                         ToDo = ref_cycles;
                     }
-                    if ((rptr->ue7_counter < 16) && ((16 - rptr->ue7_counter) < ToDo)) {
+                    if ((rptr->ue7_counter < 16) && ((16 - rptr->ue7_counter) < (int)ToDo)) {
                         ToDo = 16 - rptr->ue7_counter;
                     }
-                    if ((rptr->so_delay > 0) && (rptr->so_delay < ToDo)) {
+                    if ((rptr->so_delay > 0) && (rptr->so_delay < (int)ToDo)) {
                         ToDo = rptr->so_delay;
                     }
                 }
-
             }
             /****************************************************************************************************************************************/
             {
@@ -802,20 +783,17 @@ void rotation_1541_p64(drive_t *dptr, int ref_cycles)
             }
             /****************************************************************************************************************************************/
             {
-
                 /* Clock logic */
 
                 /* Increment the pulse divider clock until the speed zone pulse divider clock threshold value is reached, which is:
                 ** 16-(CurrentSpeedZone & 3), and each overflow, increment the pulse counter clock until the 4th pulse is reached
                 */
                 rptr->ue7_counter += ToDo;
-                if(rptr->ue7_counter == 16) {
-
+                if (rptr->ue7_counter == 16) {
                     rptr->ue7_counter = rptr->ue7_dcba;
 
                     rptr->uf4_counter = (rptr->uf4_counter + 1) & 0xf;
                     if ((rptr->uf4_counter & 3) == 2) {
-
                         /****************************************************************************************************************************************/
 
                         /* Encoder logic */
@@ -825,8 +803,7 @@ void rotation_1541_p64(drive_t *dptr, int ref_cycles)
                         head_write = (rptr->last_write_data & 0x80) >> 7;
                         rptr->last_write_data <<= 1;
 
-                        if (++ rptr->bit_counter == 8) {
-
+                        if (++rptr->bit_counter == 8) {
                             rptr->bit_counter = 0;
 
                             rptr->last_write_data = dptr->GCR_write_value;
@@ -838,7 +815,6 @@ void rotation_1541_p64(drive_t *dptr, int ref_cycles)
                                     rptr->so_delay += 16;
                                 }
                             }
-
                         }
 
                         /****************************************************************************************************************************************/
@@ -857,7 +833,7 @@ void rotation_1541_p64(drive_t *dptr, int ref_cycles)
                     P64PulseStream->CurrentIndex = P64PulseStream->UsedFirst;
                     while ((P64PulseStream->CurrentIndex >= 0) &&
                            (P64PulseStream->Pulses[P64PulseStream->CurrentIndex].Position < rptr->PulseHeadPosition)) {
-                      P64PulseStream->CurrentIndex = P64PulseStream->Pulses[P64PulseStream->CurrentIndex].Next;
+                        P64PulseStream->CurrentIndex = P64PulseStream->Pulses[P64PulseStream->CurrentIndex].Next;
                     }
                 }
 
@@ -887,57 +863,55 @@ void rotation_1541_p64(drive_t *dptr, int ref_cycles)
                 /* Calculate new delta */
                 if (P64PulseStream->CurrentIndex >= 0) {
                     DeltaPositionToNextPulse = P64PulseStream->Pulses[P64PulseStream->CurrentIndex].Position - rptr->PulseHeadPosition;
-                }else{
+                } else {
                     DeltaPositionToNextPulse = P64PulseSamplesPerRotation - rptr->PulseHeadPosition;
                 }
-
             }
             /****************************************************************************************************************************************/
 
             rptr->cycle_index += ToDo;
             ref_cycles -= ToDo;
         }
-
     }
-
 }
 
 void rotation_1541_p64_cycle(drive_t *dptr)
 {
-	rotation_t *rptr;
-	CLOCK cpu_cycles;
-	int ref_cycles, ref_advance_cycles;
+    rotation_t *rptr = &rotation[dptr->mynumber];
+    CLOCK cpu_cycles;
+    int ref_cycles, ref_advance_cycles;
+    CLOCK one_rotation = rptr->frequency ? 400000 : 200000;
 
-	rptr = &rotation[dptr->mynumber];
+    /* cpu cycles since last call */
+    cpu_cycles = *(dptr->clk) - rptr->rotation_last_clk;
+    rptr->rotation_last_clk = *(dptr->clk);
+    /* modulo, at least one revolution, but not more than two */
+    while (cpu_cycles > one_rotation * 2) {
+        cpu_cycles -= one_rotation;
+    }
 
-	/* cpu cycles since last call */
-	cpu_cycles = *(dptr->clk) - rptr->rotation_last_clk;
-	rptr->rotation_last_clk = *(dptr->clk);
-        /* modulo, at least one revolution, but not more than two */
-        while (cpu_cycles > 400000) cpu_cycles -= 200000;
+    /* Calculate the reference clock cycles from the cpu clock cycles - hw works the other way around...
+             The reference clock is actually 16MHz, and the cpu clock is the result of dividing that by 16 */
+    ref_cycles = cpu_cycles << (rptr->frequency ? 3 : 4);
 
-	/* Calculate the reference clock cycles from the cpu clock cycles - hw works the other way around...
-		 The reference clock is actually 16MHz, and the cpu clock is the result of dividing that by 16 */
-	ref_cycles = cpu_cycles << 4;
+    /* add additional R cycles requested; R must be less than a complete C cycle */
+    ref_advance_cycles = dptr->req_ref_cycles;
+    dptr->req_ref_cycles = 0;
+    ref_advance_cycles &= 15;
+    ref_cycles += ref_advance_cycles;
 
-	/* add additional R cycles requested; R must be less than a complete C cycle */
-	ref_advance_cycles = dptr->req_ref_cycles;
-	dptr->req_ref_cycles = 0;
-	ref_advance_cycles &= 15;
-	ref_cycles += ref_advance_cycles;
-
-	/* run simulation if at least 1 R cycle has elapsed */
-	if (ref_cycles > 0) {
-		if (ref_cycles > rptr->ref_advance) {
-			/* run simulation without the extra reference cycles already simmulated */
-			ref_cycles -= rptr->ref_advance;
-			rptr->ref_advance = ref_advance_cycles;
-			rotation_1541_p64(dptr, ref_cycles);
-		} else {
-			/* nothing to do as we are ahead of the cpu simulation; update the delay not catched up by the cpu yet */
-			rptr->ref_advance -= ref_cycles;
-		}
-	}
+    /* run simulation if at least 1 R cycle has elapsed */
+    if (ref_cycles > 0) {
+        if (ref_cycles > rptr->ref_advance) {
+            /* run simulation without the extra reference cycles already simmulated */
+            ref_cycles -= rptr->ref_advance;
+            rptr->ref_advance = ref_advance_cycles;
+            rotation_1541_p64(dptr, ref_cycles);
+        } else {
+            /* nothing to do as we are ahead of the cpu simulation; update the delay not catched up by the cpu yet */
+            rptr->ref_advance -= ref_cycles;
+        }
+    }
 }
 
 /* Rotate the disk according to the current value of `drive_clk[]'.  If
@@ -946,7 +920,7 @@ void rotation_rotate_disk(drive_t *dptr)
 {
     rotation_t *rptr;
     CLOCK delta;
-    int tdelta, bit;
+    int tdelta;
     int bits_moved = 0;
 
     if ((dptr->byte_ready_active & 4) == 0) {
@@ -954,14 +928,15 @@ void rotation_rotate_disk(drive_t *dptr)
         return;
     }
 
-    /* capture 1541 drive type; should be updated for all other types using the same method */
-    if (dptr->P64_image_loaded) {
-        rotation_1541_p64_cycle(dptr);
-        return;
-    } else if (dptr->type == DRIVE_TYPE_1541 || dptr->type == DRIVE_TYPE_1541II) {
-        rotation_1541_gcr_cycle(dptr);
+    if (dptr->complicated_image_loaded) { /* stuff that needs complex and slow emulation */
+        if (dptr->P64_image_loaded) {
+            rotation_1541_p64_cycle(dptr);
+        } else {
+            rotation_1541_gcr_cycle(dptr);
+        }
         return;
     }
+    /* very simple and fast emulation for perfect images like those comming from dxx files */
 
     dptr->req_ref_cycles = 0;
 
@@ -982,79 +957,40 @@ void rotation_rotate_disk(drive_t *dptr)
     }
 
     if (dptr->read_write_mode) {
-        while (bits_moved -- != 0) {
-            /* GCR=0 support.
-             *
-             * In the absence of 1-bits (magnetic flux changes), the drive
-             * will use a timer counter to count how many 0s it has read. Every
-             * 4 read bits, it will detect a 1-bit, because it doesn't
-             * distinguish between reset occuring from magnetic flux or regular
-             * wraparound.
-             *
-             * Random magnetic flux events can also occur after GCR data has been
-             * quiet for a long time, for at least 4 bits. So the first value
-             * read will always be 1. Afterwards, the 0-bit sequence lengths
-             * vary randomly, but can never exceed 3.
-             *
-             * Each time a random event happens, it tends to advance the bit counter
-             * by half a clock, because the random event can occur at any time
-             * and thus the expectation value is that it occurs at 50 % point
-             * within the bitcells.
-             *
-             * Additionally, the underlying disk rotation has no way to keep in sync
-             * with the electronics, so the bitstream after a GCR=0 may or may not
-             * be shifted with respect to the bit counter by the time drive
-             * encounters it. This situation will persist until the next sync
-             * sequence. There is no specific emulation for variable disk rotation,
-             * this case is thought to be covered by the random event handling.
-             *
-             * Here's some genuine 1541 patterns for reference:
-             *
-             * 53 12 46 22 24 AA AA AA AA AA AA AA A8 AA AA AA
-             * 53 11 11 11 14 AA AA AA AA AA AA AA A8 AA AA AA
-             * 53 12 46 22 24 AA AA AA AA AA AA AA A8 AA AA AA
-             * 53 12 22 24 45 2A AA AA AA AA AA AA AA 2A AA AA
-             * 53 11 52 22 24 AA AA AA AA AA AA AA A8 AA AA AA
-             */
+        int off = dptr->GCR_head_offset;
+        unsigned int byte, last_read_data = rptr->last_read_data << 7;
+        unsigned int bit_counter = rptr->bit_counter;
 
-            bit = read_next_bit(dptr);
-            rptr->last_read_data = ((rptr->last_read_data << 1) & 0x3fe);
+        /* if no image is attached or track does not exists, read 0 */
+        if (dptr->GCR_image_loaded == 0 || dptr->GCR_track_start_ptr == NULL) {
+            byte = 0;
+        } else {
+            byte = dptr->GCR_track_start_ptr[off >> 3] << (off & 7);
+        }
 
-            if (bit) {
-                rptr->zero_count = 0;
-                rptr->last_read_data |= 1;
-            }
-
-            /* Simulate random magnetic flux events in our lame-ass emulation. */
-            if (++ rptr->zero_count > 8 && (rptr->last_read_data & 0x3f) == 0x8 && RANDOM_nextInt(rptr) > (1 << 30)) {
-                rptr->last_read_data |= 1;
-                /*
-                 * Simulate loss of sync against the underlying platter.
-                 * Whenever 1-bits occur, there's a chance that they occured
-                 * due to a random magnetic flux event, and can thus occur
-                 * at any phase of the bit-cell clock.
-                 *
-                 * It follows, therefore, that such events have a chance to
-                 * advance the bit_counter by about 0,5 clocks each time they
-                 * occur. Hence > 0 here, which filters out 50 % of events.
-                 */
-                if (rptr->bit_counter < 7 && RANDOM_nextInt(rptr) > 0) {
-                    rptr->bit_counter ++;
-                    rptr->last_read_data = (rptr->last_read_data << 1) & 0x3fe;
+        while (bits_moved-- != 0) {
+            byte <<= 1; off++;
+            if (!(off & 7)) {
+                if ((off >> 3) >= (int)dptr->GCR_current_track_size) {
+                    off = 0;
                 }
-            } else if ((rptr->last_read_data & 0xf) == 0) {
-                /* Simulate clock reset */
-                rptr->last_read_data |= 1;
+                /* if no image is attached or track does not exists, read 0 */
+                if (dptr->GCR_image_loaded == 0 || dptr->GCR_track_start_ptr == NULL) {
+                    byte = 0;
+                } else {
+                    byte = dptr->GCR_track_start_ptr[off >> 3];
+                }
             }
+
+            last_read_data <<= 1;
+            last_read_data |= byte & 0x80;
             rptr->last_write_data <<= 1;
 
             /* is sync? reset bit counter, don't move data, etc. */
-            if (rptr->last_read_data == 0x3ff) {
-                rptr->bit_counter = 0;
-            } else {
-                if (++ rptr->bit_counter == 8) {
-                    rptr->bit_counter = 0;
-                    dptr->GCR_read = (BYTE) rptr->last_read_data;
+            if (~last_read_data & 0x1ff80) {
+                if (++bit_counter == 8) {
+                    bit_counter = 0;
+                    dptr->GCR_read = (BYTE) (last_read_data >> 7);
                     /* tlr claims that the write register is loaded at every
                      * byte boundary, and since the bus is shared, it's reasonable
                      * to guess that it would be loaded with whatever was last read. */
@@ -1064,13 +1000,21 @@ void rotation_rotate_disk(drive_t *dptr)
                         dptr->byte_ready_level = 1;
                     }
                 }
+            } else {
+                bit_counter = 0;
             }
+        }
+        rptr->last_read_data = (last_read_data >> 7) & 0x3ff;
+        rptr->bit_counter = bit_counter;
+        dptr->GCR_head_offset = off;
+        if (!dptr->GCR_read) {    /* can only happen if on a half or unformatted track */
+            dptr->GCR_read = 0x11; /* should be good enough, there's no data after all */
         }
     } else {
         /* When writing, the first byte after transition is going to echo the
          * bits from the last read value.
          */
-        while (bits_moved -- != 0) {
+        while (bits_moved-- != 0) {
             rptr->last_read_data = (rptr->last_read_data << 1) & 0x3fe;
             if ((rptr->last_read_data & 0xf) == 0) {
                 rptr->last_read_data |= 1;
@@ -1079,15 +1023,17 @@ void rotation_rotate_disk(drive_t *dptr)
             write_next_bit(dptr, rptr->last_write_data & 0x80);
             rptr->last_write_data <<= 1;
 
-            if (++ rptr->bit_counter == 8) {
+            if (++rptr->bit_counter == 8) {
                 rptr->bit_counter = 0;
                 rptr->last_write_data = dptr->GCR_write_value;
                 if ((dptr->byte_ready_active & 2) != 0) {
-                   dptr->byte_ready_edge = 1;
-                   dptr->byte_ready_level = 1;
+                    dptr->byte_ready_edge = 1;
+                    dptr->byte_ready_level = 1;
                 }
             }
         }
+        /* TODO: only if we introduced more than two 0 bits in a row */
+        dptr->complicated_image_loaded = 1;
     }
 }
 

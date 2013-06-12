@@ -2,7 +2,7 @@
  * vsidstubs.c - dummies for unneeded/unused functions
  *
  * Written by
- *  groepaz <groepaz@gmx.net> 
+ *  groepaz <groepaz@gmx.net>
  *  Marco van den Heuvel <blackystardust68@yahoo.com>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
@@ -162,6 +162,10 @@ void machine_drive_stub(void)
 {
 }
 
+int drive_get_disk_drive_type(int dnr)
+{
+    return DRIVE_TYPE_NONE;
+}
 /*******************************************************************************
     Cartridge system
 *******************************************************************************/
@@ -495,7 +499,7 @@ void digimax_userport_store(WORD addr, BYTE value)
     gfxoutput drivers
 *******************************************************************************/
 
-int gfxoutput_early_init(void)
+int gfxoutput_early_init(int drivers)
 {
     return 0;
 }
@@ -609,15 +613,6 @@ BYTE ds1202_1302_read_data_line(rtc_ds1202_1302_t *context)
 void ds1202_1302_destroy(rtc_ds1202_1302_t *context)
 {
 }
-
-/*******************************************************************************
-    userport
-*******************************************************************************/
-
-/* FIXME: these can be removed once the GUI's have been adapted for vsid */
-int userport_joystick_enable = 0;
-int userport_joystick_type = 0;
-
 
 /*******************************************************************************
     tape
@@ -979,6 +974,10 @@ void *disk_image_fsimage_fd_get(const disk_image_t *image)
     return NULL;
 }
 
+void P64ImageDestroy(PP64Image Instance)
+{
+}
+
 /*******************************************************************************
     c64bus
 *******************************************************************************/
@@ -1148,7 +1147,7 @@ int vdrive_iec_attach(unsigned int unit, const char *name)
 
 int vdrive_bam_get_disk_id(unsigned int unit, BYTE *id)
 {
-   return 0;
+    return 0;
 }
 
 int vdrive_bam_set_disk_id(unsigned int unit, BYTE *id)
@@ -1226,3 +1225,17 @@ int iec_available_busses(void)
 {
     return 0;
 }
+
+#ifdef ANDROID_COMPILE
+static int loader_true_drive = 0;
+
+void loader_set_drive_true_emulation(int val)
+{
+    loader_true_drive = val;
+}
+
+int loader_get_drive_true_emulation()
+{
+    return loader_true_drive;
+}
+#endif

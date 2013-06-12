@@ -54,7 +54,8 @@
 #endif
 
 /* wether this check makes sense for V51 is unclear */
-#if LIBAVFORMAT_VERSION_MAJOR < 51
+#if LIBAVFORMAT_VERSION_MAJOR < 53
+#define p_av_guess_format p_guess_format
 #define av_guess_format guess_format
 #define av_guess_format_t guess_format_t
 #endif
@@ -65,43 +66,53 @@
 #endif
 
 /* generic version function */
-typedef unsigned (*ffmpeg_version_t) (void);
+typedef unsigned (*ffmpeg_version_t)(void);
 
 /* avcodec fucntions */
-typedef int (*avcodec_open_t) (AVCodecContext*, AVCodec*);
-typedef int (*avcodec_close_t) (AVCodecContext*);
-typedef AVCodec* (*avcodec_find_encoder_t) (enum CodecID);
-typedef int (*avcodec_encode_audio_t) (AVCodecContext*, uint8_t*, int, const short*);
-typedef int (*avcodec_encode_video_t) (AVCodecContext*, uint8_t*, int, const AVFrame*);
-typedef int (*avpicture_fill_t) (AVPicture*, uint8_t*, int, int, int);
-typedef int (*avpicture_get_size_t) (int, int, int);
+typedef int (*avcodec_open_t)(AVCodecContext*, AVCodec*);
+typedef int (*avcodec_close_t)(AVCodecContext*);
+typedef AVCodec* (*avcodec_find_encoder_t)(enum CodecID);
+typedef int (*avcodec_encode_audio_t)(AVCodecContext*, uint8_t*, int, const short*);
+typedef int (*avcodec_encode_video_t)(AVCodecContext*, uint8_t*, int, const AVFrame*);
+typedef int (*avpicture_fill_t)(AVPicture*, uint8_t*, int, int, int);
+typedef int (*avpicture_get_size_t)(int, int, int);
 
 /* avformat functions */
-typedef void (*av_init_packet_t) (AVPacket *pkt);
-typedef void (*av_register_all_t) (void);
-typedef AVStream* (*av_new_stream_t) (AVFormatContext*, int);
-typedef int (*av_set_parameters_t) (AVFormatContext*, AVFormatParameters*);
-typedef int (*av_write_header_t) (AVFormatContext*);
-typedef int (*av_write_frame_t) (AVFormatContext*, AVPacket*);
-typedef int (*av_write_trailer_t) (AVFormatContext*);
-typedef int (*url_fopen_t) (ByteIOContext**, const char*, int);
-typedef int (*url_fclose_t) (ByteIOContext*);
-typedef void (*dump_format_t) (AVFormatContext *, int, const char*, int);
-typedef AVOutputFormat* (*av_guess_format_t) (const char*, const char*, const char*);
-typedef int (*img_convert_t) (AVPicture*, int, AVPicture*, int, int, int);
+typedef void (*av_init_packet_t)(AVPacket *pkt);
+typedef void (*av_register_all_t)(void);
+typedef AVStream* (*av_new_stream_t)(AVFormatContext*, int);
+#if LIBAVFORMAT_VERSION_MAJOR < 53
+typedef int (*av_set_parameters_t)(AVFormatContext*, AVFormatParameters*);
+typedef int (*av_write_header_t)(AVFormatContext*);
+#else
+typedef int (*avformat_write_header_t) (AVFormatContext*,AVDictionary **);
+#endif
+typedef int (*av_write_frame_t)(AVFormatContext*, AVPacket*);
+typedef int (*av_write_trailer_t)(AVFormatContext*);
+#if LIBAVFORMAT_VERSION_MAJOR < 53
+typedef int (*url_fopen_t)(ByteIOContext**, const char*, int);
+typedef int (*url_fclose_t)(ByteIOContext*);
+typedef void (*dump_format_t)(AVFormatContext *, int, const char*, int);
+#else
+typedef int (*avio_open_t) (AVIOContext**, const char*, int);
+typedef int (*avio_close_t) (AVIOContext*);
+typedef void (*av_dump_format_t) (AVFormatContext *, int, const char*, int);
+#endif
+typedef AVOutputFormat* (*av_guess_format_t)(const char*, const char*, const char*);
+typedef int (*img_convert_t)(AVPicture*, int, AVPicture*, int, int, int);
 
 /* avutil functions */
-typedef void (*av_free_t) (void**);
+typedef void (*av_free_t)(void**);
 
 #ifdef HAVE_FFMPEG_SWSCALE
 /* swscale functions */
 typedef struct SwsContext * (*sws_getContext_t)(int srcW, int srcH,
-  enum PixelFormat srcFormat, int dstW, int dstH, enum PixelFormat dstFormat,
-  int flags, SwsFilter *srcFilter, SwsFilter *dstFilter, double *param);
+                                                enum PixelFormat srcFormat, int dstW, int dstH, enum PixelFormat dstFormat,
+                                                int flags, SwsFilter *srcFilter, SwsFilter *dstFilter, double *param);
 typedef void (*sws_freeContext_t)(struct SwsContext *swsContext);
 typedef int (*sws_scale_t)(struct SwsContext *context, uint8_t* srcSlice[],
-  int srcStride[], int srcSliceY, int srcSliceH, uint8_t* dst[],
-  int dstStride[]);
+                           int srcStride[], int srcSliceY, int srcSliceH, uint8_t* dst[],
+                           int dstStride[]);
 #endif
 
 struct ffmpeglib_s {
@@ -118,14 +129,28 @@ struct ffmpeglib_s {
     av_init_packet_t            p_av_init_packet;
     av_register_all_t           p_av_register_all;
     av_new_stream_t             p_av_new_stream;
+#if LIBAVFORMAT_VERSION_MAJOR >= 53
+    avformat_write_header_t     p_avformat_write_header;
+#else
     av_set_parameters_t         p_av_set_parameters;
     av_write_header_t           p_av_write_header;
+#endif
     av_write_frame_t            p_av_write_frame;
     av_write_trailer_t          p_av_write_trailer;
+#if LIBAVFORMAT_VERSION_MAJOR >= 53
+    avio_open_t                 p_avio_open;
+    avio_close_t                p_avio_close;
+    av_dump_format_t            p_av_dump_format;
+#else
     url_fopen_t                 p_url_fopen;
     url_fclose_t                p_url_fclose;
     dump_format_t               p_dump_format;
+#endif
+#if LIBAVFORMAT_VERSION_MAJOR < 53
+    guess_format_t              p_guess_format;
+#else
     av_guess_format_t           p_av_guess_format;
+#endif
 #ifndef HAVE_FFMPEG_SWSCALE
     img_convert_t               p_img_convert;
 #endif
@@ -133,7 +158,7 @@ struct ffmpeglib_s {
     /* avutil */
     av_free_t                   p_av_free;
 
-#ifdef HAVE_FFMPEG_SWSCALE    
+#ifdef HAVE_FFMPEG_SWSCALE
     /* swscale */
     sws_getContext_t            p_sws_getContext;
     sws_freeContext_t           p_sws_freeContext;

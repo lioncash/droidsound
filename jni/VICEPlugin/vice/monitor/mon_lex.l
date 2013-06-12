@@ -332,10 +332,16 @@ if		{ BEGIN (COND_MODE); return IF; }
 
 <REG_ASGN>{
         a   { yylval.i = e_A; return MON_REGISTER; }
+        b   { yylval.i = e_B; return MON_REGISTER; }
+        c   { yylval.i = e_C; return MON_REGISTER; }
         x   { yylval.i = e_X; return MON_REGISTER; }
         y   { yylval.i = e_Y; return MON_REGISTER; }
         pc  { yylval.i = e_PC; return MON_REGISTER; }
         sp  { yylval.i = e_SP; return MON_REGISTER; }
+        dpr  { yylval.i = e_DPR; return MON_REGISTER; }
+        pbr  { yylval.i = e_PBR; return MON_REGISTER; }
+        dbr  { yylval.i = e_DBR; return MON_REGISTER; }
+        emul { yylval.i = e_EMUL; return MON_REGISTER; }
         fl  { yylval.i = e_FLAGS; return MON_REGISTER; }
         r3  { yylval.i = e_R3; return MON_REGISTER; }
         r4  { yylval.i = e_R4; return MON_REGISTER; }
@@ -365,10 +371,15 @@ if		{ BEGIN (COND_MODE); return IF; }
 	\|\|		{ yylval.i = e_OR;  return COMPARE_OP; }
 
 	\.A 		{ yylval.i = e_A; return MON_REGISTER; }
+        \.B             { yylval.i = e_B; return MON_REGISTER; }
 	\.X 		{ yylval.i = e_X; return MON_REGISTER; }
 	\.Y 		{ yylval.i = e_Y; return MON_REGISTER; }
 	\.PC 		{ yylval.i = e_PC; return MON_REGISTER; }
 	\.SP		{ yylval.i = e_SP; return MON_REGISTER; }
+        \.DPR           { yylval.i = e_DPR; return MON_REGISTER; }
+        \.PBR           { yylval.i = e_PBR; return MON_REGISTER; }
+        \.DBR           { yylval.i = e_DBR; return MON_REGISTER; }
+        \.EMUL          { yylval.i = e_EMUL; return MON_REGISTER; }
         \.R3            { yylval.i = e_R3; return MON_REGISTER; }
         \.R4            { yylval.i = e_R4; return MON_REGISTER; }
         \.R5            { yylval.i = e_R5; return MON_REGISTER; }
@@ -387,6 +398,8 @@ if		{ BEGIN (COND_MODE); return IF; }
 
 	\(		{ return L_PAREN; }
 	\)		{ return R_PAREN; }
+        \[              { return L_BRACKET; }
+        \]              { return R_BRACKET; }
 }
 
 <ASM_MODE>[a-zA-Z][a-zA-Z]\ [a-zA-Z]\,[a-zA-Z] {
@@ -434,10 +447,10 @@ if		{ BEGIN (COND_MODE); return IF; }
 
 <ASM_MODE>\(            { dont_match_reg_a = 1; return L_PAREN; }
 <ASM_MODE>\)            { dont_match_reg_a = 0; return R_PAREN; }
-<ASM_MODE>#             { dont_match_reg_a = 1; return ARG_IMMEDIATE; }
-<ASM_MODE>:             { dont_match_reg_a = 0; return INST_SEP; }
 <ASM_MODE>\[            { dont_match_reg_a = 1; return L_BRACKET; }
 <ASM_MODE>\]            { dont_match_reg_a = 0; return R_BRACKET; }
+<ASM_MODE>#             { dont_match_reg_a = 1; return ARG_IMMEDIATE; }
+<ASM_MODE>:             { dont_match_reg_a = 0; return INST_SEP; }
 <ASM_MODE>\<            { dont_match_reg_a = 1; return LESS_THAN; }
 <ASM_MODE>\+            { return PLUS; }
 <ASM_MODE>-             { return MINUS; }
@@ -480,3 +493,4 @@ static int yywrap(void)
 {
     return 1;
 }
+

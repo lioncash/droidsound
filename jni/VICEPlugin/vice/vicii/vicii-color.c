@@ -112,7 +112,8 @@ static video_cbm_palette_t vicii_palette_old =
     VICII_NUM_COLORS,
     vicii_colors_old,
     VICII_SATURATION,
-    VICII_PHASE
+    VICII_PHASE,
+    CBM_PALETTE_YUV
 };
 
 /* the wellknown vic-ii palette used for 99% of all vic-ii chips */
@@ -142,20 +143,20 @@ static video_cbm_palette_t vicii_palette =
     VICII_NUM_COLORS,
     vicii_colors,
     VICII_SATURATION,
-    VICII_PHASE
+    VICII_PHASE,
+    CBM_PALETTE_YUV
 };
 
 int vicii_color_update_palette(struct video_canvas_s *canvas)
 {
     video_cbm_palette_t *cp;
 
-    if (vicii_resources.new_luminances)
+    if (vicii_resources.new_luminances) {
         cp = &vicii_palette;
-    else
+    } else {
         cp = &vicii_palette_old;
+    }
 
     video_color_palette_internal(canvas, cp);
-
-    return video_color_update_palette(canvas);
+    return 0;
 }
-

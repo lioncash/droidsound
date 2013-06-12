@@ -29,26 +29,50 @@
 
 #include "types.h"
 
-#define C64MODEL_C64_PAL     0
-#define C64MODEL_C64C_PAL    1
+#define C64MODEL_C64_PAL 0
+#define C64MODEL_C64C_PAL 1
 #define C64MODEL_C64_OLD_PAL 2
 
-#define C64MODEL_C64_NTSC     3
-#define C64MODEL_C64C_NTSC    4
+#define C64MODEL_C64_NTSC 3
+#define C64MODEL_C64C_NTSC 4
 #define C64MODEL_C64_OLD_NTSC 5
 
 #define C64MODEL_C64_PAL_N 6
 
-#define C64MODEL_NUM 7
+/* SX-64 */
+#define C64MODEL_C64SX_PAL 7
+#define C64MODEL_C64SX_NTSC 8
+
+#define C64MODEL_C64_JAP 9
+#define C64MODEL_C64_GS 10
+
+/* 4064, PET64, EDUCATOR64 */
+#define C64MODEL_PET64_PAL 11
+#define C64MODEL_PET64_NTSC 12
+/* max machine */
+#define C64MODEL_ULTIMAX 13
+
+#define C64MODEL_NUM 14
 
 #define C64MODEL_UNKNOWN 99
 
+typedef struct {
+    int vicii_model;
+    int new_luma;
+    int sid_model;
+    int glue_logic; /* x64sc only */
+    int cia1_model;
+    int cia2_model;
+    int board; /* 0: normal, 1: ultimax */
+    const char *kernal;
+    const char *chargen;
+} c64model_details_t;
+
 extern int c64model_get(void);
-extern int c64model_get_temp(int vicii_model, int sid_model, int glue_logic,
-                             int cia1_model, int cia2_model, int new_luma);
 extern void c64model_set(int model);
-extern void c64model_set_temp(int model, int *vicii_model, int *sid_model,
-                              int *glue_logic, int *cia1_model, int *cia2_model,
-                              int *new_luma);
+/* get details for model */
+extern void c64model_set_details(c64model_details_t *details, int model);
+/* get model from details */
+extern int c64model_get_model(c64model_details_t *details);
 
 #endif

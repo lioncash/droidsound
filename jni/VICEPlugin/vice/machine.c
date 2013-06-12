@@ -73,7 +73,7 @@
 #endif
 
 static int machine_init_was_called = 0;
-
+static int mem_initialized = 0;
 static int ignore_jam;
 int machine_keymap_index;
 
@@ -84,32 +84,30 @@ unsigned int machine_jam(const char *format, ...)
     va_list ap;
     ui_jam_action_t ret;
 
-    if (ignore_jam > 0)
+    if (ignore_jam > 0) {
         return JAM_NONE;
+    }
 
     va_start(ap, format);
     str = lib_mvsprintf(format, ap);
     va_end(ap);
 
-    if (monitor_is_remote())
-    {
+    if (monitor_is_remote()) {
         ret = monitor_network_ui_jam_dialog(str);
-    }
-    else
-    {
+    } else {
         ret = ui_jam_dialog(str);
     }
     lib_free(str);
 
     switch (ret) {
-      case UI_JAM_RESET:
-        return JAM_RESET;
-      case UI_JAM_HARD_RESET:
-        return JAM_HARD_RESET;
-      case UI_JAM_MONITOR:
-        return JAM_MONITOR;
-      default:
-        break;
+        case UI_JAM_RESET:
+            return JAM_RESET;
+        case UI_JAM_HARD_RESET:
+            return JAM_HARD_RESET;
+        case UI_JAM_MONITOR:
+            return JAM_MONITOR;
+        default:
+            break;
     }
 
     ignore_jam = 1;
@@ -121,21 +119,22 @@ static void machine_trigger_reset_internal(const unsigned int mode)
     ignore_jam = 0;
 
     switch (mode) {
-      case MACHINE_RESET_MODE_HARD:
-        vsync_frame_counter = 0;
-        mem_powerup();
-        machine_specific_powerup();
+        case MACHINE_RESET_MODE_HARD:
+            vsync_frame_counter = 0;
+            mem_initialized = 0; /* force memory initialization */
+            machine_specific_powerup();
         /* Fall through.  */
-      case MACHINE_RESET_MODE_SOFT:
-        maincpu_trigger_reset();
-        break;
+        case MACHINE_RESET_MODE_SOFT:
+            maincpu_trigger_reset();
+            break;
     }
 }
 
 void machine_trigger_reset(const unsigned int mode)
 {
-    if (event_playback_active())
+    if (event_playback_active()) {
         return;
+    }
 
     if (network_connected()) {
         network_event_record(EVENT_RESETCPU, (void *)&mode, sizeof(mode));
@@ -155,6 +154,11 @@ void machine_reset(void)
     log_message(LOG_DEFAULT, "Main CPU: RESET.");
 
     /* Do machine-specific initialization.  */
+    if (!mem_initialized) {
+        mem_powerup();
+        mem_initialized = 1;
+    }
+
     machine_specific_reset();
 
     autostart_reset();
@@ -204,10 +208,12 @@ int machine_init(void)
 
 static void machine_maincpu_shutdown(void)
 {
-    if (maincpu_alarm_context != NULL)
+    if (maincpu_alarm_context != NULL) {
         alarm_context_destroy(maincpu_alarm_context);
-    if (maincpu_clk_guard != NULL)
+    }
+    if (maincpu_clk_guard != NULL) {
         clk_guard_destroy(maincpu_clk_guard);
+    }
 
     lib_free(maincpu_monitor_interface);
     maincpu_shutdown();

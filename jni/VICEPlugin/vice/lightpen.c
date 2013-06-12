@@ -75,6 +75,7 @@ struct lp_type_s {
 };
 typedef struct lp_type_s lp_type_t;
 
+/* note: xoffs=24; yoffs=0 gives "pixel perfect" match */
 static const lp_type_t lp_type[LIGHTPEN_TYPE_NUM] = {
     /* Pen with button Up (e.g. Atari CX75) */
     { PEN, 0x00, 0x01, 0, 0 },
@@ -85,7 +86,9 @@ static const lp_type_t lp_type[LIGHTPEN_TYPE_NUM] = {
     /* Magnum Light Phaser */
     { GUN, 0x20, 0x00, 20, -10 },
     /* Stack Light Rifle */
-    { GUN, 0x04, 0x00, 20, 0 }
+    { GUN, 0x04, 0x00, 20, 0 },
+    /* Inkwell Lightpen */
+    { GUN, 0x04, 0x20, 20, 0 }
 };
 
 static inline void lightpen_check_button_mask(BYTE mask, int pressed)
@@ -106,12 +109,12 @@ static inline void lightpen_update_buttons(int buttons)
     lightpen_buttons = buttons;
 
     lightpen_button_y = ((((lp_type[lightpen_type].button1 & 0x20) == 0x20) && (buttons & LP_HOST_BUTTON_1))
-                      || (((lp_type[lightpen_type].button2 & 0x20) == 0x20) && (buttons & LP_HOST_BUTTON_2)))
-                      ? 1 : 0;
+                         || (((lp_type[lightpen_type].button2 & 0x20) == 0x20) && (buttons & LP_HOST_BUTTON_2)))
+                        ? 1 : 0;
 
     lightpen_button_x = ((((lp_type[lightpen_type].button1 & 0x40) == 0x40) && (buttons & LP_HOST_BUTTON_1))
-                      || (((lp_type[lightpen_type].button2 & 0x40) == 0x40) && (buttons & LP_HOST_BUTTON_2)))
-                      ? 1 : 0;
+                         || (((lp_type[lightpen_type].button2 & 0x40) == 0x40) && (buttons & LP_HOST_BUTTON_2)))
+                        ? 1 : 0;
 
     lightpen_check_button_mask((BYTE)(lp_type[lightpen_type].button1 & 0xf), buttons & LP_HOST_BUTTON_1);
     lightpen_check_button_mask((BYTE)(lp_type[lightpen_type].button2 & 0xf), buttons & LP_HOST_BUTTON_2);

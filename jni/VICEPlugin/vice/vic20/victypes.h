@@ -55,7 +55,7 @@
 /* On MS-DOS, do not duplicate pixels.  Otherwise, we would always need at
    least 466 horizontal pixels to contain the whole screen.  */
 /* But this is no problem as 320*200 does not fit anyhow.  */
-#if !defined(__OS2__) && !defined(DINGUX_SDL) && !defined(DINGOO_NATIVE)
+#if !defined(__OS2__) && !defined(DINGUX_SDL) && !defined(DINGOO_NATIVE) && !defined(ANDROID_COMPILE)
 #define VIC_DUPLICATES_PIXELS
 #endif
 
@@ -76,7 +76,7 @@ typedef BYTE VIC_PIXEL;
 
 /* `clk' value for the beginning of the current line.  */
 #define VIC_LINE_START_CLK(clk)  (((clk) / vic.cycles_per_line) \
-                                 * vic.cycles_per_line)
+                                  * vic.cycles_per_line)
 
 /* Current vertical position of the raster.  Unlike `rasterline', which is
    only accurate if a pending `A_RASTERDRAW' event has been served, this is
@@ -87,20 +87,16 @@ typedef BYTE VIC_PIXEL;
 #define VIC_RASTER_X(cycle)      (((int)(cycle) - 7) * 4 * VIC_PIXEL_WIDTH)
 
 /* char affected by a change in this cycle rounded to whole chars */
-#define VIC_RASTER_CHAR(cycle)   ((int)((cycle) \
-                                 - vic.raster.display_xstart / (VIC_PIXEL_WIDTH * 4) - 6) / 2)
+#define VIC_RASTER_CHAR(cycle)   ((int)((cycle) - vic.raster.display_xstart / (VIC_PIXEL_WIDTH * 4) - 6) / 2)
 
 /* char affected by a change in this cycle */
-#define VIC_RASTER_CHAR_INT(cycle)   ((int)((cycle) \
-                                 - vic.raster.display_xstart / (VIC_PIXEL_WIDTH * 4) - 7) / 2)
+#define VIC_RASTER_CHAR_INT(cycle)   ((int)((cycle) - vic.raster.display_xstart / (VIC_PIXEL_WIDTH * 4) - 7) / 2)
 /* half of the char affected by a change in this cycle */
-#define VIC_RASTER_CHAR_FRAC(cycle)   ((int)((cycle) \
-                                 - vic.raster.display_xstart / (VIC_PIXEL_WIDTH * 4) - 7) % 2)
+#define VIC_RASTER_CHAR_FRAC(cycle)   ((int)((cycle) - vic.raster.display_xstart / (VIC_PIXEL_WIDTH * 4) - 7) % 2)
 
 /* Video mode definitions. */
 
-enum vic_video_mode_s
-{
+enum vic_video_mode_s {
     VIC_STANDARD_MODE,
     VIC_NUM_VMODES
 };
@@ -149,8 +145,7 @@ typedef enum vic_area_state_s vic_area_state_t;
 
 struct video_chip_cap_s;
 
-struct vic_s
-{
+struct vic_s {
     int initialized;
 
     signed int log;

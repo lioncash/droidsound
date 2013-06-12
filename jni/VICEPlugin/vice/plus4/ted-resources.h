@@ -28,8 +28,7 @@
 #define VICE_TED_RESOURCES_H
 
 /* TED resources.  */
-struct ted_resources_s
-{
+struct ted_resources_s {
     /* TED border mode, 0..3 */
     int border_mode;
 };

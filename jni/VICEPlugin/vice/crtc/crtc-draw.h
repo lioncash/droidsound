@@ -32,7 +32,10 @@
 #ifndef VICE_CRTC_DRAW_H
 #define VICE_CRTC_DRAW_H
 
+#include "types.h"
+
 extern void crtc_draw_init(void);
 
-#endif
+extern DWORD dwg_table[16];
 
+#endif

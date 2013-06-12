@@ -77,14 +77,14 @@
 
 /* Number of cycles before an attached disk becomes visible to the R/W head.
    This is mostly to make routines that auto-detect disk changes happy.  */
-#define DRIVE_ATTACH_DELAY           (3*600000)
+#define DRIVE_ATTACH_DELAY           (3 * 600000)
 
 /* Number of cycles the write protection is activated on detach.  */
-#define DRIVE_DETACH_DELAY           (3*200000)
+#define DRIVE_DETACH_DELAY           (3 * 200000)
 
 /* Number of cycles the after a disk can be inserted after a disk has been
    detached.  */
-#define DRIVE_ATTACH_DETACH_DELAY    (3*400000)
+#define DRIVE_ATTACH_DETACH_DELAY    (3 * 400000)
 
 /* Parallel cables available.  */
 #define DRIVE_PC_NONE     0
@@ -131,8 +131,6 @@ typedef struct drive_s {
     /* (only needed as long as we abuse the odd devices for drive 1:) */
     struct drive_s *drive0;
     struct drive_s *drive1;
-    /* Original ROM code is saved here.  */
-    BYTE rom_idle_trap[4];
     int trap, trapcont;
 
     /* Byte ready line.  */
@@ -200,13 +198,16 @@ typedef struct drive_s {
     DWORD snap_ref_advance;
     DWORD snap_req_ref_cycles;
 
-	  /* IF: requested additional R cycles */
-	  int req_ref_cycles;
+    /* IF: requested additional R cycles */
+    int req_ref_cycles;
 
     /* UI stuff.  */
     int old_led_status;
     int old_half_track;
-    int old_side;
+    unsigned int old_side;
+
+    /* Complicated image, with complex emulation requirements */
+    int complicated_image_loaded;
 
     /* Is a GCR image loaded?  */
     int GCR_image_loaded;
@@ -243,7 +244,7 @@ typedef struct drive_s {
 
     /* Pointer to 8KB RAM expansion.  */
     BYTE *drive_ram_expand2, *drive_ram_expand4, *drive_ram_expand6,
-         *drive_ram_expand8, *drive_ram_expanda;
+    *drive_ram_expand8, *drive_ram_expanda;
 
     /* Which RAM expansion is enabled?  */
     int drive_ram2_enabled, drive_ram4_enabled, drive_ram6_enabled,
@@ -264,10 +265,12 @@ typedef struct drive_s {
     /* Current ROM image.  */
     BYTE rom[DRIVE_ROM_SIZE];
 
+    /* Current trap ROM image.  */
+    BYTE trap_rom[DRIVE_ROM_SIZE];
 } drive_t;
 
 
-extern CLOCK drive_clk[];
+extern CLOCK drive_clk[DRIVE_NUM];
 
 /* Drive context structure for low-level drive emulation.
    Full definition in drivetypes.h */
@@ -283,6 +286,8 @@ extern void drive_move_head(int step, struct drive_s *drive);
 extern void drive_reset(void);
 extern void drive_shutdown(void);
 extern void drive_vsync_hook(void);
+extern int drive_get_disk_drive_type(int dnr);
+extern void drive_enable_update_ui(struct drive_context_s *drv);
 extern void drive_update_ui_status(void);
 extern void drive_gcr_data_writeback(struct drive_s *drive);
 extern void drive_gcr_data_writeback_all(void);

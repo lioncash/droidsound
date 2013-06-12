@@ -3,7 +3,7 @@
  * ($DD00).
  *
  * Written by
- *  Andr? Fachat <fachat@physik.tu-chemnitz.de>
+ *  André Fachat <fachat@physik.tu-chemnitz.de>
  *  Ettore Perazzoli <ettore@comm2000.it>
  *  Andreas Boose <viceteam@t-online.de>
  *
@@ -280,7 +280,7 @@ void cia2_setup_context(machine_context_t *machine_context)
 {
     cia_context_t *cia;
 
-    machine_context->cia2 = lib_calloc(1,sizeof(cia_context_t));
+    machine_context->cia2 = lib_calloc(1, sizeof(cia_context_t));
     cia = machine_context->cia2;
 
     cia->prv = NULL;
@@ -293,7 +293,8 @@ void cia2_setup_context(machine_context_t *machine_context)
 
     ciacore_setup_context(cia);
 
-    if (machine_class == VICE_MACHINE_C64SC) {
+    if (machine_class == VICE_MACHINE_C64SC
+        || machine_class == VICE_MACHINE_SCPU64) {
         cia->write_offset = 0;
     }
 

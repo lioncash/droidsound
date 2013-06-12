@@ -80,6 +80,7 @@
 #include "tpi.h"
 #include "traps.h"
 #include "types.h"
+#include "userport_joystick.h"
 #include "video.h"
 #include "video-sound.h"
 #include "vsync.h"
@@ -134,8 +135,11 @@ int machine_resources_init(void)
 #ifndef COMMON_KBD
         || pet_kbd_resources_init() < 0
 #endif
-        )
+        || userport_joystick_resources_init() < 0
+        ) {
         return -1;
+    }
+
     return 0;
 }
 
@@ -168,8 +172,10 @@ int machine_cmdline_options_init(void)
 #ifndef COMMON_KBD
         || pet_kbd_cmdline_options_init() < 0
 #endif
-        )
+        || userport_joystick_cmdline_options_init() < 0
+        ) {
         return -1;
+    }
 
     return 0;
 }
@@ -184,7 +190,8 @@ int machine_cmdline_options_init(void)
 /* ------------------------------------------------------------------------- */
 /* ... while the other CBM-II use the CRTC retrace signal. */
 
-static void cbm2_crtc_signal(unsigned int signal) {
+static void cbm2_crtc_signal(unsigned int signal)
+{
     if (signal) {
         SIGNAL_VERT_BLANK_ON
     } else {
@@ -201,13 +208,14 @@ static void cbm2_monitor_init(void)
     monitor_interface_t *drive_interface_init[DRIVE_NUM];
     monitor_cpu_type_t *asmarray[2];
 
-    asmarray[0]=&asm6502;
-    asmarray[1]=NULL;
+    asmarray[0] = &asm6502;
+    asmarray[1] = NULL;
 
     asm6502_init(&asm6502);
 
-    for (dnr = 0; dnr < DRIVE_NUM; dnr++)
+    for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
         drive_interface_init[dnr] = drivecpu_monitor_interface_get(dnr);
+    }
 
     /* Initialize the monitor.  */
     monitor_init(maincpu_monitor_interface_get(), drive_interface_init,
@@ -232,8 +240,9 @@ int machine_specific_init(void)
     /* Setup trap handling - must be before mem_load() */
     traps_init();
 
-    if (mem_load() < 0)
+    if (mem_load() < 0) {
         return -1;
+    }
 
     rs232drv_init();
 
@@ -254,8 +263,9 @@ int machine_specific_init(void)
 
 #ifndef COMMON_KBD
     /* Initialize the keyboard.  */
-    if (cbm2_kbd_init() < 0)
+    if (cbm2_kbd_init() < 0) {
         return -1;
+    }
 #endif
 
     /* Initialize the datasette emulation.  */
@@ -395,8 +405,7 @@ long machine_get_cycles_per_frame(void)
 
 void machine_get_line_cycle(unsigned int *line, unsigned int *cycle, int *half_cycle)
 {
-    *line = (unsigned int)((maincpu_clk) / machine_timing.cycles_per_line
-            % machine_timing.screen_lines);
+    *line = (unsigned int)((maincpu_clk) / machine_timing.cycles_per_line % machine_timing.screen_lines);
 
     *cycle = (unsigned int)((maincpu_clk) % machine_timing.cycles_per_line);
 
@@ -471,10 +480,6 @@ int machine_autodetect_psid(const char *name)
     return -1;
 }
 
-void machine_play_psid(int tune)
-{
-}
-
 int machine_screenshot(screenshot_t *screenshot, struct video_canvas_s *canvas)
 {
     if (canvas == crtc_get_canvas()) {
@@ -520,22 +525,13 @@ int machine_addr_in_ram(unsigned int addr)
 
 const char *machine_get_name(void)
 {
-    return (machine_class == VICE_MACHINE_CBM6x0) ? machine_name : "CBM-II-5x0";
+    return machine_name;
 }
 
-#ifdef USE_SDLUI
-/* Kludges for vsid & linking issues */
-const char **csidmodel = NULL;
-void psid_init_driver(void) {}
-#endif
+/* ------------------------------------------------------------------------- */
+/* native screenshot support */
 
-/* FIXME: further rework snapshot stuff and remove these */
-int cbm2_c500_snapshot_write_module(snapshot_t *p)
+BYTE *crtc_get_active_bitmap(void)
 {
-    return 0;
-}
-
-int cbm2_c500_snapshot_read_module(snapshot_t *p)
-{
-    return 0;
+    return NULL;
 }

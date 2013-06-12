@@ -147,7 +147,7 @@ static void io_source_msg_detach_all(WORD addr, int amount, io_source_list_t *st
 
         DBG(("IO: found %d items to detach\n", found));
         for (i = 0; i < found; i++) {
-            DBG(("IO: detach #%d id:%d name: %s\n",i , detach_list[i].det_cartid, detach_list[i].det_devname));
+            DBG(("IO: detach #%d id:%d name: %s\n", i, detach_list[i].det_cartid, detach_list[i].det_devname));
             io_source_detach(&detach_list[i]);
         }
     }
@@ -217,7 +217,7 @@ static void io_source_msg_detach_last(WORD addr, int amount, io_source_list_t *s
         DBG(("IO: found %d items to detach\n", found));
         for (i = 0; i < found; i++) {
             if (detach_list[i].order != lowest) {
-                DBG(("IO: detach #%d id:%d name: %s\n",i , detach_list[i].det_cartid, detach_list[i].det_devname));
+                DBG(("IO: detach #%d id:%d name: %s\n", i, detach_list[i].det_cartid, detach_list[i].det_devname));
                 io_source_detach(&detach_list[i]);
             }
         }
@@ -271,7 +271,6 @@ static void io_source_log_collisions(WORD addr, int amount, io_source_list_t *st
     if (found) {
         log_message(LOG_DEFAULT, new_msg, addr);
         lib_free(new_msg);
-
     }
 }
 
@@ -281,6 +280,7 @@ static inline BYTE io_read(io_source_list_t *list, WORD addr)
     int io_source_counter = 0;
     BYTE realval = 0;
     BYTE retval = 0;
+    BYTE firstval = 0;
     unsigned int lowest_order = 0xffffffff;
 
     while (current) {
@@ -301,7 +301,15 @@ static inline BYTE io_read(io_source_list_t *list, WORD addr)
                         realval &= retval;
                     }
                     if (current->device->io_source_prio != -1) {
-                        io_source_counter++;
+                        if (!io_source_counter) {
+                            firstval = retval;
+                            io_source_counter++;
+                        } else {
+                            /* if the nth read returns the same as the first read don't see it as a conflict */
+                            if (retval != firstval) {
+                                io_source_counter++;
+                            }
+                        }
                     }
                 }
             }
@@ -533,7 +541,7 @@ static int set_io_source_collision_handling(int val, void *param)
     if (val < 0 || val > 2) {
         return -1;
     }
-	io_source_collision_handling = val;
+    io_source_collision_handling = val;
 
     return 0;
 }

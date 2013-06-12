@@ -1,5 +1,5 @@
 /*
- * c64meminit.h -- Initialize C64 memory.
+ * c64dtvmeminit.h -- Initialize C64 memory.
  *
  * Written by
  *  Daniel Kahlin <daniel@kahlin.net>
@@ -30,6 +30,7 @@
 #define VICE_C64DTVMEMINIT_H
 
 extern void c64dtvmeminit(unsigned int base);
+extern const unsigned int c64dtvmeminit_io_config[8];
+extern void c64dtvmem_limit_init(DWORD mem_read_limit_tab[8][0x101]);
 
 #endif
-

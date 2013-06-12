@@ -87,7 +87,7 @@
  * DS1202 : registers 9-30: There are no registers at these locations (emulated as returning
  *                          0 upon read)
  *
- * register 31 : Clock Burst mode, all 9 registers will be read from on written to in sequence.
+ * register 31 : Clock Burst mode, all 9 registers will be read from or written to in sequence.
  *               When writing in burst mode the first 8 registers need to be transfered before
  *               the registers are accepted
  */
@@ -131,7 +131,7 @@ static BYTE ds1202_1302_get_clock_register(rtc_ds1202_1302_t *context, int reg, 
     BYTE retval;
     time_t latch = (latched) ? offset : rtc_get_latch(offset);
 
-    switch(reg) {
+    switch (reg) {
         case DS1202_1302_REG_SECONDS_CH:
             retval = context->clock_halt << 7;
             retval |= rtc_get_second(latch, 1);
@@ -590,8 +590,7 @@ int ds1202_1302_snapshot_write_module(snapshot_t *s)
 #if 0
     snapshot_module_t *m;
 
-    m = snapshot_module_create(s, SNAP_MODULE_NAME,
-                          CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR);
+    m = snapshot_module_create(s, SNAP_MODULE_NAME, CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR);
     if (m == NULL) {
         return -1;
     }
