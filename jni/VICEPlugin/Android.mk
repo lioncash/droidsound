@@ -2,7 +2,8 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_MODULE := resid
 LOCAL_ARM_MODE := arm
-LOCAL_CFLAGS += -ffast-math -fno-exceptions
+LOCAL_CFLAGS := -O3 -ffast-math -fno-exceptions
+LOCAL_LDFLAGS := -O3 -ffast-math -fno-exceptions
 
 MY_RESID_FILES = $(wildcard $(LOCAL_PATH)/vice/resid/*.cpp)
 LOCAL_SRC_FILES := $(MY_RESID_FILES:$(LOCAL_PATH)%=%)
@@ -15,6 +16,8 @@ include $(BUILD_STATIC_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE := vice
 LOCAL_ARM_MODE := arm
+LOCAL_CFLAGS := -O2
+LOCAL_LDFLAGS := -O2
 LOCAL_LDLIBS := -llog -lz
 LOCAL_SRC_FILES := \
     VICEPlugin.cpp \
