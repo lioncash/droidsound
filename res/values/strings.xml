@@ -48,9 +48,13 @@
 
 <string-array name="filter_bias_opts">
 <item>Lightest filter</item>
+<item>...</item>
 <item>Light filter</item>
+<item>...</item>
 <item>Normal filter</item>
+<item>...</item>
 <item>Dark filter</item>
+<item>...</item>
 <item>Darkest filter</item>
 </string-array>
 
@@ -77,9 +81,13 @@
 
 <string-array name="filter_bias_vals">
 <item>500</item>
+<item>375</item>
 <item>250</item>
+<item>125</item>
 <item>0</item>
+<item>-125</item>
 <item>-250</item>
+<item>-375</item>
 <item>-500</item>
 </string-array>
 
