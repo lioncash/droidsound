@@ -39,7 +39,4 @@ LOCAL_CFLAGS += -DHAVE_CONFIG_H
 
 LOCAL_LDLIBS := -llog -lz
 
-LOCAL_CFLAGS += -flto
-LOCAL_LDFLAGS += -flto
-
 include $(BUILD_SHARED_LIBRARY)

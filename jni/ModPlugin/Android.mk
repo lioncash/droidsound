@@ -31,7 +31,4 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/modplug $(LOCAL_PATH)/modplug/libmodplug
 
 LOCAL_LDLIBS := -llog 
 
-LOCAL_CFLAGS += -flto
-LOCAL_LDFLAGS += -flto
-
 include $(BUILD_SHARED_LIBRARY)

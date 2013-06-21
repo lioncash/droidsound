@@ -1,1 +1,5 @@
 APP_ABI := armeabi-v7a
+NDK_TOOLCHAIN_VERSION := 4.7
+APP_CFLAGS := -flto -O3
+APP_CPPFLAGS := -flto -O3
+APP_LDFLAGS := -flto -O3

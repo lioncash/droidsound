@@ -21,7 +21,4 @@ LOCAL_MODULE    := fft
 
 LOCAL_SRC_FILES := FFT.cpp fixedfft.cpp
 
-LOCAL_CFLAGS += -flto
-LOCAL_LDFLAGS += -flto
-
 include $(BUILD_SHARED_LIBRARY)

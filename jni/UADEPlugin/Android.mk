@@ -53,9 +53,6 @@ $(LOCAL_PATH)/uade/include \
 $(LOCAL_PATH)/uade/frontends/include \
 $(LOCAL_PATH)/$(FE)
 
-LOCAL_LDLIBS := -llog
-
-LOCAL_CFLAGS += -flto
-LOCAL_LDFLAGS += -flto
+LOCAL_LDLIBS := -llog -lm
 
 include $(BUILD_SHARED_LIBRARY)

@@ -302,7 +302,4 @@ LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/layout \
     $(LOCAL_PATH)/meta
 
-LOCAL_CFLAGS += -flto
-LOCAL_LDFLAGS += -flto
-
 include $(BUILD_SHARED_LIBRARY)

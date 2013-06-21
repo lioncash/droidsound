@@ -90,8 +90,8 @@ static void calculate_shelve(double fs, double fc, double g, biquad_t * bq)
     A = powf(10, g / 40);
     omega = 2 * M_PI * fc / fs;
     omega = tan(omega / 2) * 2;
-    sn = sin(omega);
-    cs = cos(omega);
+    sn = sinf(omega);
+    cs = cosf(omega + 0.00000001f); /* workaround for android toolchain optimizing to sincosf which isn't found at link time */
     beta = sqrt(A + A);
 
     b0 = A * ((A + 1) + (A - 1) * cs + beta * sn);

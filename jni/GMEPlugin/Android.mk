@@ -26,7 +26,4 @@ MY_SOURCES := $(wildcard $(LOCAL_PATH)/gme/*.cpp)
 LOCAL_SRC_FILES += $(MY_SOURCES:$(LOCAL_PATH)%=%)
 LOCAL_LDLIBS := -llog -lz
 
-LOCAL_CFLAGS += -flto
-LOCAL_LDFLAGS += -flto
-
 include $(BUILD_SHARED_LIBRARY)

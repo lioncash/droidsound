@@ -26,7 +26,4 @@ LOCAL_SRC_FILES :=  HivelyPlugin.cpp hvl_replay.c
 LOCAL_LDLIBS := -llog
 # -lz
 
-LOCAL_CFLAGS += -flto
-LOCAL_LDFLAGS += -flto
-
 include $(BUILD_SHARED_LIBRARY)
