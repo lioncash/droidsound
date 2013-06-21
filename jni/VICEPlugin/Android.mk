@@ -2,8 +2,8 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_MODULE := resid
 LOCAL_ARM_MODE := arm
-LOCAL_CFLAGS := -ffast-math -fno-exceptions
-LOCAL_LDFLAGS := -ffast-math -fno-exceptions
+LOCAL_CFLAGS += -ffast-math -fno-exceptions
+LOCAL_LDFLAGS += -ffast-math -fno-exceptions
 
 MY_RESID_FILES = $(wildcard $(LOCAL_PATH)/vice/resid/*.cpp)
 LOCAL_SRC_FILES := $(MY_RESID_FILES:$(LOCAL_PATH)%=%)
@@ -145,7 +145,7 @@ LOCAL_SRC_FILES := \
     overrides/video/video.c \
 #terminator for last backslash
 
-LOCAL_CFLAGS := -DHAVE_CONFIG_H
+LOCAL_CFLAGS += -DHAVE_CONFIG_H
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH) \
     $(LOCAL_PATH)/android \
