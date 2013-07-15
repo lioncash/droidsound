@@ -15,7 +15,7 @@ import android.view.ViewGroup;
 import com.ssb.droidsound.R;
 import com.ssb.droidsound.app.Application;
 import com.ssb.droidsound.async.Player;
-import com.ssb.droidsound.utils.OverlappingFFT;
+import com.ssb.droidsound.utils.FrequencyAnalysis;
 import com.ssb.droidsound.view.VisualizationInfoView;
 import com.ssb.droidsound.view.VisualizationView;
 
@@ -29,7 +29,7 @@ public class VisualizationFragment extends Fragment {
 	private final BroadcastReceiver musicChangeReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context c, Intent i) {
-			final Queue<OverlappingFFT.Data> data;
+			final Queue<FrequencyAnalysis.Data> data;
 			if (i.getAction().equals(Player.ACTION_LOADING_SONG)) {
 				data = Application.enableFftQueue();
 			} else {

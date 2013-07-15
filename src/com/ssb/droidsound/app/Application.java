@@ -34,7 +34,7 @@ import com.ssb.droidsound.database.SongDatabase;
 import com.ssb.droidsound.plugins.DroidSoundPlugin;
 import com.ssb.droidsound.service.ProtectionMoneyService;
 import com.ssb.droidsound.utils.Log;
-import com.ssb.droidsound.utils.OverlappingFFT.Data;
+import com.ssb.droidsound.utils.FrequencyAnalysis.Data;
 import com.ssb.droidsound.utils.StreamUtil;
 
 /**

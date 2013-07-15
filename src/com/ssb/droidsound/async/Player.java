@@ -18,7 +18,7 @@ import com.ssb.droidsound.bo.FilesEntry;
 import com.ssb.droidsound.database.SongDatabase;
 import com.ssb.droidsound.plugins.DroidSoundPlugin;
 import com.ssb.droidsound.utils.Log;
-import com.ssb.droidsound.utils.OverlappingFFT;
+import com.ssb.droidsound.utils.FrequencyAnalysis;
 
 public class Player extends AsyncTask<Void, Intent, Void> {
 	/**
@@ -44,7 +44,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 	private final byte[] data1;
 	private final String f2;
 	private final byte[] data2;
-	private final AtomicReference<OverlappingFFT> fft = new AtomicReference<OverlappingFFT>();
+	private final AtomicReference<FrequencyAnalysis> fft = new AtomicReference<FrequencyAnalysis>();
 
 	private final AtomicInteger subsongLengthMs = new AtomicInteger();
 	private final AtomicInteger defaultSubsong = new AtomicInteger();
@@ -83,9 +83,9 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 	 *
 	 * @return data array
 	 */
-	public Queue<OverlappingFFT.Data> enableFftQueue() {
+	public Queue<FrequencyAnalysis.Data> enableFftQueue() {
 		if (fft.get() == null) {
-			OverlappingFFT offt = new OverlappingFFT();
+			FrequencyAnalysis offt = new FrequencyAnalysis();
 			int fr = plugin.getFrameRate();
 			/* If the plugin is not yet ready, we'll just pass some default */
 			if (fr == 0) {
@@ -235,7 +235,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
         sessionOpen.putExtra(AudioEffect.EXTRA_PACKAGE_NAME, Application.packageName());
         publishProgress(sessionOpen);
 
-		OverlappingFFT offt = fft.get();
+		FrequencyAnalysis offt = fft.get();
 		if (offt != null) {
 			offt.calculateTiming(plugin.getFrameRate(), plugin.getFrameRate());
 		}
@@ -301,7 +301,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 				audioTrack.write(samples, 0, lengthInSamples);
 
 				/* Update our FFT */
-				OverlappingFFT _fft = fft.get();
+				FrequencyAnalysis _fft = fft.get();
 				if (_fft != null) {
 					_fft.feed(samples, 0, lengthInSamples);
 				}
