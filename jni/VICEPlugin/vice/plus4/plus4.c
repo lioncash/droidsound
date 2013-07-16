@@ -272,6 +272,7 @@ int machine_resources_init(void)
 void machine_resources_shutdown(void)
 {
     cartridge_resources_shutdown();
+    speech_resources_shutdown();
     serial_shutdown();
     video_resources_shutdown();
     plus4_resources_shutdown();
@@ -479,6 +480,7 @@ void machine_specific_shutdown(void)
     tape_image_detach_internal(1);
 
     ted_shutdown();
+    speech_shutdown();
 
     cs256k_shutdown();
     h256k_shutdown();

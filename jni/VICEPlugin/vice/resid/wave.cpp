@@ -204,7 +204,7 @@ void WaveformGenerator::writeCONTROL_REG(reg8 control)
   else if (waveform_prev) {
     // Change to floating DAC input.
     // Reset fading time for floating DAC input.
-    floating_output_ttl = 0x4000;
+    floating_output_ttl = 0x14000;
   }
 
   // The gate bit is handled by the EnvelopeGenerator.

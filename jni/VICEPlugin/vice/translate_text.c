@@ -1763,7 +1763,7 @@ translate_t string_table[] = {
 #endif
 
 /* monitor/mon_command.c */
-/* en */ {IDGS_MON_DELETE_DESCRIPTION,    N_("Delete checkpoint `checknum'.")},
+/* en */ {IDGS_MON_DELETE_DESCRIPTION,    N_("Delete checkpoint `checknum'. If no checkpoint is specified delete all checkpoints.")},
 #ifdef HAS_TRANSLATION
 /* da */ {IDGS_MON_DELETE_DESCRIPTION_DA, "Slet checkpoint \"checknum\"."},
 /* de */ {IDGS_MON_DELETE_DESCRIPTION_DE, "Lösche Checkpoint `Checknummer'."},
@@ -3320,6 +3320,23 @@ translate_t string_table[] = {
 /* tr */ {IDCLS_DISABLE_AUTOSTART_RANDOM_DELAY_TR, "Otomatik baþlatmada rastgele gecikmeyi pasifleþtir"},
 #endif
 
+/* machine.c */
+/* en */ {IDCLS_SET_MACHINE_JAM_ACTION,    N_("Set action on CPU JAM: (0: Ask, 1: continue, 2: Monitor, 3: Reset, 4: Hard Reset)")},
+#ifdef HAS_TRANSLATION
+/* da */ {IDCLS_SET_MACHINE_JAM_ACTION_DA, ""},  /* fuzzy */
+/* de */ {IDCLS_SET_MACHINE_JAM_ACTION_DE, ""},  /* fuzzy */
+/* es */ {IDCLS_SET_MACHINE_JAM_ACTION_ES, ""},  /* fuzzy */
+/* fr */ {IDCLS_SET_MACHINE_JAM_ACTION_FR, ""},  /* fuzzy */
+/* hu */ {IDCLS_SET_MACHINE_JAM_ACTION_HU, ""},  /* fuzzy */
+/* it */ {IDCLS_SET_MACHINE_JAM_ACTION_IT, ""},  /* fuzzy */
+/* ko */ {IDCLS_SET_MACHINE_JAM_ACTION_KO, ""},  /* fuzzy */
+/* nl */ {IDCLS_SET_MACHINE_JAM_ACTION_NL, ""},  /* fuzzy */
+/* pl */ {IDCLS_SET_MACHINE_JAM_ACTION_PL, ""},  /* fuzzy */
+/* ru */ {IDCLS_SET_MACHINE_JAM_ACTION_RU, ""},  /* fuzzy */
+/* sv */ {IDCLS_SET_MACHINE_JAM_ACTION_SV, ""},  /* fuzzy */
+/* tr */ {IDCLS_SET_MACHINE_JAM_ACTION_TR, ""},  /* fuzzy */
+#endif
+
 /* c128/c128-cmdline-options.c, c64/c64-cmdline-options.c,
    c64/psid.c, plus4/plus4-cmdline-options.c,
    vic20/vic20-cmdline-options.c, scpu64/scpu64-cmdline-options.c */
@@ -3390,6 +3407,23 @@ translate_t string_table[] = {
 /* ru */ {IDCLS_SET_BURST_MOD_RU, "Burst modification (0 = None, 1 = CIA1, 2 = CIA2)"},
 /* sv */ {IDCLS_SET_BURST_MOD_SV, "Burstmodifiering (0 = ingen, 1 = CIA1, 2 = CIA2)"},
 /* tr */ {IDCLS_SET_BURST_MOD_TR, "Burst deðiþikliði (0 = Yok, 1 = CIA1, 2 = CIA2)"},
+#endif
+
+/* c64/c64-cmdline-options.c, scpu64/scpu64-cmdline-options.c */
+/* en */ {IDCLS_SET_IEC_RESET,    N_("Computer reset goes to IEC bus (0 = No, 1 = Yes)")},
+#ifdef HAS_TRANSLATION
+/* da */ {IDCLS_SET_IEC_RESET_DA, ""},  /* fuzzy */
+/* de */ {IDCLS_SET_IEC_RESET_DE, ""},  /* fuzzy */
+/* es */ {IDCLS_SET_IEC_RESET_ES, ""},  /* fuzzy */
+/* fr */ {IDCLS_SET_IEC_RESET_FR, ""},  /* fuzzy */
+/* hu */ {IDCLS_SET_IEC_RESET_HU, ""},  /* fuzzy */
+/* it */ {IDCLS_SET_IEC_RESET_IT, ""},  /* fuzzy */
+/* ko */ {IDCLS_SET_IEC_RESET_KO, ""},  /* fuzzy */
+/* nl */ {IDCLS_SET_IEC_RESET_NL, ""},  /* fuzzy */
+/* pl */ {IDCLS_SET_IEC_RESET_PL, ""},  /* fuzzy */
+/* ru */ {IDCLS_SET_IEC_RESET_RU, ""},  /* fuzzy */
+/* sv */ {IDCLS_SET_IEC_RESET_SV, ""},  /* fuzzy */
+/* tr */ {IDCLS_SET_IEC_RESET_TR, ""},  /* fuzzy */
 #endif
 
 /* c128/c128-cmdline-options.c, c128/functionrom.c,
@@ -10167,25 +10201,6 @@ translate_t string_table[] = {
 #endif
 #endif
 
-#ifdef HAVE_RESID_FP
-/* sid/sid-cmdline-options.c */
-/* en */ {IDCLS_RESIDFP_ENGINE_MODEL,    N_("1800: ReSID-FP 6581R3 4885, 1801: ReSID-FP 6581R3 0486S, 1802: ReSID-FP 6581R3 3984, 1803: ReSID-FP 6581R4 AR 3789, 1804: ReSID-FP 6581R3 4485, 1805: ReSID-FP 6581R4 1986S, 1808: ReSID-FP 8580R5 3691, 1809: ReSID-FP 8580R5 3691 + digiboost, 1810: ReSID-FP 8580R5 1489, 1811: ReSID-FP 8580R5 1489D")},
-#ifdef HAS_TRANSLATION
-/* da */ {IDCLS_RESIDFP_ENGINE_MODEL_DA, "1800: ReSID-FP 6581R3 4885, 1801: ReSID-FP 6581R3 0486S, 1802: ReSID-FP 6581R3 3984, 1803: ReSID-FP 6581R4 AR 3789, 1804: ReSID-FP 6581R3 4485, 1805: ReSID-FP 6581R4 1986S, 1808: ReSID-FP 8580R5 3691, 1809: ReSID-FP 8580R5 3691 + digiboost, 1810: ReSID-FP 8580R5 1489, 1811: ReSID-FP 8580R5 1489D"},
-/* de */ {IDCLS_RESIDFP_ENGINE_MODEL_DE, "1800: ReSID-FP 6581R3 4885, 1801: ReSID-FP 6581R3 0486S, 1802: ReSID-FP 6581R3 3984, 1803: ReSID-FP 6581R4 AR 3789, 1804: ReSID-FP 6581R3 4485, 1805: ReSID-FP 6581R4 1986S, 1808: ReSID-FP 8580R5 3691, 1809: ReSID-FP 8580R5 3691 + digiboost, 1810: ReSID-FP 8580R5 1489, 1811: ReSID-FP 8580R5 1489D"},
-/* es */ {IDCLS_RESIDFP_ENGINE_MODEL_ES, "1800: ReSID-FP 6581R3 4885, 1801: ReSID-FP 6581R3 0486S, 1802: ReSID-FP 6581R3 3984, 1803: ReSID-FP 6581R4 AR 3789, 1804: ReSID-FP 6581R3 4485, 1805: ReSID-FP 6581R4 1986S, 1808: ReSID-FP 8580R5 3691, 1809: ReSID-FP 8580R5 3691 + digiboost, 1810: ReSID-FP 8580R5 1489, 1811: ReSID-FP 8580R5 1489D"},
-/* fr */ {IDCLS_RESIDFP_ENGINE_MODEL_FR, "1800: ReSID-FP 6581R3 4885, 1801: ReSID-FP 6581R3 0486S, 1802: ReSID-FP 6581R3 3984, 1803: ReSID-FP 6581R4 AR 3789, 1804: ReSID-FP 6581R3 4485, 1805: ReSID-FP 6581R4 1986S, 1808: ReSID-FP 8580R5 3691, 1809: ReSID-FP 8580R5 3691 + digiboost, 1810: ReSID-FP 8580R5 1489, 1811: ReSID-FP 8580R5 1489D"},
-/* hu */ {IDCLS_RESIDFP_ENGINE_MODEL_HU, ""},  /* fuzzy */
-/* it */ {IDCLS_RESIDFP_ENGINE_MODEL_IT, "1800: ReSID-FP 6581R3 4885, 1801: ReSID-FP 6581R3 0486S, 1802: ReSID-FP 6581R3 3984, 1803: ReSID-FP 6581R4 AR 3789, 1804: ReSID-FP 6581R3 4485, 1805: ReSID-FP 6581R4 1986S, 1808: ReSID-FP 8580R5 3691, 1809: ReSID-FP 8580R5 3691 + digiboost, 1810: ReSID-FP 8580R5 1489, 1811: ReSID-FP 8580R5 1489D"},
-/* ko */ {IDCLS_RESIDFP_ENGINE_MODEL_KO, ""},  /* fuzzy */
-/* nl */ {IDCLS_RESIDFP_ENGINE_MODEL_NL, "1800: ReSID-FP 6581R3 4885, 1801: ReSID-FP 6581R3 0486S, 1802: ReSID-FP 6581R3 3984, 1803: ReSID-FP 6581R4 AR 3789, 1804: ReSID-FP 6581R3 4485, 1805: ReSID-FP 6581R4 1986S, 1808: ReSID-FP 8580R5 3691, 1809: ReSID-FP 8580R5 3691 + digiboost, 1810: ReSID-FP 8580R5 1489, 1811: ReSID-FP 8580R5 1489 + digiboost"},
-/* pl */ {IDCLS_RESIDFP_ENGINE_MODEL_PL, "1800: ReSID-FP 6581R3 4885, 1801: ReSID-FP 6581R3 0486S, 1802: ReSID-FP 6581R3 3984, 1803: ReSID-FP 6581R4 AR 3789, 1804: ReSID-FP 6581R3 4485, 1805: ReSID-FP 6581R4 1986S, 1808: ReSID-FP 8580R5 3691, 1809: ReSID-FP 8580R5 3691 + digiboost, 1810: ReSID-FP 8580R5 1489, 1811: ReSID-FP 8580R5 1489D"},
-/* ru */ {IDCLS_RESIDFP_ENGINE_MODEL_RU, "1800: ReSID-FP 6581R3 4885, 1801: ReSID-FP 6581R3 0486S, 1802: ReSID-FP 6581R3 3984, 1803: ReSID-FP 6581R4 AR 3789, 1804: ReSID-FP 6581R3 4485, 1805: ReSID-FP 6581R4 1986S, 1808: ReSID-FP 8580R5 3691, 1809: ReSID-FP 8580R5 3691 + digiboost, 1810: ReSID-FP 8580R5 1489, 1811: ReSID-FP 8580R5 1489D"},
-/* sv */ {IDCLS_RESIDFP_ENGINE_MODEL_SV, "1800: ReSID-FP 6581R3 4885, 1801: ReSID-FP 6581R3 0486S, 1802: ReSID-FP 6581R3 3984, 1803: ReSID-FP 6581R4 AR 3789, 1804: ReSID-FP 6581R3 4485, 1805: ReSID-FP 6581R4 1986S, 1808: ReSID-FP 8580R5 3691, 1809: ReSID-FP 8580R5 3691 + digiförstärkning, 1810: ReSID-FP 8580R5 1489, 1811: ReSID-FP 8580R5 1489 + digiförstärkning"},
-/* tr */ {IDCLS_RESIDFP_ENGINE_MODEL_TR, "1800: ReSID-FP 6581R3 4885, 1801: ReSID-FP 6581R3 0486S, 1802: ReSID-FP 6581R3 3984, 1803: ReSID-FP 6581R4 AR 3789, 1804: ReSID-FP 6581R3 4485, 1805: ReSID-FP 6581R4 1986S, 1808: ReSID-FP 8580R5 3691, 1809: ReSID-FP 8580R5 3691 + digiboost, 1810: ReSID-FP 8580R5 1489, 1811: ReSID-FP 8580R5 1489D"},
-#endif
-#endif
-
 /* sid/sid-cmdline-options.c */
 /* en */ {IDCLS_ENABLE_SIDCART,    N_("Enable the SID cartridge")},
 #ifdef HAS_TRANSLATION
@@ -11600,7 +11615,6 @@ translate_t string_table[] = {
 /* tr */ {IDCLS_DONT_TRACE_DRIVE1_CPU_TR, "Sürücü1 CPU'sunu izleme"},
 #endif
 
-#if DRIVE_NUM > 2
 /* debug.c */
 /* en */ {IDCLS_TRACE_DRIVE2_CPU,    N_("Trace the drive2 CPU")},
 #ifdef HAS_TRANSLATION
@@ -11634,9 +11648,7 @@ translate_t string_table[] = {
 /* sv */ {IDCLS_DONT_TRACE_DRIVE2_CPU_SV, "Spåra inte processor i diskettstation 2"},
 /* tr */ {IDCLS_DONT_TRACE_DRIVE2_CPU_TR, "Sürücü2 CPU'sunu izleme"},
 #endif
-#endif
 
-#if DRIVE_NUM > 3
 /* debug.c */
 /* en */ {IDCLS_TRACE_DRIVE3_CPU,    N_("Trace the drive3 CPU")},
 #ifdef HAS_TRANSLATION
@@ -11669,7 +11681,6 @@ translate_t string_table[] = {
 /* ru */ {IDCLS_DONT_TRACE_DRIVE3_CPU_RU, "Do not trace the drive3 CPU"},
 /* sv */ {IDCLS_DONT_TRACE_DRIVE3_CPU_SV, "Spåra inte processor i diskettstation 3"},
 /* tr */ {IDCLS_DONT_TRACE_DRIVE3_CPU_TR, "Sürücü3 CPU'sunu izleme"},
-#endif
 #endif
 
 /* debug.c */

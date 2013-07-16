@@ -181,6 +181,9 @@ IDGS_DTV_ROM_CREATED
 
 
 /* COMMAND-LINE STRING ID DEFINITIONS */
+/* MACHINE.c */
+IDCLS_SET_MACHINE_JAM_ACTION
+
 /* autostart.c */
 IDCLS_AUTOSTART_LOAD_TO_BASIC_START
 
@@ -408,6 +411,9 @@ IDCLS_USE_PALN_SYNC_FACTOR
 
 /* c64/c64-cmdline-options.c, scpu64/scpu64-cmdline-options.c */
 IDCLS_SET_BURST_MOD
+
+/* c64/c64-cmdline-options.c, scpu64/scpu64-cmdline-options.c */
+IDCLS_SET_IEC_RESET
 
 /* c64/c64-cmdline-options.c, cbm2/cbm2-cmdline-options.c,
    pet/pet-cmdline-options.c, plus4/plus4-cmdline-options.c,
@@ -1695,21 +1701,17 @@ IDCLS_TRACE_DRIVE1_CPU
 /* debug.c */
 IDCLS_DONT_TRACE_DRIVE1_CPU
 
-#if DRIVE_NUM > 2
 /* debug.c */
 IDCLS_TRACE_DRIVE2_CPU
 
 /* debug.c */
 IDCLS_DONT_TRACE_DRIVE2_CPU
-#endif   /* DRIVE_NUM > 2 */
 
-#if DRIVE_NUM > 3
 /* debug.c */
 IDCLS_TRACE_DRIVE3_CPU
 
 /* debug.c */
 IDCLS_DONT_TRACE_DRIVE3_CPU
-#endif   /* DRIVE_NUM > 3 */
 
 /* debug.c */
 IDCLS_TRACE_MODE

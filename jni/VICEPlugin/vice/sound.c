@@ -248,8 +248,9 @@ static int cycle_based = 0;
 
 static int set_output_option(int val, void *param)
 {
-    if (val >= 0 && val < 3) {
+    if (val >= 0 && val < 3 && output_option != val) {
         output_option = val;
+        sound_state_changed = TRUE;
     }
     return 0;
 }
@@ -1466,6 +1467,7 @@ void sound_init(unsigned int clock_rate, unsigned int ticks_per_frame)
 
 #ifdef BEOS_COMPILE
     sound_init_beos_device();
+    sound_init_bsp_device();
 #endif
 
 #if defined(AMIGA_SUPPORT) && defined(HAVE_DEVICES_AHI_H)
@@ -1497,7 +1499,7 @@ void sound_init(unsigned int clock_rate, unsigned int ticks_per_frame)
 #if defined(BEOS_COMPILE) && !defined(USE_SDL_AUDIO)
         /* Don't use beos sound device as default for Haiku */
         if (CheckForHaiku()) {
-            util_string_set(&device_name, "dummy");
+            util_string_set(&device_name, "bsp");
         } else
 #endif
         {
