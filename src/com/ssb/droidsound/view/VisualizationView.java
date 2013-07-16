@@ -1,5 +1,6 @@
 package com.ssb.droidsound.view;
 
+import java.util.Arrays;
 import java.util.Queue;
 
 import android.content.Context;
@@ -19,7 +20,7 @@ public class VisualizationView extends SurfaceView {
 
 	private Queue<FrequencyAnalysis.Data> queue;
 
-	private float[] fft;
+	private final float[] fft = new float[12*8 * 3];
 
 	private final Paint white;
 
@@ -46,7 +47,7 @@ public class VisualizationView extends SurfaceView {
 	 */
 	public void setData(Queue<FrequencyAnalysis.Data> data) {
 		this.queue = data;
-		this.fft = null;
+		Arrays.fill(fft, 0);
 		invalidate();
 	}
 
@@ -103,8 +104,20 @@ public class VisualizationView extends SurfaceView {
 
 				data = queue.poll();
 				if (data != null) {
-					fft = data.getFrequencies();
+					updateFromFrequencies(data.getFrequencies());
 				}
+			}
+		}
+	}
+
+	private void updateFromFrequencies(float[] frequencies) {
+		for (int i = 0; i < fft.length; i += 1) {
+			float oldEnergy = fft[i];
+			float newEnergy = frequencies[i];
+			if (newEnergy > oldEnergy) {
+				fft[i] = newEnergy;
+			} else {
+				fft[i] = oldEnergy * .5f;
 			}
 		}
 	}

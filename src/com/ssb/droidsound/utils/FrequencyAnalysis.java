@@ -46,7 +46,7 @@ public class FrequencyAnalysis {
 	private final short[] sample = new short[2048];
 
 	/** Redo FFT after overlap samples */
-	private final int overlap = 1024;
+	private final int overlap = 512;
 
 	/** FFT buffer 1 */
 	private final short[] fft1 = new short[1024];
@@ -131,19 +131,21 @@ public class FrequencyAnalysis {
 			double phase2 = Math.atan2(fft2[(i << 1) | 1], fft2[i << 1]);
 			double phase = phase2 - phase1;
 
-	        /* what is the expected phase difference at overlaps? These should bracket it. */
-	        double minbin = overlap * (i - 0.5) / sample.length * 2 * Math.PI;
-	        double maxbin = overlap * (i + 0.5) / sample.length * 2 * Math.PI;
+	        /* what is the expected phase difference at overlaps? These should bracket valid values
+	         * and we take the fraction of the result to make it faster to bracket phase between
+	         * min and max */
+	        double minbin = (1 + overlap * (i - 0.5) / sample.length) * 2 * Math.PI;
+	        double maxbin = (1 + overlap * (i + 0.5) / sample.length) * 2 * Math.PI;
+	        /* Phase == zerobin when measured frequency is precisely centered at that bin */
+	        double zerobin = (minbin + maxbin) / 2;
 
-	        /* Now, for well-formed signals the phase appears between minbin and maxbin,
-	         * and in theory I could use the range up to 2pi, and simply fold the value
-	         * in between minbin and maxbin, but I think there's grounds for rejecting
-	         * some measured overlaps.
-	         */
-	        while (phase < minbin - Math.PI) {
+	        /* Try to find the most likely interpretation for the signal freq */
+	        while (phase < zerobin - Math.PI) {
 	        	phase += 2 * Math.PI;
 	        }
-	        phase = (phase - minbin) / (maxbin - minbin) - 0.5;
+
+	        /* phase is now within Math.PI in either direction */
+	        phase = (phase - zerobin) / (maxbin - minbin);
 
 	        double estfreq = frameRate * (i + phase) / fft2.length;
 	        if (estfreq < minfreq) {
@@ -161,6 +163,11 @@ public class FrequencyAnalysis {
 		synchronized (queue) {
 			queue.add(new Data(time - 1000 * 512 / frameRate, bins));
 		}
+	}
+
+	private static double fract(double x) {
+		x -= Math.floor(x);
+		return x;
 	}
 
 	public Queue<Data> getQueue() {
