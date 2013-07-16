@@ -43,10 +43,10 @@ public class FrequencyAnalysis {
 	private final Queue<Data> queue = new PriorityQueue<Data>();
 
 	/** Input samples buffer 1 */
-	private final short[] sample1 = new short[2048];
+	private final short[] sample = new short[2048];
 
-	/** Input samples buffer 2 */
-	private final short[] sample2 = new short[2048];
+	/** Redo FFT after overlap samples */
+	private final int overlap = 1024;
 
 	/** FFT buffer 1 */
 	private final short[] fft1 = new short[1024];
@@ -54,8 +54,11 @@ public class FrequencyAnalysis {
 	/** FFT buffer 2 */
 	private final short[] fft2 = new short[1024];
 
+	/** Which FFT buffer is more recent? */
+	private boolean swap;
+
 	/** Current index within accumulation buffer */
-	private int sample2Idx;
+	private int sampleIdx;
 
 	/** Audio output rate */
 	private int frameRate;
@@ -80,11 +83,11 @@ public class FrequencyAnalysis {
 			int mono = (samples[i] + samples[i + 1]) >> 1;
 			/*mono = (int) (8192 * Math.sin(x));
 			x += xf;*/
-			sample2[(sample2.length >> 1) + sample2Idx] = (short) (mono >> 1);
-			if (++ sample2Idx == sample2.length >> 1) {
+			sample[sample.length - overlap + sampleIdx] = (short) (mono >> 1);
+			if (++ sampleIdx == overlap) {
 				runFfts(time + 1000 * (i - posInSamples - lengthInSamples) / 2 / frameRate);
-				System.arraycopy(sample2, sample2.length >> 1, sample2, 0, sample2.length >> 1);
-				sample2Idx = 0;
+				System.arraycopy(sample, overlap, sample, 0, sample.length - overlap);
+				sampleIdx = 0;
 			}
 		}
 		//xf += 1e-4;
@@ -108,16 +111,11 @@ public class FrequencyAnalysis {
 			}
 		}
 
-		/* fft1 is defined as N samples lagged version of fft2
-		 * that means data at end of fft1 must be moved at start of it,
-		 * and fft2 data minus the old N samples concatenated to it
-		 */
-		int overlap = 128;
-		System.arraycopy(sample1, sample1.length - overlap, sample1, 0, overlap);
-		System.arraycopy(sample2, 0, sample1, overlap, sample2.length - overlap);
+		short[] fft1 = swap ? this.fft1 : this.fft2;
+		short[] fft2 = swap ? this.fft2 : this.fft1;
+		swap = !swap;
 
-		FFT.fft(sample1, fft1);
-		FFT.fft(sample2, fft2);
+		FFT.fft(sample, fft2);
 
 		double minfreq = 55; /* A */
 		float[] bins = new float[12 * 8 * 3]; /* 8 octaves, 3 notes per bin for estimating tonality */
@@ -134,19 +132,18 @@ public class FrequencyAnalysis {
 			double phase = phase2 - phase1;
 
 	        /* what is the expected phase difference at overlaps? These should bracket it. */
-	        double minbin = overlap * (i - 0.5) / sample2.length * 2 * Math.PI;
-	        double maxbin = overlap * (i + 0.5) / sample2.length * 2 * Math.PI;
+	        double minbin = overlap * (i - 0.5) / sample.length * 2 * Math.PI;
+	        double maxbin = overlap * (i + 0.5) / sample.length * 2 * Math.PI;
 
-	        if (maxbin - minbin < 2 * Math.PI) {
-	        	/* We try corrections as long as we can, in theory, uniquely identify a phase candidate
-	        	 * within the range of maxbin .. minbin. */
-	        	while (phase < minbin) {
-	        		phase += 2 * Math.PI;
-	        	}
-	        	phase = (phase - minbin) / (maxbin - minbin) - 0.5;
-	        } else {
-	        	phase = 0;
+	        /* Now, for well-formed signals the phase appears between minbin and maxbin,
+	         * and in theory I could use the range up to 2pi, and simply fold the value
+	         * in between minbin and maxbin, but I think there's grounds for rejecting
+	         * some measured overlaps.
+	         */
+	        while (phase < minbin - Math.PI) {
+	        	phase += 2 * Math.PI;
 	        }
+	        phase = (phase - minbin) / (maxbin - minbin) - 0.5;
 
 	        double estfreq = frameRate * (i + phase) / fft2.length;
 	        if (estfreq < minfreq) {
