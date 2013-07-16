@@ -151,7 +151,7 @@ public class FrequencyAnalysis {
 	        if (estfreq < minfreq) {
 	        	continue;
 	        }
-	        int note = (int) Math.round(Math.log(estfreq / minfreq) / Math.log(2) * 12 * 3);
+	        int note = (int) Math.round(Math.log(estfreq / minfreq) / Math.log(2) * 12 * 3 + 1);
 	        if (note < bins.length) {
 	        	double re = fft2[(i << 1)];
 	        	double im = fft2[(i << 1) | 1];
@@ -161,7 +161,7 @@ public class FrequencyAnalysis {
 		}
 
 		synchronized (queue) {
-			queue.add(new Data(time - 1000 * 512 / frameRate, bins));
+			queue.add(new Data(time - 1000 * (sample.length >> 1) / frameRate, bins));
 		}
 	}
 
