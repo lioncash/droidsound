@@ -112,13 +112,7 @@ public class VisualizationView extends SurfaceView {
 
 	private void updateFromFrequencies(float[] frequencies) {
 		for (int i = 0; i < fft.length; i += 1) {
-			float oldEnergy = fft[i];
-			float newEnergy = frequencies[i];
-			if (newEnergy > oldEnergy) {
-				fft[i] = newEnergy;
-			} else {
-				fft[i] = oldEnergy * .5f;
-			}
+			fft[i] = Math.max(fft[i] * .5f, frequencies[i]);
 		}
 	}
 }

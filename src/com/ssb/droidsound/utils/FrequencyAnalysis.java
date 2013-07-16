@@ -165,11 +165,6 @@ public class FrequencyAnalysis {
 		}
 	}
 
-	private static double fract(double x) {
-		x -= Math.floor(x);
-		return x;
-	}
-
 	public Queue<Data> getQueue() {
 		return queue;
 	}
