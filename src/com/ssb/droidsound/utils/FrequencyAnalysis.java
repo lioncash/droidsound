@@ -50,7 +50,7 @@ public class FrequencyAnalysis {
 	private final float[] window = new float[2048];
 
 	/** Redo FFT after overlap samples */
-	private final int overlap = 1024;
+	private final int overlap = 768;
 
 	/** FFT buffer 1 */
 	private final float[] fft1 = new float[2048];
@@ -153,8 +153,8 @@ public class FrequencyAnalysis {
 	        if (note >= 0 && note < bins.length) {
 	        	float re = fft2[i * 2];
 	        	float im = fft2[i * 2 + 1];
-	        	float energy = (float) (Math.sqrt(re * re + im * im) / 65536.0);
-	        	bins[note] += energy;
+	        	float magnitude = (float) (Math.sqrt(re * re + im * im) / 65536.0);
+	        	bins[note] += magnitude;
 	        }
 		}
 
