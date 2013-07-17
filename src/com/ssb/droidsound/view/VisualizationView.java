@@ -20,7 +20,7 @@ public class VisualizationView extends SurfaceView {
 
 	private Queue<FrequencyAnalysis.Data> queue;
 
-	private final float[] fft = new float[12*8 * 3];
+	private final float[] fft = new float[13 * 8 * 3];
 
 	private final Paint white;
 
@@ -71,20 +71,20 @@ public class VisualizationView extends SurfaceView {
 		fftPaint.setStrokeWidth(width * 3f / fft.length - 1f);
 
 		for (int i = 1; i < fft.length - 1; i += 3) {
-			double energyPrev = fft[i-1];
-			double energyNorm = fft[i];
-			double energyNext = fft[i+1];
+			float energyPrev = fft[i-1];
+			float energyNorm = fft[i];
+			float energyNext = fft[i+1];
 
-			double hump = 2 * energyNorm / (energyPrev + energyNext + 1e-10);
-			float saturation = (float) Math.max(0, Math.min(1, hump - 1));
+			float hump = 2 * energyNorm / (energyPrev + energyNext + 1e-10f);
+			float saturation = Math.max(0, Math.min(1, hump - 1));
 			fftPaint.setColor(colors[(i / 3) % 12].toRGB((1 + saturation) * 0.5f, saturation));
 
 			float x = (i + 0.5f) / (fft.length) * width;
 
-			double dbIn = (energyPrev + energyNorm + energyNext) / 3;
-			double dB = Math.log(dbIn) / Math.log(10) * 10 / 30;
+			float dbIn = (energyPrev + energyNorm + energyNext) / 3;
+			float dB = (float) (Math.log(dbIn + 1e-10f) / Math.log(10) * 10) / 24;
 
-			canvas.drawLine(x, height, x, height * (1f - (float) dB), fftPaint);
+			canvas.drawLine(x, height, x, height * (1f - dB), fftPaint);
 		}
 	}
 

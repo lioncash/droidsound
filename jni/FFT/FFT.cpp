@@ -1,67 +1,110 @@
 #include <stdint.h>
+#include <math.h>
 #include "com_ssb_droidsound_utils_FFT.h"
-#include "fixedfft.h"
 
-JNIEXPORT void JNICALL Java_com_ssb_droidsound_utils_FFT_fft(JNIEnv *env, jclass klass, jshortArray jin, jshortArray jout)
+/* Code from numerical recipes */
+static void four1(float data[], int nn, int isign)
 {
-        int32_t tmp[MAX_FFT_SIZE];
-
-        int32_t fftLen = env->GetArrayLength(jin);
-        fftLen >>= 1;
-        if (fftLen < 0 || fftLen > MAX_FFT_SIZE) {
-            return;
+    int n, mmax, m, j, istep, i;
+    float wtemp, wr, wpr, wpi, wi, theta;
+    float tempr, tempi;
+    
+    n=nn << 1;
+    j = 1;
+    for (i = 1; i < n; i += 2) {
+        if (j > i) {
+            tempr = data[j];     data[j] = data[i];     data[i] = tempr;
+            tempr = data[j+1]; data[j+1] = data[i+1]; data[i+1] = tempr;
         }
-        
-        if (fftLen != env->GetArrayLength(jout)) {
-           return;
+        m = n >> 1;
+        while (m >= 2 && j > m) {
+            j -= m;
+            m >>= 1;
         }
-
-
-        jshort* in = (jshort *) env->GetPrimitiveArrayCritical(jin, NULL);
-        if (in == NULL) {
-            return;
+        j += m;
+    }
+    mmax = 2;
+    while (n > mmax) {
+        istep = 2*mmax;
+        theta = (float) (2.0 * M_PI) / (float) (isign*mmax);
+        wtemp = sinf(0.5f*theta);
+        wpr = -2.0f*wtemp*wtemp;
+        wpi = sinf(theta);
+        wr = 1.0f;
+        wi = 0.0f;
+        for (m = 1; m < mmax; m += 2) {
+            for (i = m; i <= n; i += istep) {
+                j =i + mmax;
+                tempr = wr*data[j]   - wi*data[j+1];
+                tempi = wr*data[j+1] + wi*data[j];
+                data[j]   = data[i]   - tempr;
+                data[j+1] = data[i+1] - tempi;
+                data[i] += tempr;
+                data[i+1] += tempi;
+            }
+            wr = (wtemp = wr)*wpr - wi*wpi + wr;
+            wi = wi*wpr + wtemp*wpi + wi;
         }
+        mmax = istep;
+    }
+}
 
-        int scale = LOG_FFT_SIZE;
-        for (int32_t i = 1; i <= fftLen >> 1; i <<= 1, --scale);
+static void realft(float data[], unsigned long n, int isign)
+{
+    unsigned long i,i1,i2,i3,i4,np3;
+    float c1=0.5f,c2,h1r,h1i,h2r,h2i;
+    float wr,wi,wpr,wpi,wtemp,theta;
 
-        /* Convert 16-bit stereo to real-valued mono input packing 2 values per int32 */
-        for (int32_t i = 0; i < fftLen >> 1; i += 1) {
-            /* Head sample */
-            int32_t mh1 = in[(i << 1) + 0];
-            int32_t mh2 = in[(i << 1) + 1];
-            /* Tail sample */
-            int32_t j = fftLen - 1 - i;
-            int32_t mt1 = in[(j << 1) + 0];
-            int32_t mt2 = in[(j << 1) + 1];
+    theta = (float) M_PI / (float) (n>>1);
+    if (isign == 1) {
+        c2=-0.5f;
+        four1(data,n>>1,1);
+    } else {
+        c2=0.5f;
+        theta = -theta;
+    }
+    wtemp=sinf(0.5f*theta);
+    wpr = -2.0f*wtemp*wtemp;
+    wpi=sinf(theta);
+    wr=1.0f+wpr;
+    wi=wpi;
+    np3=n+3;
+    for (i=2;i<=(n>>2);i++) {
+        i4=1+(i3=np3-(i2=1+(i1=i+i-1)));
+        h1r=c1*(data[i1]+data[i3]);
+        h1i=c1*(data[i2]-data[i4]);
+        h2r = -c2*(data[i2]+data[i4]);
+        h2i=c2*(data[i1]-data[i3]);
+        data[i1]=h1r+wr*h2r-wi*h2i;
+        data[i2]=h1i+wr*h2i+wi*h2r;
+        data[i3]=h1r-wr*h2r+wi*h2i;
+        data[i4] = -h1i+wr*h2i+wi*h2r;
+        wr=(wtemp=wr)*wpr-wi*wpi+wr;
+        wi=wi*wpr+wtemp*wpi+wi;
+    }
+    if (isign == 1) {
+        data[1] = (h1r=data[1])+data[2];
+        data[2] = h1r-data[2];
+    } else {
+        data[1]=c1*((h1r=data[1])+data[2]);
+        data[2]=c1*(h1r-data[2]);
+        four1(data,n>>1,-1);
+    }
+}
 
-            /* Get window function index, half of the table. */
-            int32_t widx = i != 0 ? i : 1;
-            int32_t w = MAX_FFT_SIZE / 4 - (widx << scale);
-            int32_t ws = w >> 31;
-            /* The combination of (w ^ x) - w reads the table in reverse
-             * until element 0, then forwards. Resulting curve is -cos(). */
-            int32_t cos = int16_t((twiddle[(w ^ ws) - ws] ^ ws) >> 16);
-            /* Hamming window: 0.54 - 0.46 * cos() */
-            int32_t win = 0x8a3d + ((0x75c3 * cos) >> 15);
-            tmp[i] = ((mh1 * win) & 0xffff0000) | (((mh2 * win) >> 16) & 0xffff);
-            tmp[j] = ((mt1 * win) & 0xffff0000) | (((mt2 * win) >> 16) & 0xffff);
-        }
-        env->ReleasePrimitiveArrayCritical(jin, in, 0);
+JNIEXPORT void JNICALL Java_com_ssb_droidsound_utils_FFT_fft(JNIEnv *env, jclass klass, jfloatArray jinout)
+{
+    int32_t inoutLen = env->GetArrayLength(jinout);
+    if (inoutLen & (inoutLen - 1)) {
+        return;
+    }
 
-        /* Calculate the FFT of the (real, real)FFT of the formatted FFT data. */
-        fixed_fft_real(fftLen, tmp);
+    jfloat* inout = (jfloat *) env->GetPrimitiveArrayCritical(jinout, NULL);
+    if (inout == NULL) {
+        return;
+    }
 
-        /* Write back to input array as real, imag pairs. */
-        jshort* out = (jshort *) env->GetPrimitiveArrayCritical(jout, NULL);
-        if (out == NULL) {
-            return;
-        }
-        /* We write only half of the FFT, because of the redundancy of the second half. */
-        for (int32_t i = 0; i < fftLen >> 1; i += 1) {
-             int32_t v = tmp[i];
-             out[i << 1] = v >> 16;
-             out[(i << 1) + 1] = v;
-        }
-        env->ReleasePrimitiveArrayCritical(jout, out, 0);
+    realft(inout, inoutLen, 1);
+
+    env->ReleasePrimitiveArrayCritical(jinout, inout, 0);
 }

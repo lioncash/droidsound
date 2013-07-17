@@ -19,6 +19,8 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := fft
 
-LOCAL_SRC_FILES := FFT.cpp fixedfft.cpp
+LOCAL_SRC_FILES := FFT.cpp
+
+LOCAL_CFLAGS += -Wconversion
 
 include $(BUILD_SHARED_LIBRARY)

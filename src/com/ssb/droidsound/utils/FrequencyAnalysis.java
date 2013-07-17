@@ -42,17 +42,20 @@ public class FrequencyAnalysis {
 	/** Queue of generated FFT frames for later processing. */
 	private final Queue<Data> queue = new PriorityQueue<Data>();
 
-	/** Input samples buffer 1 */
-	private final short[] sample = new short[2048];
+	/** Input samples buffer */
+	private final float[] sample = new float[2048];
+
+	/** Window */
+	private final float[] window = new float[2048];
 
 	/** Redo FFT after overlap samples */
-	private final int overlap = 512;
+	private final int overlap = 1024;
 
 	/** FFT buffer 1 */
-	private final short[] fft1 = new short[1024];
+	private final float[] fft1 = new float[2048];
 
 	/** FFT buffer 2 */
-	private final short[] fft2 = new short[1024];
+	private final float[] fft2 = new float[2048];
 
 	/** Which FFT buffer is more recent? */
 	private boolean swap;
@@ -66,8 +69,11 @@ public class FrequencyAnalysis {
 	/** Length of data buffering */
 	private int bufferingMs;
 
-	/*double x;
-	double xf = 0.001;*/
+	public FrequencyAnalysis() {
+		for (int i = 0; i < window.length; i += 1) {
+			window[i] = (float) (0.53836 - 0.46164 * Math.cos(i * 2 * Math.PI / (window.length - 1)));
+		}
+	}
 
 	/**
 	 * Read interleaved stereo sample data
@@ -80,17 +86,14 @@ public class FrequencyAnalysis {
 		/* Estimated time when the current head of audio buffer will play back */
 		long time = System.currentTimeMillis() + bufferingMs;
 		for (int i = posInSamples; i < posInSamples + lengthInSamples; i += 2) {
-			int mono = (samples[i] + samples[i + 1]) >> 1;
-			/*mono = (int) (8192 * Math.sin(x));
-			x += xf;*/
-			sample[sample.length - overlap + sampleIdx] = (short) (mono >> 1);
+			float mono = samples[i] + samples[i + 1];
+			sample[sample.length - overlap + sampleIdx] = mono;
 			if (++ sampleIdx == overlap) {
 				runFfts(time + 1000 * (i - posInSamples - lengthInSamples) / 2 / frameRate);
 				System.arraycopy(sample, overlap, sample, 0, sample.length - overlap);
 				sampleIdx = 0;
 			}
 		}
-		//xf += 1e-4;
 	}
 
 	/**
@@ -111,14 +114,17 @@ public class FrequencyAnalysis {
 			}
 		}
 
-		short[] fft1 = swap ? this.fft1 : this.fft2;
-		short[] fft2 = swap ? this.fft2 : this.fft1;
+		float[] fft1 = swap ? this.fft1 : this.fft2;
+		float[] fft2 = swap ? this.fft2 : this.fft1;
 		swap = !swap;
 
-		FFT.fft(sample, fft2);
+		for (int i = 0; i < sample.length; i += 1) {
+			fft2[i] = sample[i] * window[i];
+		}
+		FFT.fft(fft2);
 
-		double minfreq = 55; /* A */
-		float[] bins = new float[12 * 8 * 3]; /* 8 octaves, 3 notes per bin for estimating tonality */
+		double minfreq = 27.5; /* A */
+		float[] bins = new float[13 * 8 * 3]; /* 8 octaves, 3 notes per bin for estimating tonality */
 
 		/* Enhance frequency estimate by doing the FFT twice with slight time lag between the sample
 		 * frames. We can use the change in phase we see in a bin to estimate the true frequency
@@ -126,10 +132,10 @@ public class FrequencyAnalysis {
 		 * estimating the value, and this happens for signals > 10 kHz where the bins are densely placed
 		 * enough anyway.
 		 */
-		for (int i = 1; i < fft2.length >> 1; i += 1) {
-			double phase1 = Math.atan2(fft1[(i << 1) | 1], fft1[i << 1]);
-			double phase2 = Math.atan2(fft2[(i << 1) | 1], fft2[i << 1]);
-			double phase = phase2 - phase1;
+		for (int i = 1; i < (fft2.length >> 1) - 1; i += 1) {
+			double phase1 = Math.atan2(fft1[i * 2 + 2], fft1[i * 2 + 1]);
+			double phase2 = Math.atan2(fft2[i * 2 + 2], fft2[i * 2 + 1]);
+			double phase = phase1 - phase2;
 
 	        /* what is the expected phase difference at overlaps? These should bracket valid values
 	         * and we take the fraction of the result to make it faster to bracket phase between
@@ -153,9 +159,9 @@ public class FrequencyAnalysis {
 	        }
 	        int note = (int) Math.round(Math.log(estfreq / minfreq) / Math.log(2) * 12 * 3 + 1);
 	        if (note < bins.length) {
-	        	double re = fft2[(i << 1)];
-	        	double im = fft2[(i << 1) | 1];
-	        	float energy = (float) (Math.sqrt(re * re + im * im));
+	        	double re = fft2[i * 2 + 1];
+	        	double im = fft2[i * 2 + 2];
+	        	float energy = (float) (Math.sqrt(re * re + im * im) / 65536.0);
 	        	bins[note] += energy;
 	        }
 		}

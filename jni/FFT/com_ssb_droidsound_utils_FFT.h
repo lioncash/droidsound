@@ -13,7 +13,7 @@ extern "C" {
  * Signature: ([S[S)V
  */
 JNIEXPORT void JNICALL Java_com_ssb_droidsound_utils_FFT_fft
-  (JNIEnv *, jclass, jshortArray, jshortArray);
+  (JNIEnv *, jclass, jfloatArray);
 
 #ifdef __cplusplus
 }

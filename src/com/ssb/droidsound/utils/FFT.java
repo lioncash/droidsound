@@ -6,10 +6,9 @@ public class FFT {
 	}
 
 	/**
-	 * Calculates the real-valued spectrum from input. The input is reduced to mono.
+	 * Calculates the complex spectrum from real-valued input.
 	 *
-	 * @param in 16 bit stereo data, 2 * 2^n long
-	 * @param out 16-bit spectral data in (real, imag) pairs, same length as input
+	 * Returns [Re(0), Re(1), Im(1), Re(2), Im(2), ..., Re(N/2)]
 	 */
-	public static native void fft(short[] in, short[] out);
+	public static native void fft(float[] inout);
 }
