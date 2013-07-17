@@ -104,7 +104,7 @@ JNIEXPORT void JNICALL Java_com_ssb_droidsound_utils_FFT_fft(JNIEnv *env, jclass
         return;
     }
 
-    realft(inout, inoutLen, 1);
+    realft(inout - 1, inoutLen, 1);
 
     env->ReleasePrimitiveArrayCritical(jinout, inout, 0);
 }

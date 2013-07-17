@@ -20,7 +20,7 @@ public class VisualizationView extends SurfaceView {
 
 	private Queue<FrequencyAnalysis.Data> queue;
 
-	private final float[] fft = new float[13 * 8 * 3];
+	private final float[] fft = new float[12 * 9 * 3];
 
 	private final Paint white;
 

@@ -4,8 +4,9 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 
 /**
- * Input signal is converted to mono and FFTs are run at multiple resolutions
- * to provide overall coverage from 55 Hz and above.
+ * Input signal is converted to mono and FFT is taken with overlap.
+ * Change of phase within frequency bin is used to enhance the estimate of
+ * the frequency within the bin.
  *
  * @author alankila
  */
@@ -87,11 +88,11 @@ public class FrequencyAnalysis {
 		long time = System.currentTimeMillis() + bufferingMs;
 		for (int i = posInSamples; i < posInSamples + lengthInSamples; i += 2) {
 			float mono = samples[i] + samples[i + 1];
-			sample[sample.length - overlap + sampleIdx] = mono;
-			if (++ sampleIdx == overlap) {
+			sample[sampleIdx] = mono;
+			if (++ sampleIdx == sample.length) {
 				runFfts(time + 1000 * (i - posInSamples - lengthInSamples) / 2 / frameRate);
 				System.arraycopy(sample, overlap, sample, 0, sample.length - overlap);
-				sampleIdx = 0;
+				sampleIdx = sample.length - overlap;
 			}
 		}
 	}
@@ -123,44 +124,35 @@ public class FrequencyAnalysis {
 		}
 		FFT.fft(fft2);
 
-		double minfreq = 27.5; /* A */
-		float[] bins = new float[13 * 8 * 3]; /* 8 octaves, 3 notes per bin for estimating tonality */
+		double minfreq = 27.5; /* A = 440, 220, 110, 55, 27.5 */
+		float[] bins = new float[12 * 9 * 3]; /* 12 notes per octave, 9 octaves, 3 bins per note */
 
-		/* Enhance frequency estimate by doing the FFT twice with slight time lag between the sample
-		 * frames. We can use the change in phase we see in a bin to estimate the true frequency
-		 * within the bin. Only when period is less than 16 samples will we run into difficulties
-		 * estimating the value, and this happens for signals > 10 kHz where the bins are densely placed
-		 * enough anyway.
-		 */
 		for (int i = 1; i < (fft2.length >> 1) - 1; i += 1) {
-			double phase1 = Math.atan2(fft1[i * 2 + 2], fft1[i * 2 + 1]);
-			double phase2 = Math.atan2(fft2[i * 2 + 2], fft2[i * 2 + 1]);
+			double phase1 = Math.atan2(fft1[i * 2 + 1], fft1[i * 2]);
+			double phase2 = Math.atan2(fft2[i * 2 + 1], fft2[i * 2]);
 			double phase = phase1 - phase2;
+			/* phase has range -2pi to 2pi */
 
-	        /* what is the expected phase difference at overlaps? These should bracket valid values
-	         * and we take the fraction of the result to make it faster to bracket phase between
-	         * min and max */
-	        double minbin = (1 + overlap * (i - 0.5) / sample.length) * 2 * Math.PI;
-	        double maxbin = (1 + overlap * (i + 0.5) / sample.length) * 2 * Math.PI;
-	        /* Phase == zerobin when measured frequency is precisely centered at that bin */
-	        double zerobin = (minbin + maxbin) / 2;
+	        /* what is the expected phase difference at overlaps? */
+	        double zerobin = fract((double) overlap * i / sample.length) * 2 * Math.PI;
+	        double binwidth = (double) overlap / sample.length * 2 * Math.PI;
+	        /* zerobin has range 0 .. 2pi */
 
-	        /* Try to find the most likely interpretation for the signal freq */
-	        while (phase < zerobin - Math.PI) {
+	        /* Select phase interpretation that minimizes phase-zerobin */
+	        if (phase < zerobin - Math.PI) {
 	        	phase += 2 * Math.PI;
+	        } else if (phase > zerobin + Math.PI) {
+	        	phase -= 2 * Math.PI;
 	        }
 
-	        /* phase is now within Math.PI in either direction */
-	        phase = (phase - zerobin) / (maxbin - minbin);
-
-	        double estfreq = frameRate * (i + phase) / fft2.length;
-	        if (estfreq < minfreq) {
+	        double estfreq = frameRate * (i + (phase - zerobin) / binwidth) / fft2.length;
+	        if (estfreq <= 0) {
 	        	continue;
 	        }
 	        int note = (int) Math.round(Math.log(estfreq / minfreq) / Math.log(2) * 12 * 3 + 1);
-	        if (note < bins.length) {
-	        	double re = fft2[i * 2 + 1];
-	        	double im = fft2[i * 2 + 2];
+	        if (note >= 0 && note < bins.length) {
+	        	float re = fft2[i * 2];
+	        	float im = fft2[i * 2 + 1];
 	        	float energy = (float) (Math.sqrt(re * re + im * im) / 65536.0);
 	        	bins[note] += energy;
 	        }
@@ -169,6 +161,10 @@ public class FrequencyAnalysis {
 		synchronized (queue) {
 			queue.add(new Data(time - 1000 * (sample.length >> 1) / frameRate, bins));
 		}
+	}
+
+	private double fract(double x) {
+		return x - Math.floor(x);
 	}
 
 	public Queue<Data> getQueue() {

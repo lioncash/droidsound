@@ -8,7 +8,7 @@ public class FFT {
 	/**
 	 * Calculates the complex spectrum from real-valued input.
 	 *
-	 * Returns [Re(0), Re(1), Im(1), Re(2), Im(2), ..., Re(N/2)]
+	 * Returns [Re(0), Re(N/2), Re(0), Im(0), Re(1), Im(1), ...]
 	 */
 	public static native void fft(float[] inout);
 }
