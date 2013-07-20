@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Queue;
 import java.util.concurrent.ExecutionException;
 
 import android.content.ComponentName;
@@ -33,8 +32,8 @@ import com.ssb.droidsound.bo.SongFileData;
 import com.ssb.droidsound.database.SongDatabase;
 import com.ssb.droidsound.plugins.DroidSoundPlugin;
 import com.ssb.droidsound.service.ProtectionMoneyService;
+import com.ssb.droidsound.utils.FrequencyAnalysis;
 import com.ssb.droidsound.utils.Log;
-import com.ssb.droidsound.utils.FrequencyAnalysis.Data;
 import com.ssb.droidsound.utils.StreamUtil;
 
 /**
@@ -363,7 +362,7 @@ public class Application extends android.app.Application {
     	return playMod(song);
 	}
 
-	public static Queue<Data> enableFftQueue() {
+	public static FrequencyAnalysis enableFftQueue() {
 		if (player == null) {
 			return null;
 		}

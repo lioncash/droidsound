@@ -18,7 +18,7 @@ public class VisualizationView extends SurfaceView {
 
 	private Color[] colors;
 
-	private Queue<FrequencyAnalysis.Data> queue;
+	private FrequencyAnalysis fa;
 
 	private final float[] fft = new float[12 * 9 * 3];
 
@@ -45,25 +45,21 @@ public class VisualizationView extends SurfaceView {
 	 *
 	 * @param data
 	 */
-	public void setData(Queue<FrequencyAnalysis.Data> data) {
-		this.queue = data;
+	public void setData(FrequencyAnalysis fa) {
+		this.fa = fa;
 		Arrays.fill(fft, 0);
 		invalidate();
 	}
 
 	@Override
 	protected void onDraw(Canvas canvas) {
-		if (queue == null) {
+		if (fa == null) {
 			Log.i("VisualizationView", "Stop updates");
 			return;
 		}
 
 		long futureDelay = updateFftData();
 		postInvalidateDelayed(futureDelay);
-
-		if (fft == null) {
-			return;
-		}
 
 		int width = getWidth();
 		int height = getHeight();
@@ -89,23 +85,23 @@ public class VisualizationView extends SurfaceView {
 	}
 
 	private long updateFftData() {
-		synchronized (queue) {
-			while (true) {
-				FrequencyAnalysis.Data data = queue.peek();
-				if (data == null) {
-					Log.i("VisualizationView", "Data underrun. Retry in 100 ms.");
-					return 100;
-				}
+		Queue<FrequencyAnalysis.Data> queue = fa.getQueue();
+		while (true) {
+			FrequencyAnalysis.Data data = queue.peek();
+			if (data == null) {
+				Log.i("VisualizationView", "Data underrun. Retry in 100 ms.");
+				return 100;
+			}
 
-				long ctm = System.currentTimeMillis();
-				if (data.getTime() > ctm) {
-					return data.getTime() - ctm;
-				}
+			long ctm = System.currentTimeMillis();
+			if (data.getTime() > ctm) {
+				return data.getTime() - ctm;
+			}
 
-				data = queue.poll();
-				if (data != null) {
-					updateFromFrequencies(data.getFrequencies());
-				}
+			data = queue.poll();
+			if (data != null) {
+				float[] bins = fa.runFfts(data.getSamples());
+				updateFromFrequencies(bins);
 			}
 		}
 	}

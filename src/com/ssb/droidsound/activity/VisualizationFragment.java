@@ -1,7 +1,5 @@
 package com.ssb.droidsound.activity;
 
-import java.util.Queue;
-
 import android.app.Fragment;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -29,14 +27,14 @@ public class VisualizationFragment extends Fragment {
 	private final BroadcastReceiver musicChangeReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context c, Intent i) {
-			final Queue<FrequencyAnalysis.Data> data;
+			final FrequencyAnalysis fa;
 			if (i.getAction().equals(Player.ACTION_LOADING_SONG)) {
-				data = Application.enableFftQueue();
+				fa = Application.enableFftQueue();
 			} else {
 				Application.disableFftQueue();
-				data = null;
+				fa = null;
 			}
-			visualizationView.setData(data);
+			visualizationView.setData(fa);
 		}
 	};
 

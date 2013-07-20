@@ -1,6 +1,5 @@
 package com.ssb.droidsound.async;
 
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -17,8 +16,8 @@ import com.ssb.droidsound.app.Application;
 import com.ssb.droidsound.bo.FilesEntry;
 import com.ssb.droidsound.database.SongDatabase;
 import com.ssb.droidsound.plugins.DroidSoundPlugin;
-import com.ssb.droidsound.utils.Log;
 import com.ssb.droidsound.utils.FrequencyAnalysis;
+import com.ssb.droidsound.utils.Log;
 
 public class Player extends AsyncTask<Void, Intent, Void> {
 	/**
@@ -83,7 +82,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 	 *
 	 * @return data array
 	 */
-	public Queue<FrequencyAnalysis.Data> enableFftQueue() {
+	public FrequencyAnalysis enableFftQueue() {
 		if (fft.get() == null) {
 			FrequencyAnalysis offt = new FrequencyAnalysis();
 			int fr = plugin.getFrameRate();
@@ -94,7 +93,7 @@ public class Player extends AsyncTask<Void, Intent, Void> {
 			offt.calculateTiming(fr, fr);
 			fft.set(offt);
 		}
-		return fft.get().getQueue();
+		return fft.get();
 	}
 
 	/** Remove FFT queue. */

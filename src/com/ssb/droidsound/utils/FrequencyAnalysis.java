@@ -1,7 +1,7 @@
 package com.ssb.droidsound.utils;
 
-import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Input signal is converted to mono and FFT is taken with overlap.
@@ -11,46 +11,41 @@ import java.util.Queue;
  * @author alankila
  */
 public class FrequencyAnalysis {
-	public static class Data implements Comparable<Data> {
+	public static class Data {
 		private final long time;
-		private final float[] fft;
+		private final float[] samples;
 
-		public Data(long time, float[] fft) {
+		public Data(long time, float[] samples) {
 			this.time = time;
-			this.fft = fft;
+			this.samples = samples;
 		}
 
 		public long getTime() {
 			return time;
 		}
 
-		public float[] getFrequencies() {
-			return fft;
-		}
-
-		@Override
-		public int compareTo(Data other) {
-			if (time < other.time) {
-				return -1;
-			}
-			if (time > other.time) {
-				return 1;
-			}
-			return 0;
+		public float[] getSamples() {
+			return samples;
 		}
 	}
 
 	/** Queue of generated FFT frames for later processing. */
-	private final Queue<Data> queue = new PriorityQueue<Data>();
+	private final Queue<Data> queue = new ConcurrentLinkedQueue<Data>();
 
 	/** Input samples buffer */
-	private final float[] sample = new float[2048];
+	private float[] sample;
 
-	/** Window */
-	private final float[] window = new float[2048];
+	/** Current index within accumulation buffer */
+	private int sampleIdx;
 
 	/** Redo FFT after overlap samples */
 	private final int overlap = 768;
+
+	/** Sample data (historical) */
+	private final float[] sampleHistory = new float[2048];
+
+	/** Window */
+	private final float[] window = new float[2048];
 
 	/** FFT buffer 1 */
 	private final float[] fft1 = new float[2048];
@@ -61,9 +56,6 @@ public class FrequencyAnalysis {
 	/** Which FFT buffer is more recent? */
 	private boolean swap;
 
-	/** Current index within accumulation buffer */
-	private int sampleIdx;
-
 	/** Audio output rate */
 	private int frameRate;
 
@@ -71,56 +63,59 @@ public class FrequencyAnalysis {
 	private int bufferingMs;
 
 	public FrequencyAnalysis() {
+		sample = new float[overlap];
 		for (int i = 0; i < window.length; i += 1) {
 			window[i] = (float) (0.53836 - 0.46164 * Math.cos(i * 2 * Math.PI / (window.length - 1)));
 		}
 	}
 
 	/**
-	 * Read interleaved stereo sample data
+	 * Read interleaved stereo sample data, buffer it, then fire it into queue.
 	 *
 	 * @param samples input array
 	 * @param posInSamples start offset in input array
 	 * @param lengthInSamples number of samples to read
 	 */
 	public void feed(short[] samples, int posInSamples, int lengthInSamples) {
+		/* Consume old junk if the visualizer isn't keeping up */
+		while (true) {
+			Data d = queue.peek();
+			if (d != null && d.getTime() + bufferingMs < System.currentTimeMillis()) {
+				queue.poll();
+				continue;
+			}
+			break;
+		}
+
 		/* Estimated time when the current head of audio buffer will play back */
 		long time = System.currentTimeMillis() + bufferingMs;
 		for (int i = posInSamples; i < posInSamples + lengthInSamples; i += 2) {
 			float mono = samples[i] + samples[i + 1];
 			sample[sampleIdx] = mono;
 			if (++ sampleIdx == sample.length) {
-				runFfts(time + 1000 * (i - posInSamples - lengthInSamples) / 2 / frameRate);
-				System.arraycopy(sample, overlap, sample, 0, sample.length - overlap);
-				sampleIdx = sample.length - overlap;
+				Data d = new Data(time + 1000 * (i - posInSamples - lengthInSamples) / 2 / frameRate, sample);
+				queue.add(d);
+				sample = new float[overlap];
+				sampleIdx = 0;
 			}
 		}
 	}
 
 	/**
-	 * Run FFTs at 1024 points
+	 * Run FFT for input data (from a processing or UI thread)
 	 *
 	 * @param time the expected playback time of the input buffer
 	 */
-	private void runFfts(long time) {
-		/* Consume old junk if the visualizer isn't keeping up */
-		synchronized (queue) {
-			while (true) {
-				Data d = queue.peek();
-				if (d != null && d.getTime() + bufferingMs < System.currentTimeMillis()) {
-					queue.poll();
-					continue;
-				}
-				break;
-			}
-		}
+	public float[] runFfts(float[] sample) {
+		System.arraycopy(sampleHistory, sample.length, sampleHistory, 0, sampleHistory.length - sample.length);
+		System.arraycopy(sample, 0, sampleHistory, sampleHistory.length - sample.length, sample.length);
 
 		float[] fft1 = swap ? this.fft1 : this.fft2;
 		float[] fft2 = swap ? this.fft2 : this.fft1;
 		swap = !swap;
 
-		for (int i = 0; i < sample.length; i += 1) {
-			fft2[i] = sample[i] * window[i];
+		for (int i = 0; i < sampleHistory.length; i += 1) {
+			fft2[i] = sampleHistory[i] * window[i];
 		}
 		FFT.fft(fft2);
 
@@ -158,9 +153,7 @@ public class FrequencyAnalysis {
 	        }
 		}
 
-		synchronized (queue) {
-			queue.add(new Data(time - 1000 * (sample.length >> 1) / frameRate, bins));
-		}
+		return bins;
 	}
 
 	private double fract(double x) {
