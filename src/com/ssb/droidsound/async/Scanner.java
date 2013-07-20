@@ -431,6 +431,8 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 	}
 
 	private void scanSonglengthsTxt(long fileId, InputStream is) throws IOException {
+		db.execSQL("delete from songlength");
+
 		BufferedReader br = new BufferedReader(new InputStreamReader(is, ISO88591));
 		ContentValues cv = new ContentValues();
 		cv.put("file_id", fileId);
