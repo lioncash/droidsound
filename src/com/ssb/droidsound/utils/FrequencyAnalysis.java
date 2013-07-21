@@ -119,7 +119,7 @@ public class FrequencyAnalysis {
 		}
 		FFT.fft(fft2);
 
-		double minfreq = 27.5; /* A = 440, 220, 110, 55, 27.5 */
+		double minfreq = 55; /* A = 440, 220, 110, 55, 27.5 */
 		float[] bins = new float[12 * 9 * 3]; /* 12 notes per octave, 9 octaves, 3 bins per note */
 
 		for (int i = 1; i < (fft2.length >> 1) - 1; i += 1) {
@@ -140,16 +140,20 @@ public class FrequencyAnalysis {
 	        	phase -= 2 * Math.PI;
 	        }
 
-	        double estfreq = frameRate * (i + (phase - zerobin) / binwidth) / fft2.length;
+	        double estfreq = frameRate * (i + (phase - zerobin) / binwidth) / (fft2.length >> 1);
 	        if (estfreq <= 0) {
 	        	continue;
 	        }
-	        int note = (int) Math.round(Math.log(estfreq / minfreq) / Math.log(2) * 12 * 3 + 1);
-	        if (note >= 0 && note < bins.length) {
+	        float note = (float) (Math.log(estfreq / minfreq) / Math.log(2) * 12 * 3 + 1);
+	        if (note >= 0.5f && note <= bins.length - 1.5f) {
 	        	float re = fft2[i * 2];
 	        	float im = fft2[i * 2 + 1];
 	        	float magnitude = (float) (Math.sqrt(re * re + im * im) / 65536.0);
-	        	bins[note] += magnitude;
+
+	        	/* Spread energy to nearby bins. This is crude as fuck... */
+	        	for (int j = -4; j <= 4; j += 1) {
+	        		bins[Math.round(note + 0.1f * j)] += magnitude / 9;
+	        	}
 	        }
 		}
 
