@@ -145,15 +145,14 @@ public class FrequencyAnalysis {
 	        	continue;
 	        }
 	        float note = (float) (Math.log(estfreq / minfreq) / Math.log(2) * 12 * 3 + 1);
-	        if (note >= 0.5f && note <= bins.length - 1.5f) {
+	        if (note >= 0.0f && note <= bins.length - 1.5f) {
 	        	float re = fft2[i * 2];
 	        	float im = fft2[i * 2 + 1];
 	        	float magnitude = (float) (Math.sqrt(re * re + im * im) / 65536.0);
 
-	        	/* Spread energy to nearby bins. This is crude as fuck... */
-	        	for (int j = -4; j <= 4; j += 1) {
-	        		bins[Math.round(note + 0.1f * j)] += magnitude / 9;
-	        	}
+	        	float fract = note - (float) Math.floor(note);
+	        	bins[(int) Math.floor(note)] += magnitude * (1.0f - fract);
+	        	bins[1 + (int) Math.floor(note)] += magnitude * fract;
 	        }
 		}
 
