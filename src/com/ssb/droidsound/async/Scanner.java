@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -350,7 +351,7 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 			File f = files.get(i);
 			if (f.isFile()) {
 				Log.i(TAG, "New file: %s", f.getPath());
-				String fnUpper = f.getName().toUpperCase();
+				String fnUpper = f.getName().toUpperCase(Locale.ROOT);
 				if (fnUpper.endsWith(".ZIP")) {
 					ContentValues values = new ContentValues();
 					values.put("parent_id", parentId);
@@ -446,7 +447,7 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 			if (! m.matches()) {
 				continue;
 			}
-			String md5 = m.group(1).toLowerCase();
+			String md5 = m.group(1).toLowerCase(Locale.ROOT);
 			String times = m.group(2);
 
 			m = timestamps.matcher(times);

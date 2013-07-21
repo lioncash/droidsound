@@ -35,7 +35,7 @@ public class FrequencyAnalysis {
 	/** Input samples buffer */
 	private float[] sample;
 
-	/** Current index within accumulation buffer */
+	/** Current index within input samples buffer */
 	private int sampleIdx;
 
 	/** Redo FFT after overlap samples */
@@ -80,7 +80,7 @@ public class FrequencyAnalysis {
 		/* Consume old junk if the visualizer isn't keeping up */
 		while (true) {
 			Data d = queue.peek();
-			if (d != null && d.getTime() + bufferingMs < System.currentTimeMillis()) {
+			if (d != null && d.getTime() + 2 * bufferingMs < System.currentTimeMillis()) {
 				queue.poll();
 				continue;
 			}
@@ -93,7 +93,7 @@ public class FrequencyAnalysis {
 			float mono = samples[i] + samples[i + 1];
 			sample[sampleIdx] = mono;
 			if (++ sampleIdx == sample.length) {
-				Data d = new Data(time + 1000 * (i - posInSamples - lengthInSamples) / 2 / frameRate, sample);
+				Data d = new Data(time + 1000 * (i - (posInSamples + lengthInSamples)) / 2 / frameRate, sample);
 				queue.add(d);
 				sample = new float[overlap];
 				sampleIdx = 0;
@@ -129,8 +129,8 @@ public class FrequencyAnalysis {
 			/* phase has range -2pi to 2pi */
 
 	        /* what is the expected phase difference at overlaps? */
-	        double zerobin = fract((double) overlap * i / sample.length) * 2 * Math.PI;
-	        double binwidth = (double) overlap / sample.length * 2 * Math.PI;
+	        double zerobin = fract((double) overlap * i / sampleHistory.length) * 2 * Math.PI;
+	        double binwidth = (double) overlap / sampleHistory.length * 2 * Math.PI;
 	        /* zerobin has range 0 .. 2pi */
 
 	        /* Select phase interpretation that minimizes phase-zerobin */
