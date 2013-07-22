@@ -78,7 +78,7 @@ public class VisualizationView extends SurfaceView {
 			float x = (i + 0.5f) / (fft.length) * width;
 
 			float dbIn = (energyPrev + energyNorm + energyNext) / 3;
-			float dB = (float) (Math.log(dbIn + 1e-10f) / Math.log(10) * 10) / 24;
+			float dB = (float) (Math.log(dbIn + 1e-10f) / Math.log(10) * 10) / 48;
 
 			canvas.drawLine(x, height, x, height * (1f - dB), fftPaint);
 		}

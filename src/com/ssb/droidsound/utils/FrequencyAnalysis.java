@@ -140,15 +140,15 @@ public class FrequencyAnalysis {
 	        	phase -= 2 * Math.PI;
 	        }
 
-	        double estfreq = frameRate * (i + (phase - zerobin) / binwidth) / (fft2.length >> 1);
-	        if (estfreq <= 0) {
+	        double frequency = frameRate * (i + (phase - zerobin) / binwidth) / (fft2.length >> 1);
+	        if (frequency <= 0) {
 	        	continue;
 	        }
-	        float note = (float) (Math.log(estfreq / minfreq) / Math.log(2) * 12 * 3 + 1);
+	        float note = (float) (Math.log(frequency / minfreq) / Math.log(2) * 12 * 3 + 1);
 	        if (note >= 0.0f && note <= bins.length - 1.5f) {
 	        	float re = fft2[i * 2];
 	        	float im = fft2[i * 2 + 1];
-	        	float magnitude = (float) (Math.sqrt(re * re + im * im) / 65536.0);
+	        	float magnitude = (float) (Math.sqrt(re * re + im * im) / Math.log(frequency)) / 256;
 
 	        	float fract = note - (float) Math.floor(note);
 	        	bins[(int) Math.floor(note)] += magnitude * (1.0f - fract);
