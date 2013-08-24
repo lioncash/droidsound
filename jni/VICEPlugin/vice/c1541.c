@@ -51,6 +51,7 @@
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
+
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -88,8 +89,6 @@
 #include "p64.h"
 
 /* #define DEBUG_DRIVE */
-
-#define GEOS    /* DiSc */
 
 #define MAXARG          256
 #define MAXDRIVE        1
@@ -137,7 +136,6 @@ static int zcreate_cmd(int nargs, char **args);
 
 static int open_image(int dev, char *name, int create, int disktype);
 
-#ifdef GEOS
 int internal_read_geos_file(int unit, FILE* outf, char* src_name_ascii);
 static int read_geos_cmd(int nargs, char **args);
 static int fix_ts(int unit, unsigned int trk, unsigned int sec,
@@ -145,7 +143,6 @@ static int fix_ts(int unit, unsigned int trk, unsigned int sec,
                   unsigned int blk_offset);
 static int internal_write_geos_file(int unit, FILE* f);
 static int write_geos_cmd(int nargs, char **args);
-#endif
 
 int rom1541_loaded = 0;
 int rom1541ii_loaded = 0;
@@ -262,7 +259,6 @@ const command_t command_list[] = {
       "the current unit, if any.",
       1, 4,
       format_cmd },
-#ifdef GEOS
     { "geosread",
       "geosread <source> [<destination>]",
       "Read GEOS <source> from the disk image and copy it as a Convert file into \n"
@@ -273,7 +269,6 @@ const command_t command_list[] = {
       "geoswrite <source>",
       "Write GOES Convert file <source> from the file system on a disk image.",
       1, 1, write_geos_cmd },
-#endif
     { "help",
       "help [<command>]",
       "Explain specified command.  If no command is specified, list available\n"      "ones.",
@@ -607,66 +602,6 @@ static int is_valid_cbm_file_name(const char *name)
 {
     /* Notice that ':' is the same on PETSCII and ASCII.  */
     return strchr(name, ':') == NULL;
-}
-
-/* ------------------------------------------------------------------------- */
-
-/* A simple pager.  */
-/* It would be cool to have it in the monitor too.  */
-
-static int pager_x, pager_y, pager_num_cols, pager_num_lines;
-
-static void pager_init(void)
-{
-    if (ioutil_isatty(fileno(stdout))) {
-        pager_x = pager_y = 0;
-        pager_num_lines = archdep_num_text_lines();
-        pager_num_cols = archdep_num_text_columns();
-    } else {
-        pager_num_lines = pager_num_cols = -1;
-    }
-}
-
-static void pager_print(const char *text)
-{
-    const char *p;
-
-    if (pager_num_lines < 0 || pager_num_cols < 0) {
-        fputs(text, stdout);
-    } else {
-        for (p = text; *p != 0; p++) {
-            if (*p != '\n') {
-                pager_x++;
-                if (pager_x > pager_num_cols) {
-                    pager_y++;
-                    pager_x = 0;
-                }
-            } else {
-                pager_x = 0;
-                pager_y++;
-            }
-
-            if (interactive_mode && (pager_y == pager_num_lines - 1)) {
-                char *s;
-
-                if (*p == '\n') {
-                    putchar(*p);
-                }
-
-                s = read_line("---Type <return> to continue, or q <return> to quit---");
-                if (s != NULL && toupper((int) *s) == 'Q') {
-                    break;
-                }
-
-                pager_x = pager_y = 0;
-                if (*p != '\n') {
-                    putchar(*p);
-                }
-            } else {
-                putchar(*p);
-            }
-        }
-    }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1265,13 +1200,10 @@ static int help_cmd(int nargs, char **args)
     if (nargs == 1) {
         int i;
 
-        pager_init();
-        pager_print("Available commands are:");
+        printf("Available commands are:\n");
         for (i = 0; command_list[i].name != NULL; i++) {
-            pager_print("\n  ");
-            pager_print(command_list[i].syntax);
+            printf("  %s\n", command_list[i].syntax);
         }
-        pager_print("\n");
     } else {
         int match;
 
@@ -1435,28 +1367,23 @@ static int list_cmd(int nargs, char **args)
         char *string = image_contents_to_string(listing, 1);
         image_contents_file_list_t *element = listing->file_list;
 
-        pager_init();
-        pager_print(string);
-        pager_print("\n");
+        printf("%s\n", string);
         lib_free(string);
         if (element == NULL) {
-            pager_print("Empty image\n");
+            printf("Empty image\n");
         } else {
             do {
                 string = image_contents_filename_to_string(element, 1);
                 if ((pattern == NULL) || list_match_pattern(pattern, string)) {
                     lib_free(string);
                     string = image_contents_file_to_string(element, 1);
-                    pager_print(string);
-                    pager_print("\n");
+                    printf("%s\n", string);
                 }
                 lib_free(string);
             } while ((element = element->next) != NULL);
         }
         if (listing->blocks_free >= 0) {
-            string = lib_msprintf("%d blocks free.\n", listing->blocks_free);
-            pager_print(string);
-            lib_free(string);
+            printf("%d blocks free.\n", listing->blocks_free);
         }
     }
 
@@ -1652,8 +1579,6 @@ static int read_cmd(int nargs, char **args)
 
     return FD_OK;
 }
-
-#ifdef GEOS
 
 #define SLOT_GEOS_FILE_STRUC  23  /* Offset to geos file structure byte */
 #define SLOT_GEOS_FILE_TYPE   24  /* Offset to geos file type
@@ -2343,9 +2268,6 @@ static int write_geos_cmd(int nargs, char **args)
     return erg;
 }
 
-
-#endif
-
 static int rename_cmd(int nargs, char **args)
 {
     char *src_name, *dest_name;
@@ -2413,19 +2335,14 @@ static int rename_cmd(int nargs, char **args)
 
 static int show_cmd(int nargs, char **args)
 {
-    const char *text;
-
     if (strcasecmp(args[1], "copying") == 0) {
-        text = info_license_text;
+        printf("%s", info_license_text);
     } else if (strcasecmp(args[1], "warranty") == 0) {
-        text = info_warranty_text;
+        printf("%s", info_warranty_text);
     } else {
         fprintf(stderr, "Use either `show copying' or `show warranty'.\n");
         return FD_OK;           /* FIXME? */
     }
-
-    pager_init();
-    pager_print(text);
 
     return FD_OK;
 }
@@ -3337,40 +3254,6 @@ unsigned int machine_bus_device_type_get(unsigned int unit)
 void machine_drive_flush(void)
 {
 }
-
-#ifdef WIN32
-/* Kludge! Will be removed someday.  */
-size_t system_wcstombs(char *mbs, const char *wcs, size_t len)
-{
-    strncpy(mbs, wcs, len);
-    return strlen(mbs);
-}
-
-size_t system_mbstowcs(char *wcs, const char *mbs, size_t len)
-{
-    strncpy(wcs, mbs, len);
-    return strlen(wcs);
-}
-
-char *system_mbstowcs_alloc(const char *mbs)
-{
-    char *wcs;
-
-    if (mbs == NULL) {
-        return NULL;
-    }
-
-    wcs = lib_malloc((strlen(mbs) + 1) * sizeof(char));
-    system_mbstowcs(wcs, mbs, strlen(mbs) + 1);
-
-    return wcs;
-}
-
-void system_mbstowcs_free(char *wcs)
-{
-    lib_free(wcs);
-}
-#endif
 
 const char *machine_get_name(void)
 {

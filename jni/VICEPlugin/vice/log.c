@@ -57,7 +57,6 @@ static void log_file_open(void)
 {
     if (log_file_name == NULL || *log_file_name == 0) {
         log_file = archdep_open_default_log_file();
-        return;
     } else {
 #ifndef __OS2__
         if (strcmp(log_file_name, "-") == 0) {
@@ -309,9 +308,9 @@ static int log_helper(log_t log, unsigned int level, const char *format,
     if (log_file == NULL) {
         rc = log_archdep(logtxt, format, ap);
     } else {
-#ifdef WIN32
+#ifdef ARCHDEP_EXTRA_LOG_CALL
         log_archdep(logtxt, format, ap);
-#endif /* #ifdef WIN32 */
+#endif
         if (fputs(logtxt, log_file) == EOF
             || vfprintf(log_file, format, ap) < 0
             || fputc ('\n', log_file) == EOF) {

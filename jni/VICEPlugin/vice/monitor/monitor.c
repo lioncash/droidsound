@@ -629,7 +629,7 @@ void mon_exit(void)
    So I decided to skip this (I think it's unnecessary for OS/2 */
 void mon_quit(void)
 {
-#ifdef OS2
+#ifdef __OS2__
     /* same as "quit" */
     exit_mon = 1;
 #else
@@ -2415,7 +2415,12 @@ static int monitor_process(char *cmd)
     }
     lib_free(last_cmd);
 
-    last_cmd = cmd;
+    /* remember last command, except when leaving the monitor */
+    if (exit_mon) {
+        last_cmd = NULL;
+    } else {
+        last_cmd = cmd;
+    }
 
     uimon_notify_change(); /* @SRT */
 
@@ -2427,7 +2432,9 @@ static void monitor_close(int check)
     inside_monitor = FALSE;
     vsync_suspend_speed_eval();
 
-    exit_mon--;
+    if (exit_mon) {
+        exit_mon--;
+    }
 
     if (check && exit_mon) {
         if (!monitor_is_remote()) {
@@ -2437,6 +2444,8 @@ static void monitor_close(int check)
     }
 
     exit_mon = 0;
+
+    last_cmd = NULL;
 
     if (monitor_is_remote()) {
         signals_pipe_unset();
@@ -2467,6 +2476,7 @@ static void monitor_close(int check)
 void monitor_startup(MEMSPACE mem)
 {
     char prompt[40];
+    char *p;
 
     if (mem != e_default_space) {
         default_memspace = mem;
@@ -2475,7 +2485,17 @@ void monitor_startup(MEMSPACE mem)
     monitor_open();
     while (!exit_mon) {
         make_prompt(prompt);
-        monitor_process(uimon_in(prompt));
+        p = uimon_in(prompt);
+        if (p) {
+            exit_mon = monitor_process(p);
+        } else {
+            exit_mon = 1;
+        }
+
+        if (exit_mon) {
+            mon_out("exit\n");
+            break;
+        }
     }
     monitor_close(1);
 }

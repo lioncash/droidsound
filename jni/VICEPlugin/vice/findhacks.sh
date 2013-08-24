@@ -14,24 +14,71 @@ ARCHDEFS+=" AMIGA_MORPHOS"
 ARCHDEFS+=" USE_SDLUI"
 ARCHDEFS+=" USE_GNOMEUI"
 ARCHDEFS+=" USE_XAWUI"
+ARCHDEFS+=" USE_BEOS_UI"
 ARCHDEFS+=" DINGOO_NATIVE"
 ARCHDEFS+=" DINGUX_SDL"
-ARCHDEFS+=" GP2X"
-ARCHDEFS+=" GP2X_SDL"
-ARCHDEFS+=" WIZ"
-ARCHDEFS+=" WIZ_SDL"
 ARCHDEFS+=" __XBOX__"
-ARCHDEFS+=" __GNUC__"
-ARCHDEFS+=" _MSC_VER"
-ARCHDEFS+=" WINVER"
-ARCHDEFS+=" WATCOM_COMPILE"
-ARCHDEFS+=" __WATCOMC__"
-ARCHDEFS+=" __VBCC__"
+ARCHDEFS+=" ANDROID_COMPILE"
+ARCHDEFS+=" ANDROID"
+ARCHDEFS+=" __INTERIX"
+ARCHDEFS+="SKYOS"
+ARCHDEFS+=" __sgi"
+ARCHDEFS+=" sgi"
+ARCHDEFS+=" __hpux"
+ARCHDEFS+=" _hpux"
+ARCHDEFS+=" sun"
+ARCHDEFS+=" __sun"
+ARCHDEFS+=" __SVR4"
+ARCHDEFS+=" __svr4__"
+ARCHDEFS+=" __QNX__"
+ARCHDEFS+=" __QNXNTO__"
+ARCHDEFS+=" __osf__"
+ARCHDEFS+=" __osf"
+ARCHDEFS+=" __APPLE__"
+ARCHDEFS+=" __MACH__"
+ARCHDEFS+=" __FreeBSD__"
+ARCHDEFS+=" __NetBSD__"
+ARCHDEFS+=" __DragonflyBSD__"
+ARCHDEFS+=" __HAIKU__"
+ARCHDEFS+=" __OpenBSD__"
+ARCHDEFS+=" __DragonFly__"
+ARCHDEFS+=" __bsdi__"
+ARCHDEFS+=" MINIXVMD"
+ARCHDEFS+=" MINIX_SUPPORT"
+ARCHDEFS+=" VMS"
+ARCHDEFS+=" __NeXT__"
+
+# todo: seperated check for CPU defs
+ARCHDEFS+=" __i386__"
+ARCHDEFS+=" __i486__"
+ARCHDEFS+=" __i586__"
+ARCHDEFS+=" __i686__"
+ARCHDEFS+=" __x86_64__"
+ARCHDEFS+=" __amd64__"
 
 # list of OBSOLETE global arch-dependent defines. whenever one gets removed or
 # even just renamed, add it here
 OBSOLETEARCHDEFS+=" MSDOS"
 OBSOLETEARCHDEFS+=" OS2"
+OBSOLETEARCHDEFS+=" GP2X"
+OBSOLETEARCHDEFS+=" GP2X_SDL"
+OBSOLETEARCHDEFS+=" WIZ"
+OBSOLETEARCHDEFS+=" riscos"
+OBSOLETEARCHDEFS+=" __riscos"
+OBSOLETEARCHDEFS+=" __riscos__"
+OBSOLETEARCHDEFS+=" __RISCOS__"
+
+# list of all valid compiler specific global defines
+CCARCHDEFS+=" __GNUC__"
+CCARCHDEFS+=" _MSC_VER"
+CCARCHDEFS+=" WINVER"
+CCARCHDEFS+=" WATCOM_COMPILE"
+CCARCHDEFS+=" __WATCOMC__"
+CCARCHDEFS+=" __VBCC__"
+CCARCHDEFS+=" __ICC"
+CCARCHDEFS+=" __DMC__"
+CCARCHDEFS+=" __IBMC__"
+CCARCHDEFS+=" llvm"
 
 # list of OBSOLETE resources. whenever a resource gets removed or even just
 # renamed, it should get added here (comment them out if no more are left)
@@ -109,12 +156,25 @@ OBSOLETERESOURCES+=" PALOddLineOffset"
 function findifdefs
 {
     echo "checking define: \"$1\""
-    find -wholename './arch' -prune -o -name '*.[ch]' -print | xargs grep -n '#if' | sed 's:\(.*\)$:\1^:g' | grep "$1[ )^]" | sed 's:\(.*\)^$:\1:g' 
+    find -wholename './arch' -prune -o -wholename './platform' -prune -o -name '*.[ch]' -print | xargs grep -n '#if' | sed 's:\(.*\)$:\1^:g' | grep "$1[ )^]" | sed 's:\(.*\)^$:\1:g' 
+    echo " "
+}
+
+function findifdefsfulltree
+{
+    echo "checking define: \"$1\""
+    find -name '*.[ch]' -print | xargs grep -n '#if' | sed 's:\(.*\)$:\1^:g' | grep "$1[ )^]" | sed 's:\(.*\)^$:\1:g' 
+    echo " "
 }
 
 function finddefsfiles
 {
-    FILES+=`find -wholename './arch' -prune -o -name '*.[ch]' -print | xargs grep '#if' | sed 's:\(.*\)$:\1^:g' | grep "$1[ )^]" | sed 's:\(.*\)^$:\1:g' | sed 's/\(.*[ch]:\).*/\1/'`
+    FILES+=`find -wholename './arch' -prune -o -wholename './platform' -prune -o -name '*.[ch]' -print | xargs grep '#if' | sed 's:\(.*\)$:\1^:g' | grep "$1[ )^]" | sed 's:\(.*\)^$:\1:g' | sed 's/\(.*[ch]:\).*/\1/'`
+}
+
+function finddefsfilesfulltree
+{
+    FILES+=`find -name '*.[ch]' -print | xargs grep '#if' | sed 's:\(.*\)$:\1^:g' | grep "$1[ )^]" | sed 's:\(.*\)^$:\1:g' | sed 's/\(.*[ch]:\).*/\1/'`
 }
 
 function findres
@@ -150,28 +210,70 @@ find -wholename './arch/win32/utils' -prune -o -wholename './bin2c.c' -prune -o 
 
 function finddefs
 {
+FILES=""
+
 echo "-------------------------------------------------------------------------"
 echo "- archdep defines found in portable code (eliminate if possible)"
-echo "-"
+echo "-" $ARCHDEFS
+echo " "
 
 for I in $ARCHDEFS; do
     findifdefs $I
 done
 
 echo "-------------------------------------------------------------------------"
-echo "- obsolete defines (these should be fixed/removed!)"
-echo "-"
+echo "- list of all files containing archdep defines in portable code:"
 
-for I in $OBSOLETEARCHDEFS; do
-    findifdefs $I
+for I in $ARCHDEFS; do
+    finddefsfiles $I
+done
+
+echo $FILES | tr ':' '\n' | sed 's:^ ::' | sort -u
+#echo $FILES | tr ':' '\n' | sed 's:^ ::' | sort -u | wc -l
+}
+
+function findccdefs
+{
+FILES=""
+
+echo "-------------------------------------------------------------------------"
+echo "- compiler specific defines (these should be avoided!):"
+echo "-" $CCARCHDEFS
+echo " "
+
+for I in $CCARCHDEFS; do
+    findifdefsfulltree $I
 done
 
 echo "-------------------------------------------------------------------------"
-echo "- list of all files containing archdep defines in portable code:"
-echo "-"
+echo "- list of all files containing compiler specific defines:"
 
-for I in $ARCHDEFS $OBSOLETEARCHDEFS; do
-    finddefsfiles $I
+for I in $CCARCHDEFS; do
+    finddefsfilesfulltree $I
+done
+
+echo $FILES | tr ':' '\n' | sed 's:^ ::' | sort -u
+#echo $FILES | tr ':' '\n' | sed 's:^ ::' | sort -u | wc -l
+}
+
+function findobsolete
+{
+FILES=""
+
+echo "-------------------------------------------------------------------------"
+echo "- obsolete defines (these should be fixed/removed!):"
+echo "-" $OBSOLETEARCHDEFS
+echo " "
+
+for I in $OBSOLETEARCHDEFS; do
+    findifdefsfulltree $I
+done
+
+echo "-------------------------------------------------------------------------"
+echo "- list of all files containing obsolete defines:"
+
+for I in $OBSOLETEARCHDEFS; do
+    finddefsfilesfulltree $I
 done
 
 echo $FILES | tr ':' '\n' | sed 's:^ ::' | sort -u
@@ -194,10 +296,12 @@ function usage
 {
     echo "usage: findhacks.sh <option>"
     echo "where option is one of:"
-    echo "archdep  - find arch dependant ifdefs in portable code"
-    echo "printf   - find printfs (which perhaps should go to the log instead)"
-    echo "res      - find obsolete resources"
-    echo "all      - all of the above"
+    echo "archdep   - find arch dependant ifdefs in portable code"
+    echo "ccarchdep - find compiler specific ifdefs"
+    echo "obsolete  - find obsolete ifdefs"
+    echo "printf    - find printfs (which perhaps should go to the log instead)"
+    echo "res       - find obsolete resources"
+    echo "all       - all of the above"
     exit
 }
 ################################################################################
@@ -205,12 +309,18 @@ function usage
 case $1 in
     archdep)
         finddefs ;;
+    ccarchdep)
+        findccdefs ;;
+    obsolete)
+        findobsolete ;;
     printf)
         findprintfs ;;
     res)
         findresources ;;
     all)
         finddefs
+        findccdefs
+        findobsolete
         findprintfs
         findresources ;;
     *)

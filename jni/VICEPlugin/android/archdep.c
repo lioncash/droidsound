@@ -545,6 +545,11 @@ int archdep_file_is_chardev(const char *name)
     return 0;
 }
 
+int archdep_rename(const char *n1, const char *n2)
+{
+    return 0;
+}
+
 void archdep_shutdown(void)
 {
     lib_free(argv0);

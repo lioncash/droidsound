@@ -118,6 +118,8 @@
 #define ARCHDEP_KEYBOARD_SYM_NONE 0
 #endif
 
+#define ARCHDEP_SOUND_OUTPUT_MODE SOUND_OUTPUT_SYSTEM
+
 extern const char *archdep_home_path(void);
 
 /* set this path to customize the preference storage */ 

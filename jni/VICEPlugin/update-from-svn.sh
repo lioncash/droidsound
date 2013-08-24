@@ -21,11 +21,12 @@ rm -rf "$TARGET"
 
 echo "Copying SVN checkout..."
 cp -a "$VICEDIR/src" vice
-echo "Removing SVN and autotools specific files..."
+echo "Removing SVN and autotools specific files, editor backups, etc."
 find "$TARGET" -name '.svn' -type d -prune -exec rm -rf '{}' ';'
 find "$TARGET" -name '*.in' -type f -exec rm -rf '{}' ';'
 find "$TARGET" -name '*.am' -type f -exec rm -rf '{}' ';'
 find "$TARGET" -name 'configure' -type f -exec rm -rf '{}' ';'
+find "$TARGET" -name '*~' -type f -exec rm -rf '{}' ';'
 echo "Removing arch files"
 rm -rf "$TARGET/arch"
 echo "Changing suffix of C++ source files..."
@@ -36,4 +37,4 @@ done
 echo "Adding new file set to git..."
 git add "$TARGET"
 
-echo "You may still have to let VICE's build system generate a translate.h, and copy it to $MYDIR."
+echo "Allow VICE build to create the following files: debug.h, translate.h and version.h under src. Copy them to '$MYDIR'.";

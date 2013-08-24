@@ -73,33 +73,6 @@ typedef struct psid_s {
     DWORD frames_played;
 } psid_t;
 
-const char * csidmodel[] = {
-    "6581",
-    "8580",
-    "8580D",
-    "6581R4",
-    "DTVSID",
-    "?",
-    "?",
-    "?",
-    "6581R3_4885",
-    "6581R3_0486S",   /* this is the default one if an invalid model has been specified */
-    "6581R3_3984",
-    "6581R4AR_3789",
-    "6581R3_4485",
-    "6581R4_1986S",
-    "?",
-    "?",
-    "8580R5_3691",
-    "8580R5_3691D",
-    "8580R5_1489",
-    "8580R5_1489D"
-};
-
-#define NO_OF_SIDMODELS  (sizeof csidmodel / sizeof csidmodel[0])
-#define MAX_SIDMODEL     (NO_OF_SIDMODELS - 1)
-#define DEFAULT_SIDMODEL 9   /* defines the default as "6581R3_0486S" */
-
 #define PSID_V1_DATA_OFFSET 0x76
 #define PSID_V2_DATA_OFFSET 0x7c
 
@@ -255,6 +228,11 @@ int psid_load_file(const char* filename)
         psid->start_page = 0;
         psid->max_pages = 0;
         psid->reserved = 0;
+    }
+
+    if ((psid->start_song < 1) || (psid->start_song > psid->songs)) {
+        log_error(vlog, "Default tune out of range.");
+        goto fail;
     }
 
     /* Check for SIDPLAYER MUS files. */
@@ -444,7 +422,7 @@ void psid_init_tune(int install_driver_hook)
         log_message(vlog, "  Author: %s", (char *) psid->author);
         log_message(vlog, "Released: %s", (char *) psid->copyright);
         log_message(vlog, "Using %s sync", sync == MACHINE_SYNC_PAL ? "PAL" : "NTSC");
-        log_message(vlog, "SID model: %s  (Using %s)", csidflag[(psid->flags >> 4) & 3], csidmodel[sid_model > (int)MAX_SIDMODEL ? DEFAULT_SIDMODEL : sid_model]);
+        log_message(vlog, "SID model: %s", csidflag[(psid->flags >> 4) & 3]);
         log_message(vlog, "Using %s interrupt", irq_str);
         log_message(vlog, "Playing tune %d out of %d (default=%d)", start_song, psid->songs, psid->start_song);
     } else {

@@ -23,7 +23,7 @@ LOCAL_SRC_FILES := ModPlugin.cpp
 
 MY_SOURCES := $(wildcard $(LOCAL_PATH)/modplug/*.cpp)
 
-LOCAL_SRC_FILES += $(MY_SOURCES:$(LOCAL_PATH)%=%)
+LOCAL_SRC_FILES += $(MY_SOURCES:$(LOCAL_PATH)/%=%)
 
 LOCAL_CFLAGS += -DHAVE_CONFIG_H
 

@@ -61,9 +61,7 @@ struct PlayData
 
 static void write_debug(int level, void * cookie, const char * fmt, va_list list)
 {
-    static char temp[1024];
-    vsprintf(temp, fmt, list);
-    __android_log_print(ANDROID_LOG_VERBOSE, "SC68Debug", temp);
+    __android_log_vprint(ANDROID_LOG_VERBOSE, "SC68Debug", fmt, list);
 }
 
 

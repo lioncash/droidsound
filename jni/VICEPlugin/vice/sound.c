@@ -402,14 +402,8 @@ static const resource_int_t resources_int[] = {
       (void *)&speed_adjustment_setting, set_speed_adjustment_setting, NULL },
     { "SoundVolume", 100, RES_EVENT_NO, NULL,
       (void *)&volume, set_volume, NULL },
-#ifdef __MSDOS__
-    /* Force default to SOUND_OUTPUT_MONO, that way stereo/triple sid will work */
-    { "SoundOutput", SOUND_OUTPUT_MONO, RES_EVENT_NO, NULL,
+    { "SoundOutput", ARCHDEP_SOUND_OUTPUT_MODE, RES_EVENT_NO, NULL,
       (void *)&output_option, set_output_option, NULL },
-#else
-    { "SoundOutput", SOUND_OUTPUT_SYSTEM, RES_EVENT_NO, NULL,
-      (void *)&output_option, set_output_option, NULL },
-#endif
     { NULL }
 };
 
@@ -775,6 +769,7 @@ int sound_open(void)
     int speed;
     int fragsize;
     int fragnr;
+    char frag_str[8];
     double bufsize;
 
     if (suspend_time > 0 && disabletime) {
@@ -888,10 +883,11 @@ int sound_open(void)
         snddata.fragnr = fragnr;
         snddata.bufsize = fragsize * fragnr;
         snddata.bufptr = 0;
+        /* log_message isn't guarenteed to handle "%f" */
+        sprintf(frag_str, "%.1f", (1000.0 * fragsize / speed));
         log_message(sound_log,
-                    "Opened device `%s', speed %dHz, fragment size %dms, buffer size %dms%s",
-                    pdev->name, speed,
-                    (int)(1000.0 * fragsize / speed),
+                    "Opened device `%s', speed %dHz, fragment size %sms, buffer size %dms%s",
+                    pdev->name, speed, frag_str,
                     (int)(1000.0 * snddata.bufsize / speed),
                     snddata.sound_output_channels > 1 ? ", stereo" : "");
         sample_rate = speed;
