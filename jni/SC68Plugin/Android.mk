@@ -19,6 +19,8 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := sc68
 
+# Thanks to this app's shitty build system/design, there's a lot of .c files that aren't OK to build
+# so I copypasted the actually built file names from the autotools build of the program.
 LOCAL_SRC_FILES := SC68Plugin.cpp \
     file68/src/error68.c \
     file68/src/file68.c \
@@ -82,6 +84,7 @@ LOCAL_SRC_FILES := SC68Plugin.cpp \
     libsc68/mixer68.c \
     unice68/unice68_pack.c \
     unice68/unice68_unpack.c \
+    unice68/unice68_version.c \
 #terminator
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/libsc68 \
@@ -91,7 +94,7 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/libsc68 \
 	$(LOCAL_PATH)/file68/sc68 \
 	$(LOCAL_PATH)/unice68
 
-LOCAL_CFLAGS += -DHAVE_CONFIG_H -DEMU68_EXPORT
+LOCAL_CFLAGS += -DUSE_UNICE68 -DHAVE_CONFIG_H -DEMU68_EXPORT
 
 LOCAL_LDLIBS := -llog -lz
 

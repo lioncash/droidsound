@@ -31,6 +31,7 @@ find "$TARGET" -name '.svn' -type d -prune -exec rm -rf '{}' ';'
 find "$TARGET" -name '*.in' -type f -exec rm -rf '{}' ';'
 find "$TARGET" -name '*.am' -type f -exec rm -rf '{}' ';'
 find "$TARGET" -name 'configure' -type f -exec rm -rf '{}' ';'
+find "$TARGET" -name 'autom4te.cache' -type d -prune -exec rm -rf '{}' ';'
 find "$TARGET" -name '*~' -type f -exec rm -rf '{}' ';'
 
 echo "Adding new file set to git..."

@@ -2,6 +2,7 @@ package com.ssb.droidsound.plugins;
 
 import java.io.File;
 import java.nio.charset.Charset;
+import java.util.Locale;
 
 import com.ssb.droidsound.app.Application;
 import com.ssb.droidsound.utils.Unzipper;
@@ -27,7 +28,7 @@ public class SC68Plugin extends DroidSoundPlugin {
 
 	@Override
 	public boolean canHandle(String name) {
-		String ext = name.substring(name.indexOf('.') + 1).toUpperCase();
+		String ext = name.substring(name.indexOf('.') + 1).toUpperCase(Locale.ROOT);
 		return ext.equals("SNDH") || ext.equals("SC68") || ext.equals("SND");
 	}
 
@@ -43,19 +44,29 @@ public class SC68Plugin extends DroidSoundPlugin {
 
 	@Override
 	public void unload() {
-		if (currentSong != 0)
-			N_unload(currentSong);
+		if (currentSong == 0) {
+			return;
+		}
+
+		N_unload(currentSong);
+		currentSong = 0;
 	}
 
 	@Override
 	public String[] getDetailedInfo() {
-		String replay = N_getStringInfo(currentSong, 52);
-		String hwname = N_getStringInfo(currentSong, 51);
-		int hwbits = getIntInfo(50);
-		return new String[] {
-				String.format("Format: %s", replay != null ? replay : "?"),
-				String.format("Hardware: %s (%s)", hwname != null ? hwname : "?", HWS[hwbits])
-		};
+//		if (currentSong == 0) {
+//			return null;
+//		}
+//
+// FIXME CRASHES IN NATIVE CODE
+//		String replay = N_getStringInfo(currentSong, 52);
+//		String hwname = N_getStringInfo(currentSong, 51);
+//		int hwbits = getIntInfo(50);
+//		return new String[] {
+//				String.format("Format: %s", replay != null ? replay : "?"),
+//				String.format("Hardware: %s (%s)", hwname != null ? hwname : "?", HWS[hwbits])
+//		};
+		return new String[] {};
 	}
 
 	private static String readNullTerminated(byte[] data, int i) {
@@ -68,6 +79,10 @@ public class SC68Plugin extends DroidSoundPlugin {
 
 	@Override
 	public int getSoundData(short[] dest) {
+		if (currentSong == 0) {
+			return -1;
+		}
+
 		return N_getSoundData(currentSong, dest, dest.length);
 	}
 
@@ -100,7 +115,7 @@ public class SC68Plugin extends DroidSoundPlugin {
 
 	@Override
 	public String getVersion() {
-		return "SC68 3.0.0a";
+		return "SC68 3.0.0b";
 	}
 
 	@Override
