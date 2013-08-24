@@ -22,11 +22,10 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
 
-import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
-import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteStatement;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.provider.BaseColumns;
@@ -57,14 +56,30 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 
 	private final SQLiteDatabase db;
 	private final boolean full;
-	private final DatabaseUtils.InsertHelper filesHelper;
-	private final DatabaseUtils.InsertHelper songlengthHelper;
+
+	private final SQLiteStatement filesStatement;
+	private final int FILES_PARENT_ID = 1;
+	private final int FILES_FILENAME = 2;
+	private final int FILES_MODIFY_TIME = 3;
+	private final int FILES_TYPE = 4;
+	private final int FILES_URL = 5;
+	private final int FILES_TITLE = 6;
+	private final int FILES_COMPOSER = 7;
+	private final int FILES_DATE = 8;
+	private final int FILES_FORMAT = 9;
+
+	private final SQLiteStatement songlengthStatement;
+	private final int SONGLENGTH_FILE_ID = 1;
+	private final int SONGLENGTH_MD5 = 2;
+	private final int SONGLENGTH_SUBSONG = 3;
+	private final int SONGLENGTH_TIME_MS = 4;
 
 	public Scanner(SQLiteDatabase db, boolean full) {
 		this.db = db;
 		this.full = full;
-		filesHelper = new DatabaseUtils.InsertHelper(db, "files");
-		songlengthHelper = new DatabaseUtils.InsertHelper(db, "songlength");
+
+		filesStatement = db.compileStatement("INSERT INTO files (parent_id, filename, modify_time, type, url, title, composer, date, format) VALUES (?, ?, ?, ?, ?, ? ,?, ?, ?)");
+		songlengthStatement = db.compileStatement("INSERT INTO songlength (file_id, md5, subsong, timeMs) VALUES (?, ?, ?, ?)");
 	}
 
 	@Override
@@ -112,6 +127,34 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 		scanning.set(false);
 	}
 
+	private void bind(SQLiteStatement stmt, int key) {
+		stmt.bindNull(key);
+	}
+
+	private void bind(SQLiteStatement stmt, int key, String obj) {
+		if (obj == null) {
+			bind(stmt, key);
+		} else {
+			stmt.bindString(key, obj);
+		}
+	}
+
+	private void bind(SQLiteStatement stmt, int key, Long value) {
+		if (value == null) {
+			bind(stmt, key);
+		} else {
+			stmt.bindLong(key, value);
+		}
+	}
+
+	private void bind(SQLiteStatement stmt, int key, Integer value) {
+		if (value == null) {
+			bind(stmt, key);
+		} else {
+			stmt.bindLong(key, value);
+		}
+	}
+
 	/**
 	 * Insert a directory node to a parent.
 	 *
@@ -120,12 +163,16 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 	 * @return rowid
 	 */
 	private long insertDirectory(String name, Long parentId) {
-		ContentValues values = new ContentValues();
-		values.put("type", SongDatabase.TYPE_DIRECTORY);
-		values.put("parent_id", parentId);
-		values.put("filename", name);
-		values.put("title", name);
-		return filesHelper.insert(values);
+		bind(filesStatement, FILES_PARENT_ID, parentId);
+		bind(filesStatement, FILES_FILENAME, name);
+		bind(filesStatement, FILES_MODIFY_TIME);
+		bind(filesStatement, FILES_TYPE, SongDatabase.TYPE_DIRECTORY);
+		bind(filesStatement, FILES_URL);
+		bind(filesStatement, FILES_TITLE, name);
+		bind(filesStatement, FILES_COMPOSER);
+		bind(filesStatement, FILES_DATE);
+		bind(filesStatement, FILES_FORMAT);
+		return filesStatement.executeInsert();
 	}
 
 	private static String makeZipUrl(File zipFile, File songFile) {
@@ -154,17 +201,16 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 
 		String url = zipFile != null ? makeZipUrl(zipFile, songFile) : makeFileUrl(songFile);
 
-		ContentValues values = new ContentValues();
-		values.put("parent_id", parentId);
-		values.put("filename", songFile.getName());
-		values.put("modify_time", modifyTime);
-		values.put("type", SongDatabase.TYPE_FILE);
-		values.put("url", url);
-		values.put("title", info.title != null ? info.title : songFile.getName());
-		values.put("composer", info.composer != null ? info.composer : songFile.getParentFile().getName());
-		values.put("date", info.date);
-		values.put("format", info.format);
-		filesHelper.insert(values);
+		bind(filesStatement, FILES_PARENT_ID, parentId);
+		bind(filesStatement, FILES_FILENAME, songFile.getName());
+		bind(filesStatement, FILES_MODIFY_TIME, modifyTime);
+		bind(filesStatement, FILES_TYPE, SongDatabase.TYPE_FILE);
+		bind(filesStatement, FILES_URL, url);
+		bind(filesStatement, FILES_TITLE, info.title != null ? info.title : songFile.getName());
+		bind(filesStatement, FILES_COMPOSER, info.composer != null ? info.composer : songFile.getParentFile().getName());
+		bind(filesStatement, FILES_DATE, info.date);
+		bind(filesStatement, FILES_FORMAT, info.format);
+		filesStatement.executeInsert();
 	}
 
 	/**
@@ -178,22 +224,20 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 	 * @param f
 	 */
 	private void insertPlaylist(long rowId, File f) {
-		ContentValues values = new ContentValues();
 		Playlist pl = new Playlist(f);
 
 		int i = 0;
 		for (FilesEntry sf : pl.getSongs()) {
-			values.put("parent_id", rowId);
-			/* filename has no meaning but is unique index with parent_id */
-			values.put("filename", String.valueOf(++ i));
-			values.put("title", sf.getTitle());
-			values.put("type", SongDatabase.TYPE_FILE);
-			values.put("url", String.valueOf(sf.getUrl()));
-			values.put("title", sf.getTitle());
-			values.put("composer", sf.getComposer());
-			values.put("date", sf.getDate());
-			values.put("format", sf.getFormat());
-			filesHelper.insert(values);
+			bind(filesStatement, FILES_PARENT_ID, rowId);
+			bind(filesStatement, FILES_FILENAME, String.valueOf(++ i));
+			bind(filesStatement, FILES_MODIFY_TIME);
+			bind(filesStatement, FILES_TYPE, SongDatabase.TYPE_FILE);
+			bind(filesStatement, FILES_URL, String.valueOf(sf.getUrl()));
+			bind(filesStatement, FILES_TITLE, sf.getTitle());
+			bind(filesStatement, FILES_COMPOSER, sf.getComposer());
+			bind(filesStatement, FILES_DATE, sf.getDate());
+			bind(filesStatement, FILES_FORMAT, sf.getFormat());
+			filesStatement.executeInsert();
 		}
 	}
 
@@ -252,11 +296,16 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 			} else {
 				pathParentId = pathMap.get(path);
 				if (name.equals("Songlengths.txt")) {
-					ContentValues cv = new ContentValues();
-					cv.put("filename", name);
-					cv.put("parent_id", pathParentId);
-					cv.put("type", SongDatabase.TYPE_SONGLENGTH);
-					long rowId = filesHelper.insert(cv);
+					bind(filesStatement, FILES_PARENT_ID, pathParentId);
+					bind(filesStatement, FILES_FILENAME, name);
+					bind(filesStatement, FILES_MODIFY_TIME);
+					bind(filesStatement, FILES_TYPE, SongDatabase.TYPE_SONGLENGTH);
+					bind(filesStatement, FILES_URL);
+					bind(filesStatement, FILES_TITLE);
+					bind(filesStatement, FILES_COMPOSER);
+					bind(filesStatement, FILES_DATE);
+					bind(filesStatement, FILES_FORMAT);
+					long rowId = filesStatement.executeInsert();
 					scanSonglengthsTxt(rowId, zis);
 				} else {
 					insertFile(zipFile, new File(path, name), StreamUtil.readFully(zis, ze.getSize()), 0, pathParentId);
@@ -341,7 +390,7 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 		}
 		db.execSQL("PRAGMA foreign_keys=OFF");
 
-		Map<File, ContentValues> zipsToScan = new HashMap<File, ContentValues>();
+		List<File> zipsToScan = new ArrayList<File>();
 		List<File> songLengthsToDo = new ArrayList<File>();
 		List<File> directoriesToAdd = new ArrayList<File>();
 
@@ -353,24 +402,18 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 				Log.i(TAG, "New file: %s", f.getPath());
 				String fnUpper = f.getName().toUpperCase(Locale.ROOT);
 				if (fnUpper.endsWith(".ZIP")) {
-					ContentValues values = new ContentValues();
-					values.put("parent_id", parentId);
-					values.put("filename", f.getName());
-					values.put("modify_time", f.lastModified());
-					values.put("type", SongDatabase.TYPE_ZIP);
-					values.put("url", "file://" + Uri.encode(f.getAbsolutePath(), "/"));
-					values.put("title", f.getName().substring(0, f.getName().length() - 4));
-					zipsToScan.put(f, values);
+					zipsToScan.add(f);
 				} else if (fnUpper.endsWith(".PLIST")) {
-					ContentValues values = new ContentValues();
-					values.put("parent_id", parentId);
-					values.put("filename", f.getName());
-					values.put("modify_time", f.lastModified());
-					values.put("type", SongDatabase.TYPE_PLAYLIST);
-					values.put("url", f.getAbsolutePath());
-					values.put("title", f.getName().substring(0, f.getName().length() - 6));
-
-					long rowId = filesHelper.insert(values);
+					bind(filesStatement, FILES_PARENT_ID, parentId);
+					bind(filesStatement, FILES_FILENAME, f.getName());
+					bind(filesStatement, FILES_MODIFY_TIME, f.lastModified());
+					bind(filesStatement, FILES_TYPE, SongDatabase.TYPE_PLAYLIST);
+					bind(filesStatement, FILES_URL, f.getAbsolutePath());
+					bind(filesStatement, FILES_TITLE, f.getName().substring(0, f.getName().length() - 6));
+					bind(filesStatement, FILES_COMPOSER);
+					bind(filesStatement, FILES_DATE);
+					bind(filesStatement, FILES_FORMAT);
+					long rowId = filesStatement.executeInsert();
 					insertPlaylist(rowId, f);
 				} else if (f.getName().equals("Songlengths.txt")) {
 					songLengthsToDo.add(f);
@@ -404,11 +447,16 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 
 		for (File f : songLengthsToDo) {
 			db.beginTransaction();
-			ContentValues cv = new ContentValues();
-			cv.put("filename", f.getName());
-			cv.put("parent_id", parentId);
-			cv.put("type", SongDatabase.TYPE_SONGLENGTH);
-			long rowId = filesHelper.insert(cv);
+			bind(filesStatement, FILES_PARENT_ID, parentId);
+			bind(filesStatement, FILES_FILENAME, f.getName());
+			bind(filesStatement, FILES_MODIFY_TIME, f.lastModified());
+			bind(filesStatement, FILES_TYPE, SongDatabase.TYPE_SONGLENGTH);
+			bind(filesStatement, FILES_URL);
+			bind(filesStatement, FILES_TITLE, f.getName());
+			bind(filesStatement, FILES_COMPOSER);
+			bind(filesStatement, FILES_DATE);
+			bind(filesStatement, FILES_FORMAT);
+			long rowId = filesStatement.executeInsert();
 			FileInputStream fi = new FileInputStream(f);
 			scanSonglengthsTxt(rowId, fi);
 			fi.close();
@@ -416,13 +464,21 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 			db.endTransaction();
 		}
 
-		for (Entry<File, ContentValues> entries : zipsToScan.entrySet()) {
+		for (File f : zipsToScan) {
 			db.beginTransaction();
-			long rowId = filesHelper.insert(entries.getValue());
-			scanZip(entries.getKey(), rowId);
+			bind(filesStatement, FILES_PARENT_ID, parentId);
+			bind(filesStatement, FILES_FILENAME, f.getName());
+			bind(filesStatement, FILES_MODIFY_TIME, f.lastModified());
+			bind(filesStatement, FILES_TYPE, SongDatabase.TYPE_ZIP);
+			bind(filesStatement, FILES_URL, "file://" + Uri.encode(f.getAbsolutePath(), "/"));
+			bind(filesStatement, FILES_TITLE, f.getName().substring(0, f.getName().length() - 4));
+			bind(filesStatement, FILES_COMPOSER);
+			bind(filesStatement, FILES_DATE);
+			bind(filesStatement, FILES_FORMAT);
+			long rowId = filesStatement.executeInsert();
+			scanZip(f, rowId);
 			db.setTransactionSuccessful();
 			db.endTransaction();
-			sendUpdate(100);
 		}
 
 		/* Continue scanning into found directories */
@@ -432,11 +488,7 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 	}
 
 	private void scanSonglengthsTxt(long fileId, InputStream is) throws IOException {
-		db.execSQL("delete from songlength");
-
 		BufferedReader br = new BufferedReader(new InputStreamReader(is, ISO88591));
-		ContentValues cv = new ContentValues();
-		cv.put("file_id", fileId);
 
 		Pattern md5AndTimes = Pattern.compile("([a-fA-f0-9]{32})=(.*)");
 		Pattern timestamps = Pattern.compile("([0-9]{1,2}):([0-9]{2})");
@@ -455,10 +507,11 @@ public class Scanner extends AsyncTask<Void, Intent, Void> {
 			while (m.find()) {
 				int minutes = Integer.valueOf(m.group(1));
 				int seconds = Integer.valueOf(m.group(2));
-				cv.put("md5", md5);
-				cv.put("subsong", ++ song);
-				cv.put("timeMs", (minutes * 60 + seconds) * 1000);
-				songlengthHelper.insert(cv);
+				bind(songlengthStatement, SONGLENGTH_FILE_ID, fileId);
+				bind(songlengthStatement, SONGLENGTH_MD5, md5);
+				bind(songlengthStatement, SONGLENGTH_SUBSONG, ++ song);
+				bind(songlengthStatement, SONGLENGTH_TIME_MS, (minutes * 60 + seconds) * 1000);
+				songlengthStatement.executeInsert();
 			}
 		}
 	}

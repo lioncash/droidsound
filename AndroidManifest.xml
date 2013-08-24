@@ -2,9 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.ssb.droidsound"
     android:versionCode="20"
-    android:versionName="2" >
+    android:versionName="2">
 
-    <uses-sdk android:minSdkVersion="14" android:targetSdkVersion="17" />
+    <uses-sdk android:minSdkVersion="16" android:targetSdkVersion="18" />
 
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -14,7 +14,7 @@
         android:name=".app.Application"
         android:icon="@drawable/droidsound64x64"
         android:allowBackup="true"
-        android:label="@string/app_name" >
+        android:label="@string/app_name" android:debuggable="false">
         <activity
             android:name=".activity.PlayerActivity"
             android:label="@string/app_name"

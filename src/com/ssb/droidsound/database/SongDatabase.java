@@ -8,6 +8,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -41,7 +42,7 @@ public class SongDatabase {
 		TITLE, COMPOSER, FILENAME;
 
 		protected String toSQL() {
-			return "type, lower(" + String.valueOf(this).toLowerCase() + "), lower(filename)";
+			return "type, lower(" + String.valueOf(this).toLowerCase(Locale.ROOT) + "), lower(filename)";
 		}
 	}
 
@@ -109,7 +110,7 @@ public class SongDatabase {
 					+ "subsong INTEGER,"
 					+ "timeMs INTEGER NOT NULL"
 					+ ");");
-			db.execSQL("CREATE UNIQUE INDEX ui_songlength_md5_subsong ON songlength (md5, subsong);");
+			db.execSQL("CREATE UNIQUE INDEX ui_songlength_md5_subsong ON songlength (file_id, md5, subsong);");
 			db.execSQL("CREATE INDEX ui_songlength_file ON songlength (file_id);");
 
 			db.setVersion(DB_VERSION);
@@ -118,7 +119,7 @@ public class SongDatabase {
 	}
 
 	public Cursor search(String query, Sort sorting) {
-		String q = "%" + query.toLowerCase() + "%" ;
+		String q = "%" + query.toLowerCase(Locale.ROOT) + "%" ;
 		return db.query("files",
 				COLUMNS,
 				"(lower(title) LIKE ? OR lower(composer) LIKE ? OR lower(filename) LIKE ?) AND type = ?", new String[] { q, q, q, String.valueOf(TYPE_FILE) },

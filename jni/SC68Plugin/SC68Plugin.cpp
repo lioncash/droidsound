@@ -109,7 +109,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1load(JNIEn
     pd->finished = false;
 
 
-    pd->defaultTrack = sc68_play(pd->sc68, SC68_DEF_TRACK, 0);
+    pd->defaultTrack = sc68_play(pd->sc68, SC68_DEF_TRACK, -1);
     if (sc68_process(pd->sc68, NULL, 0) == SC68_ERROR) {
         free(pd);
         sc68_destroy(sc68);
@@ -178,7 +178,7 @@ JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1setTune
     PlayData *pd = (PlayData*) song;
     
     pd->currentTrack = tune+1;
-    sc68_play(pd->sc68, pd->currentTrack, 0);
+    sc68_play(pd->sc68, pd->currentTrack, -1);
     int code = sc68_process(pd->sc68, 0, 0);
     if (code == SC68_ERROR) {
         return false;

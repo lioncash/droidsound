@@ -148,7 +148,7 @@ public class FrequencyAnalysis {
 	        if (note >= 0.0f && note <= bins.length - 1.5f) {
 	        	float re = fft2[i * 2];
 	        	float im = fft2[i * 2 + 1];
-	        	float magnitude = (float) (Math.sqrt(re * re + im * im) / Math.log(frequency)) / 256;
+	        	float magnitude = (float) (Math.sqrt(re * re + im * im) / fft2.length);
 
 	        	float fract = note - (float) Math.floor(note);
 	        	bins[(int) Math.floor(note)] += magnitude * (1.0f - fract);
