@@ -1,4 +1,4 @@
-/* $Id: default_option68.h 95 2009-02-12 00:05:40Z benjihan $ */
+/* Time-stamp: <2013-06-18 21:59:03 ben> */
 
 #ifndef _IO68_DEFAULT_OPTION68_H_
 #define _IO68_DEFAULT_OPTION68_H_
@@ -12,7 +12,7 @@
 # endif
 
 # ifndef SAMPLING_RATE_MAX
-#  define SAMPLING_RATE_MAX 62500
+#  define SAMPLING_RATE_MAX 96000
 # endif
 
 #endif /* #ifndef _IO68_DEFAULT_OPTION68_H_ */

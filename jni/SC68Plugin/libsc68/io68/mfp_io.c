@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-23 16:28:16 ben>
+ * Time-stamp: <2013-08-12 19:02:16 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -32,7 +32,7 @@
 #include "mfpemul.h"
 
 #ifdef DEBUG
-# include <sc68/msg68.h>
+# include <sc68/file68_msg.h>
 
 static const char * const regnames[] = {
   "GPIP", /* 01 - General Purpose I/O Interrupt port     */
@@ -94,7 +94,7 @@ static int68_t mfpr_01(mfp_t * const mfp, const bogoc68_t bogoc) {
   return mfp->map[GPIP];
 }
 static void mfpw_01(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
-  REPORTW(GPIP,v);
+  REPORTW(GPIP,(unsigned)v);
   mfp->map[GPIP] = v;
 }
 
@@ -105,7 +105,7 @@ static int68_t mfpr_03(mfp_t * const mfp, const bogoc68_t bogoc) {
 }
 static void mfpw_03(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
   /* $$$ Writing AER might trigger an interrupt */
-  REPORTW(AER,v);
+  REPORTW(AER,(unsigned)v);
   mfp->map[AER]=v;
 }
 

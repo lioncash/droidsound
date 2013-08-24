@@ -4,18 +4,19 @@
  * @author    Benjamin Gerard
  * @date      2009/02/10
  * @brief     io68 export header.
- *
  */
+/* Time-stamp: <2013-08-04 19:14:37 ben> */
 
-/* $Id: io68.h 75 2009-02-04 19:12:14Z benjihan $ */
+/* Copyright (C) 1998-2013 Benjamin Gerard */
 
-/* Copyright (C) 1998-2009 Benjamin Gerard */
-
-#ifndef _IO68_IO68_API_H_
-#define _IO68_IO68_API_H_
+#ifndef IO68_IO68_API_H
+#define IO68_IO68_API_H
 
 #ifndef IO68_API
 # ifdef IO68_EXPORT
+#  ifndef SC68_EXPORT
+#   define SC68_EXPORT 1
+#  endif
 #  include "sc68/sc68.h"
 #  define IO68_EXTERN SC68_EXTERN
 #  define IO68_API    SC68_API
@@ -28,4 +29,4 @@
 # endif
 #endif
 
-#endif /* #ifndef _IO68_IO68_API_H_ */
+#endif

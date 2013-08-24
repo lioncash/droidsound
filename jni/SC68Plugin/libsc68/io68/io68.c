@@ -3,9 +3,9 @@
  * @brief   IO chips library
  * @author  http://sourceforge.net/users/benjihan
  *
- * Copyright (C) 1998-2011 Benjamin Gerard
+ * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2011-10-05 16:44:14 ben>
+ * Time-stamp: <2013-07-22 02:49:08 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -29,7 +29,7 @@
 #endif
 
 #include "io68.h"
-#include "sc68/msg68.h"
+#include "sc68/file68_msg.h"
 
 static const struct {
   const char * name;

@@ -1,0 +1,61 @@
+.\" unice68.1.tpl.  Generated from unice68.1.tpl.in by configure.
+.\"
+.\" Man page for unice68 
+.\"
+.\" $Id: unice68.1.tpl.in 5 2009-01-18 23:16:38Z benjihan $
+.\"
+.TH unice68 "1" 20130728 "sc68-tools" "User Commands"
+.LO 1
+.SH NAME
+unice68 \- ice depacker
+
+.SH "SYNOPSIS"
+.nf
+.na
+.B unice68 [OPTION] [--] [<input> [<output>]]\fR
+.ad
+.fi
+
+.SH "DESCRIPTION"
+.B unice68\fR is a program to depack ice packed files.
+
+.SH "OPTIONS SUMMARY"
+.TP 4
+.B \`-h\'\fR, \fB\`--help\'\fR
+Display help message and exit.
+.TP
+.B \`-V\'\fR, \fB\`--version\'\fR
+Display version and copyright and exit.
+.TP
+.B \`-v\'\fR, \fB\`--verbose\'\fR
+Be more verbose (multiple use possible).
+.TP
+.B \`-q\'\fR, \fB\`--quiet\'\fR
+Be less verbose (multiple use possible).
+
+.SH "PARAMETERS"
+.TP 4
+.B <input>\fR
+an ice packed file. If \fB<input>\fR parameter is \`-\'
+or missing; stdin is used.
+.TP
+.B <output>\fR
+a regular file created containing depacked data. If \fB<output>\fR
+parameter is \`-\' or missing; stdout is used.
+.SH AUTHORS
+.br
+Benjamin Gerard
+.SH COPYING
+Copyright (c) 1998-2009 Benjamin Gerard
+
+Permission is granted to make and distribute verbatim copies of
+this manual upon condition that the  provided the copyright notice
+and this permission notice are preserved on all copies.
+.SH "SEE ALSO"
+The full documentation for \fBunice68\fR is maintained as a
+Texinfo manual. If the \fBinfo\fR and \fBunice68\fR programs
+are properly installed at your site, the command
+
+.B info unice68\fR
+
+should give you access to the complete manual.

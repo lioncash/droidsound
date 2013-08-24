@@ -3,9 +3,9 @@
  * @brief   Paula I/O plugin (Amiga soundchip)
  * @author  http://sourceforge.net/users/benjihan
  *
- * Copyright (C) 1998-2011 Benjamin Gerard
+ * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2011-10-06 14:14:38 ben>
+ * Time-stamp: <2013-08-01 19:04:13 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -187,7 +187,7 @@ static inline void stop_DMA(paula_t * const paula, const int bit)
 }
 
 /* Reload paula internal register with current value */
-static void reload(paulav_t * v, const u8 * p, const int fix)
+static void reload(paulav_t * const v, const u8 * const p, const int fix)
 {
   plct_t len;
 

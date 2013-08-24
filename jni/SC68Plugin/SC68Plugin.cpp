@@ -8,7 +8,8 @@
 
 /* sc68 includes */
 #include <sc68/sc68.h>
-#include <sc68/msg68.h>
+#include <sc68/file68_rsc.h>
+#include <unice68.h>
 
 #include "com_ssb_droidsound_plugins_SC68Plugin.h"
 
@@ -88,7 +89,7 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1load(JNIEn
     __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "Create");
     sc68_t *sc68 = sc68_create(NULL);
 
-    sc68_set_user(sc68, data_dir);
+    rsc68_set_user(data_dir);
 
     jboolean iscopy;
     jbyte *ptr = env->GetByteArrayElements(bArray, NULL);
@@ -97,13 +98,14 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1load(JNIEn
 
     __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "SIZE %d ARRAYLEN %d", size, alen);
 
-    if (sc68_verify_mem(ptr, size) < 0)
+/*    if (sc68_verify_mem(ptr, size) < 0)
     {
         env->ReleaseByteArrayElements(bArray, ptr, 0);
         sc68_destroy(sc68);
         sc68_shutdown();
         return 0;
     }
+*/
 
     __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "STEP");
     if (sc68_load_mem(sc68, ptr, size))
@@ -150,7 +152,7 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getSoundDat
     PlayData *pd = (PlayData*)song;
     const char *err = "";
     
-    while (NULL != (err = sc68_error_get(pd->sc68)))
+    while (NULL != (err = sc68_error(pd->sc68)))
     {
         __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "ERROR:%s", err);
     }
@@ -217,7 +219,8 @@ JNIEXPORT jboolean JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1seekTo(
     PlayData *pd = (PlayData*)song;
     int status;
     
-    sc68_seek(pd->sc68, msec, &status);
+    /* FIXME: is there a seek function anymore? */
+    //sc68_seek(pd->sc68, msec, &status);
     return true;
 }
 
@@ -302,16 +305,12 @@ JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1setDataDir(
 }
 
 
-extern "C" {
-int unice68_depacker(void * dest, const void * src);
-int unice68_get_depacked_size(const void * buffer, int * p_csize);
-}
 JNIEXPORT jbyteArray JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1unice(JNIEnv *env, jobject obj, jbyteArray src)
 {
     jbyte *sptr = env->GetByteArrayElements(src, NULL);
     int rc = 0;
     int ssize = env->GetArrayLength(src);
-    int size = unice68_get_depacked_size(sptr, NULL);
+    int size = unice68_depacked_size(sptr, NULL);
     
         if (size <= 0)
         {

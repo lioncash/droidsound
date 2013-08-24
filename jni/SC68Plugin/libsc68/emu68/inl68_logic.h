@@ -1,18 +1,16 @@
 /**
  * @ingroup   emu68_lib_inline
  * @file      emu68/inl68_logic.h
+ * @brief     68k logical instruction inlines.
  * @author    Benjamin Gerard
  * @date      2009/05/18
- * @brief     68k logical instruction inlines.
- *
  */
+/* Time-stamp: <2013-08-04 23:11:03 ben>  */
 
-/* $Id: inst68.h 102 2009-03-14 17:21:58Z benjihan $ */
+/* Copyright (C) 1998-2013 Benjamin Gerard */
 
-/* Copyright (C) 1998-2009 Benjamin Gerard */
-
-#ifndef _INL68_LOGIC_H_
-#define _INL68_LOGIC_H_
+#ifndef INL68_LOGIC_H
+#define INL68_LOGIC_H
 
 #include "inl68_progctrl.h"             /* for inl_tst68() */
 
@@ -48,4 +46,4 @@ int68_t inl_not68(emu68_t * const emu68, int68_t d)
   return d;
 }
 
-#endif /* #ifndef _INL68_LOGIC_H_ */
+#endif

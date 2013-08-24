@@ -1,20 +1,21 @@
 /**
  * @ingroup   io68_ym_devel
  * @file      io68/ym_blep.h
+ * @brief     YM-2149 BLEP synthesis engine
  * @author    Antti Lankila
- *
+ * @date      2009-01-30
  */
-
-/* $Id: ym_blep.h 102 2009-03-14 17:21:58Z benjihan $ */
+/* Time-stamp: <2013-08-07 13:52:47 ben> */
 
 /* Copyright (C) 1998-2009 Antti Lankila */
 
-/** Setup function for ym blep synthesis engine.
+/**
+ * Setup function for ym blep synthesis engine.
  *
  *    The ym_blep_setup() function sets ym blep synthesis engine for
  *    this ym emulator instance.
  *
- *  @parm    ym  ym emulator instance to setup
+ *  @param    ym  ym emulator instance to setup
  *  @retval   0  on success
  *  @retval  -1  on failure
  */

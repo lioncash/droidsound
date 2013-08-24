@@ -1,25 +1,28 @@
 /*
- *               emu68 - 68000 instructions emulation
- *             Copyright (C) 2001-2009 Benjamin Gerard
- *           <benjihan -4t- users.sourceforge -d0t- net>
+ * @file    emu68/inst68.c
+ * @brief   68000 instructions emulation
+ * @author  http://sourceforge.net/users/benjihan
  *
- * This  program is  free  software: you  can  redistribute it  and/or
- * modify  it under the  terms of  the GNU  General Public  License as
- * published by the Free Software  Foundation, either version 3 of the
+ * Copyright (C) 1998-2013 Benjamin Gerard
+ *
+ * Time-stamp: <2013-07-14 12:45:41 ben>
+ *
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but
- * WITHOUT  ANY  WARRANTY;  without   even  the  implied  warranty  of
- * MERCHANTABILITY or  FITNESS FOR A PARTICULAR PURPOSE.   See the GNU
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
  *
- * You should have  received a copy of the  GNU General Public License
+ * You should have received a copy of the GNU General Public License
  * along with this program.
+ *
  * If not, see <http://www.gnu.org/licenses/>.
  *
  */
-
-/* $Id: inst68.c 149 2011-08-25 04:10:37Z benjihan $ */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -42,18 +45,7 @@
 
 void exception68(emu68_t * const emu68, const int vector, const int level)
 {
-  if ( vector & 0x100 ) {
-    /* Those are specific to EMU68 */
-    switch (vector) {
-    case HWBREAK_VECTOR:
-      /* $$$ TODO: inplement emu68 breakpoint */
-
-    case HWTRACE_VECTOR:
-      break;
-    default:
-      assert(!"invalid eception vector");
-    }
-  } else {
+  if ( vector < 0x100 ) {
     int savesr = REG68.sr;
     int savest = emu68->status;
 
@@ -64,7 +56,13 @@ void exception68(emu68_t * const emu68, const int vector, const int level)
     if ( savest == EMU68_XCT &&
          ( vector == BUSERR_VECTOR || vector == ADRERR_VECTOR ) ) {
       /* Double fault ! */
-      emu68->status = EMU68_ERR;        /* Halt processor */
+      emu68->status = EMU68_HLT;       /* Halt processor */
+
+      /* Let user know. */
+      if (emu68->handler)
+        emu68->handler(emu68, HWHALT_VECTOR, emu68->cookie);
+      return;
+
     } else if ( vector == RESET_VECTOR ) {
       REG68.sr  |= SR_I;
       REG68.a[7] = read_L(RESET_SP_VECTOR << 2);
@@ -76,12 +74,18 @@ void exception68(emu68_t * const emu68, const int vector, const int level)
       pushl(REG68.pc);
       pushw(savesr);
       REG68.pc  = read_L(vector << 2);
-      emu68->status = EMU68_NRM;        /* Back to normal mode */
+
+      /* $$$ Which it is ??? */
+      if (0)
+        emu68->status = EMU68_NRM;     /* Back to normal mode */
+      else
+        emu68->status = savest;        /* Back to saved mode */
     }
   }
-  if (emu68->handler && emu68->handler(emu68, vector, emu68->cookie) ) {
-    emu68->status = EMU68_BRK;        /* User forced exit */
-  }
+
+  if (emu68->handler)
+    emu68->handler(emu68, vector, emu68->cookie);
+
 }
 
 void buserror68(emu68_t * const emu68, const int addr, const int mode)
@@ -106,37 +110,37 @@ void linef68(emu68_t * const emu68)
 
 #include "inl68_arithmetic.h"
 
-int68_t add68(emu68_t * const emu68, int68_t s, int68_t d, int68_t c)
+int68_t add68(emu68_t * const emu68, const int68_t s, int68_t d, int68_t c)
 {
   return inl_add68(emu68, s, d, c);
 }
 
-int68_t sub68(emu68_t * const emu68, int68_t s, int68_t d, int68_t c)
+int68_t sub68(emu68_t * const emu68, const int68_t s, int68_t d, int68_t c)
 {
   return inl_sub68(emu68, s, d, c);
 }
 
-void cmp68(emu68_t * const emu68, int68_t s, int68_t d)
+void cmp68(emu68_t * const emu68, const int68_t s, int68_t d)
 {
   inl_cmp68(emu68, s, d);
 }
 
-int68_t muls68(emu68_t * const emu68, int68_t s, int68_t d)
+int68_t muls68(emu68_t * const emu68, const int68_t s, int68_t d)
 {
   return inl_muls68(emu68, s, d);
 }
 
-int68_t mulu68(emu68_t * const emu68, uint68_t s, uint68_t d)
+int68_t mulu68(emu68_t * const emu68, const uint68_t s, uint68_t d)
 {
   return inl_mulu68(emu68, s, d);
 }
 
-int68_t divs68(emu68_t * const emu68, int68_t s, int68_t d)
+int68_t divs68(emu68_t * const emu68, const int68_t s, int68_t d)
 {
   return inl_divs68(emu68, s, d);
 }
 
-int68_t divu68(emu68_t * const emu68, uint68_t s, uint68_t d)
+int68_t divu68(emu68_t * const emu68, const uint68_t s, uint68_t d)
 {
   return inl_divu68(emu68, s, d);
 }
@@ -173,7 +177,7 @@ int68_t eor68(emu68_t * const emu68, const int68_t s, int68_t d)
   return inl_eor68(emu68, s, d);
 }
 
-int68_t not68(emu68_t * const emu68, const int68_t d)
+int68_t not68(emu68_t * const emu68, int68_t d)
 {
   return inl_not68(emu68, d);
 }
@@ -264,12 +268,12 @@ int68_t bchg68(emu68_t * const emu68, const int68_t v, const int bit)
 
 #include "inl68_bcd.h"
 
-int68_t abcd68(emu68_t * const emu68, int68_t a, int68_t b)
+int68_t abcd68(emu68_t * const emu68, const int68_t a, int68_t b)
 {
   return inl_abcd68(emu68, a, b);
 }
 
-int68_t sbcd68(emu68_t * const emu68, int68_t a, int68_t b)
+int68_t sbcd68(emu68_t * const emu68, const int68_t a, int68_t b)
 {
   return inl_sbcd68(emu68, a, b);
 }
@@ -362,7 +366,7 @@ void tst68(emu68_t * const emu68, const int68_t a)
   inl_tst68(emu68, a);
 }
 
-int68_t tas68(emu68_t * const emu68, int68_t d)
+int68_t tas68(emu68_t * const emu68, const int68_t d)
 {
   return inl_tas68(emu68, d);
 }

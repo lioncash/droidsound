@@ -4,12 +4,10 @@
  * @author    Benjamin Gerard
  * @date      1999/05/17
  * @brief     audio mixer header.
- *
  */
+/* Time-stamp: <2013-07-24 06:01:11 ben> */
 
-/* $Id: mixer68.h 102 2009-03-14 17:21:58Z benjihan $ */
-
-/* Copyright (C) 1998-2009 Benjamin Gerard */
+/* Copyright (C) 1998-2013 Benjamin Gerard */
 
 #ifndef _MIXER68_H_
 #define _MIXER68_H_

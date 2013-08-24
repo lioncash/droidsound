@@ -3,9 +3,9 @@
  * @brief   Paula emulator (Amiga soundchip)
  * @author  http://sourceforge.net/users/benjihan
  *
- * Copyright (C) 1998-2011 Benjamin Gerard
+ * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2011-10-27 12:13:51 ben>
+ * Time-stamp: <2013-08-16 06:42:40 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -29,14 +29,17 @@
 #endif
 
 #ifdef HAVE_CONFIG_OPTION68_H
-# include <config_option68.h>
+# include "config_option68.h"
 #else
 # include "default_option68.h"
 #endif
 
-#include "io68/paulaemul.h"
+#include "paulaemul.h"
 #include "emu68/assert68.h"
-#include <sc68/msg68.h>
+
+#include <sc68/file68_msg.h>
+#include <sc68/file68_opt.h>
+#include <sc68/file68_str.h>
 
 #ifndef DEBUG_PL_O
 # define DEBUG_PL_O 0
@@ -116,6 +119,62 @@ static paula_parms_t default_parms;
  /* big/little endian compliance */
 static int msw_first = 0;
 
+
+static int onchange_filter(const option68_t * opt, value68_t * val)
+{
+  paula_engine(0,!val->num?PAULA_ENGINE_SIMPLE:PAULA_ENGINE_LINEAR);
+  return 0;
+}
+
+static int onchange_blend(const option68_t * opt, value68_t * val)
+{
+  int v = val->num;
+  if (v < 0)
+    v = 0;
+  else if (v >= 256)
+    v = 255;
+  v -= 128;
+  v = ((v << 8) | (-(v&1)&255)) + 0x8000;
+  val->num = v;
+  return 0;
+}
+
+static int onchange_clock(const option68_t * opt, value68_t * val)
+{
+  int clock;
+  if (!strcmp68(val->str,"pal"))
+    clock = PAULA_CLOCK_PAL;
+  else if (!strcmp68(val->str,"ntsc"))
+    clock = PAULA_CLOCK_NTSC;
+  else
+    return -1;
+  paula_clock(0, clock);
+  return 0;
+}
+
+
+/* Command line options */
+static const char prefix[] = "sc68-";
+static const char engcat[] = "paula";
+static option68_t opts[] = {
+  {
+    onchange_filter,
+    option68_BOL, prefix, "amiga-filter", engcat,
+    "active paula resample filter"
+  },
+  {
+    onchange_blend,
+    option68_INT, prefix, "amiga-blend", engcat,
+    "left/right voices blending factor [0..255] {128:mono}"
+  },
+  {
+    onchange_clock,
+    option68_STR, prefix, "amiga-clock", engcat,
+    "paula clock [pal*|ntsc]"
+  }
+};
+
+
 /* ,-----------------------------------------------------------------.
  * |                         Paula init                              |
  * `-----------------------------------------------------------------'
@@ -139,7 +198,17 @@ int paula_init(int * argc, char ** argv)
   default_parms.clock  = PAULA_CLOCK_PAL;
   default_parms.hz     = SAMPLING_RATE_DEF;
 
-  /* $$$ TODO: parsing options paula options */
+  /* Register amiga options */
+  option68_append(opts,sizeof(opts)/sizeof(*opts));
+
+  /* Default option values */
+  option68_iset(opts+0,default_parms.engine!=PAULA_ENGINE_SIMPLE);
+  option68_iset(opts+1,32);
+  option68_set (opts+2,"pal");
+
+  /* Parse options */
+  *argc = option68_parse(*argc,argv,0);
+
   return 0;
 }
 
@@ -290,6 +359,11 @@ int paula_reset(paula_t * const paula)
     paula->map[i] = 0;
   }
 
+  /* Some musics does not initialize volume (see support-request #4) */
+  for (i=0; i<4; i++) {
+    paula->map[PAULA_VOICE(i)+9] = 64;
+  }
+
   /* reset voices */
   for (i=0; i<4; i++) {
     paula->voice[i].adr   = 0;
@@ -320,7 +394,6 @@ static void pl_info(paula_t * const paula)
 int paula_setup(paula_t * const paula,
                 paula_setup_t * const setup)
 {
-
   if (!paula || !setup || !setup->mem) {
     return -1;
   }
@@ -502,20 +575,70 @@ static void clear_buffer(s32 * b, int n)
     } while (--n);
 }
 
+
+#if DEBUG_PL_O == 1
+
+typedef struct {
+  int on;
+  int adr;   /**< current sample counter (<<paula_t::ct_fix). */
+  int start; /**< loop address.                               */
+  int end;   /**< end address (<<paula_t::ct_fix).            */
+  int vol;
+  int per;
+} paulav_dbg_t;
+
+static
+void paula_dbg(paulav_dbg_t * d, paula_t * const paula, int i)
+{
+  paulav_t * const w   = paula->voice+i;
+  u8       * const p   = paula->map+PAULA_VOICE(i);
+  const int     ct_fix = paula->ct_fix;
+
+  d->on   = ((paula->dmacon >> 9) & (paula->dmacon >> i) & 1);
+  d->adr  = w->adr << ct_fix;
+  d->end  = w->end << ct_fix;
+  d->start  = w->start << ct_fix;
+  d->vol = p[9] & 127;
+  if (d->vol >= 64) {
+    d->vol = 64;
+  }
+  d->per = ( p[6] << 8 ) + p[7];
+  if (!d->per) d->per = 1;
+}
+
+#endif
+
 void paula_mix(paula_t * const paula, s32 * splbuf, int n)
 {
 
   if ( n > 0 ) {
-    int i;
+    int i, b=0;
+#if DEBUG_PL_O == 1
+    paulav_dbg_t d[4];
+#endif
     clear_buffer(splbuf, n);
     for (i=0; i<4; i++) {
       const int right = (i^msw_first)&1;
+#if DEBUG_PL_O == 1
+      paula_dbg(d+i, paula, i);
+#endif
       if ((paula->dmacon >> 9) & (paula->dmacon >> i) & 1) {
         mix_one(paula, i, right, splbuf, n);
+        b += 1 << i;
       }
     }
-  }
 
+#if DEBUG_PL_O == 1
+#   define ONE "%c:%06x-%06x->%06x,%04x,%02d"
+    TRACE68(pl_cat,"paula  : %d " ONE " " ONE " " ONE " " ONE "\n",
+            n,
+            d[0].on?'A':'.', d[0].adr, d[0].end, d[0].start, d[0].per,d[0].vol,
+            d[1].on?'B':'.', d[1].adr, d[1].end, d[1].start, d[1].per,d[1].vol,
+            d[2].on?'C':'.', d[2].adr, d[2].end, d[2].start, d[2].per,d[2].vol,
+            d[3].on?'D':'.', d[3].adr, d[3].end, d[3].start, d[3].per,d[3].vol);
+#endif
+
+  }
   /* HaxXx: assuming next mix is next frame reset beam V/H position. */
   paula->vhpos = 0;
 }

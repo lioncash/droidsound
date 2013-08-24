@@ -3,9 +3,9 @@
  * @brief   MFP 68901 emulator (Atari ST timers)
  * @author  http://sourceforge.net/users/benjihan
  *
- * Copyright (C) 1998-2011 Benjamin Gerard
+ * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2011-10-22 15:31:06 ben>
+ * Time-stamp: <2013-08-12 19:10:04 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -30,7 +30,7 @@
 
 #include "mfpemul.h"
 #include "emu68/assert68.h"
-#include <sc68/msg68.h>
+#include <sc68/file68_msg.h>
 
 #define cpp(V)      (V*prediv_width[(int)ptimer->tcr])
 #define timerfrq(V) ((8000000u*192u)/cpp(V))
@@ -153,7 +153,9 @@ int timer_get_tdr(const mfp_timer_t * const ptimer, const bogoc68_t bogoc)
 static inline
 void reconf_timer(mfp_timer_t * const ptimer, int tcr, const bogoc68_t bogoc)
 {
+#if !defined(NDEBUG) || !defined(CPP_SUPPORTS_VA_MACROS)
   uint_t          frq = timerfrq(ptimer->tdr_res); /* old frequency       */
+#endif
   const bogoc68_t cti = ptimer->cti - bogoc;       /* cycles to interrupt */
   const uint_t    psw = prediv_width[ptimer->tcr]; /* cycles count-down   */
   const uint_t    cnt = cti/psw;                   /* count-down          */
@@ -168,7 +170,7 @@ void reconf_timer(mfp_timer_t * const ptimer, int tcr, const bogoc68_t bogoc)
   if (bogoc > ptimer->cti) {
     TRACE68(mfp_cat,
           "mfp: timer-%c -- reconf out of range -- @%u > cti:%u\n",
-          ptimer->def.letter, bogoc, ptimer->cti);
+          ptimer->def.letter, (unsigned) bogoc, (unsigned) ptimer->cti);
     ptimer->cti = bogoc + psw * ptimer->tdr_res;
   } else {
     ptimer->cti = bogoc + psr + (tdr-1) * new_psw;
@@ -178,10 +180,10 @@ void reconf_timer(mfp_timer_t * const ptimer, int tcr, const bogoc68_t bogoc)
   ptimer->tcr = tcr;
 
   TRACE68(mfp_cat,
-        "mfp: timer-%c -- reconf @%u cti:%u cpp:%u -- %d:%dhz\n",
-        ptimer->def.letter, bogoc,
-        ptimer->cti, cpp(ptimer->tdr_res),
-        frq,timerfrq(ptimer->tdr_res));
+          "mfp: timer-%c -- reconf @%u cti:%u cpp:%u -- %u:%uhz\n",
+          ptimer->def.letter, (unsigned) bogoc,
+          (unsigned) ptimer->cti, (unsigned) cpp(ptimer->tdr_res),
+          (unsigned) frq, (unsigned) timerfrq(ptimer->tdr_res));
 }
 
 /* Stop a running timer: tcr !0->0
@@ -222,13 +224,13 @@ void resume_timer(mfp_timer_t * const ptimer, int tcr, bogoc68_t bogoc)
   ptimer->cti = bogoc + ptimer->tdr_cur * prediv_width[tcr] - ptimer->psc;
 
   TRACE68(mfp_cat,
-        "mfp: timer-%c  -- resume @%u cti:%u cpp:%u "
-        "tdr:%u/%u psw:%u(%u) -- %dhz\n",
-        ptimer->def.letter, bogoc, ptimer->cti,
-        cpp(ptimer->tdr_res),
-        (int)ptimer->tdr_cur,(int)ptimer->tdr_res,
-        prediv_width[ptimer->tcr],ptimer->tcr,
-        timerfrq(ptimer->tdr_res));
+          "mfp: timer-%c  -- resume @%u cti:%u cpp:%u "
+          "tdr:%u/%u psw:%u(%u) -- %uhz\n",
+          ptimer->def.letter, (unsigned) bogoc, (unsigned) ptimer->cti,
+          (unsigned) cpp(ptimer->tdr_res),
+          (unsigned) ptimer->tdr_cur, (unsigned) ptimer->tdr_res,
+          (unsigned) prediv_width[ptimer->tcr], (unsigned) ptimer->tcr,
+          (unsigned) timerfrq(ptimer->tdr_res));
 }
 
 /* Read timer data register:
@@ -275,10 +277,12 @@ int68_t mfp_get_tdr(mfp_t * const mfp, const int timer, const bogoc68_t bogoc)
    INDETERMINATE value is loaded into the main counter.
 
 */
-void mfp_put_tdr(mfp_t * const mfp, int timer, int68_t v, bogoc68_t bogoc)
+void mfp_put_tdr(mfp_t * const mfp, int timer, int68_t v, const bogoc68_t bogoc)
 {
   mfp_timer_t * const  ptimer = &mfp->timers[timer&3];
+#ifndef NDEBUG
   const uint_t old_tdr = ptimer->tdr_res;
+#endif
 
   /* Interrupt when count down to 0 so 0 is 256 */
   v  = (u8)v; v += (!v)<<8;
@@ -288,18 +292,21 @@ void mfp_put_tdr(mfp_t * const mfp, int timer, int68_t v, bogoc68_t bogoc)
     ptimer->tdr_cur = v;
     TRACE68(mfp_cat,
           "mfp: timer-%c -- reload TDR @%u -- %u\n",
-          ptimer->def.letter, bogoc, ptimer->tdr_res);
-  } else if (ptimer->tcr && v != old_tdr) {
+            ptimer->def.letter, (unsigned) bogoc, (unsigned) ptimer->tdr_res);
+  }
+#ifndef NDEBUG
+  else if (ptimer->tcr && v != old_tdr) {
     uint_t old_frq = timerfrq(old_tdr);
     TRACE68(mfp_cat,
-          "mfp: timer-%c -- change @%u cti:%u psw:%u(%u) cpp:%u"
-          " -- %u(%u) -> %u(%u)hz\n",
-          ptimer->def.letter, bogoc, ptimer->cti,
-          prediv_width[ptimer->tcr], ptimer->tcr,
-          cpp(ptimer->tdr_res),
-          old_frq,old_tdr,
-          timerfrq(ptimer->tdr_res), ptimer->tdr_res);
+            "mfp: timer-%c -- change @%u cti:%u psw:%u(%u) cpp:%u"
+            " -- %u(%u) -> %u(%u)hz\n",
+            ptimer->def.letter, (unsigned) bogoc, (unsigned) ptimer->cti,
+            (unsigned) prediv_width[ptimer->tcr], (unsigned) ptimer->tcr,
+            (unsigned) cpp(ptimer->tdr_res),
+            (unsigned) old_frq, (unsigned) old_tdr,
+            (unsigned) timerfrq(ptimer->tdr_res), (unsigned) ptimer->tdr_res);
   }
+#endif
 }
 
 /* Write Timer Control Register
@@ -329,16 +336,15 @@ void mfp_put_tcr(mfp_t * const mfp,
                  int timer, int68_t v, const bogoc68_t bogoc)
 {
   timer &= 3;
-
   if (timer < TIMER_C) {
     /* Timer A or B */
     mfp->map[0x19+2*timer] = v;
-    /* $$$ Event mode + Pulse mode not emulate */
+    /* $$$ Event mode + Pulse mode is NOT simulate yet ! */
     if (v&0x10) {
-
       TRACE68(mfp_cat,
             "mfp: timer-%c -- mode not supported --  %02x\n",
             timer_def[timer].letter,(int)(u8)v);
+      assert(0 == "mfp mode not supported");
     }
     mfp_put_tcr_bogo(mfp->timers+timer, v&7, bogoc);
   } else {
@@ -441,7 +447,7 @@ void mfp_adjust_bogoc(mfp_t * const mfp, const bogoc68_t bogoc)
       if (ptimer->cti < bogoc) {
         TRACE68(mfp_cat,
               "mfp: timer-%c -- adjust -- cti:%u cycle:%u\n",
-              ptimer->def.letter,ptimer->cti, bogoc);
+              ptimer->def.letter, (unsigned) ptimer->cti, (unsigned) bogoc);
       }
       assert(ptimer->cti >= bogoc);
       while (ptimer->cti < bogoc) {

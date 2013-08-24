@@ -3,9 +3,9 @@
  * @brief   message logging
  * @author  http://sourceforge.net/users/benjihan
  *
- * Copyright (C) 2001-2011 Benjamin Gerard
+ * Copyright (C) 2001-2013 Benjamin Gerard
  *
- * Time-stamp: <2011-10-27 12:29:07 ben>
+ * Time-stamp: <2013-08-06 00:51:35 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -28,14 +28,11 @@
 # include "config.h"
 #endif
 #include "file68_api.h"
-#include "msg68.h"
-#include "string68.h"
+#include "file68_msg.h"
+#include "file68_str.h"
 
 static msg68_t   output = 0;           /* Output function.  */
 static void    * cookie = 0;           /* User data.        */
-#if 0
-static int       curcat = msg68_DEBUG; /* Current category. */
-#endif
 
 /** Default message filter mask.
  *
@@ -47,10 +44,8 @@ static unsigned int msg68_bitmsk =
   DEBUGMSG_MASK
 #elif defined(DEBUG)
   (1 << msg68_TRACE) - 1
-#elif defined(NDEBUG)
-  (1 << msg68_NOTICE) - 1
 #else
-  (1 << msg68_DEBUG) -1
+  (1 << msg68_NOTICE) - 1
 #endif
   ;
 
@@ -117,7 +112,7 @@ void msg68_va(int bit, const char * fmt, va_list list)
   msg68x_va(bit, cookie, fmt, list);
 }
 
-void msg68(const int bit, const char * fmt, ...)
+void msg68(int bit, const char * fmt, ...)
 {
   va_list list;
   va_start(list, fmt);
@@ -286,7 +281,7 @@ int msg68_cat_bit(const char * name)
 }
 
 /* Create/Modify a category. */
-int msg68_cat(const char * name, const char * desc, const int masked)
+int msg68_cat(const char * name, const char * desc, int masked)
 {
   int i = msg68_NEVER;
 
@@ -310,7 +305,7 @@ int msg68_cat(const char * name, const char * desc, const int masked)
 }
 
 /* Free/Destroy a debug category. */
-void msg68_cat_free(const int category)
+void msg68_cat_free(int category)
 {
   if (is_valid_category(category) && category > msg68_TRACE) {
     cat_bits[category].bit = -1;
@@ -319,7 +314,7 @@ void msg68_cat_free(const int category)
 }
 
 /* Set all predefined categories mask according to given level. */
-int msg68_cat_level(const int category)
+int msg68_cat_level(int category)
 {
   int ret = -(category < msg68_CRITICAL || category > msg68_TRACE);
   if (!ret) {
@@ -331,7 +326,7 @@ int msg68_cat_level(const int category)
 }
 
 /* Get info on category */
-int msg68_cat_info(const int category, const char **pname,
+int msg68_cat_info(int category, const char **pname,
                    const char **pdesc, int *pnext)
 {
   int ret = -1, next = category;

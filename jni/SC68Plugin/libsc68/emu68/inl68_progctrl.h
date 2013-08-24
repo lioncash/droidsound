@@ -1,18 +1,16 @@
 /**
  * @ingroup   emu68_lib_inline
  * @file      emu68/inl68_progctrl.h
+ * @brief     68k program control inlines.
  * @author    Benjamin Gerard
  * @date      2009/05/18
- * @brief     68k program control inlines.
- *
  */
+/* Time-stamp: <2013-08-04 23:10:44 ben> */
 
-/* $Id: inst68.h 102 2009-03-14 17:21:58Z benjihan $ */
+/* Copyright (C) 1998-2013 Benjamin Gerard */
 
-/* Copyright (C) 1998-2009 Benjamin Gerard */
-
-#ifndef _INL68_PROGCTRL_H_
-#define _INL68_PROGCTRL_H_
+#ifndef INL68_PROGCTRL_H
+#define INL68_PROGCTRL_H
 
 static inline
 void inl_tst68(emu68_t * const emu68, const int68_t a)
@@ -24,7 +22,7 @@ void inl_tst68(emu68_t * const emu68, const int68_t a)
 }
 
 static inline
-int68_t inl_tas68(emu68_t * const emu68, int68_t d)
+int68_t inl_tas68(emu68_t * const emu68, const int68_t d)
 {
   inl_tst68(emu68, d << BYTE_FIX);
   return d | 0x80;
@@ -76,4 +74,4 @@ void inl_jsr68(emu68_t * const emu68, const addr68_t addr)
 static inline
 void inl_nop68(emu68_t * const emu68) { }
 
-#endif /* #ifndef _INL68_PROGCTRL_H_ */
+#endif

@@ -55,7 +55,7 @@ cycle68_t cycle_cputoym(const ym_io68_t * const ymio, const cycle68_t cycle)
     u64 cycle64 = cycle;
     cycle64 *= ymio->clock.mul;
     cycle64 /= ymio->clock.div;
-    return cycle64;
+    return (cycle68_t) cycle64;
   }
 }
 
@@ -72,7 +72,7 @@ cycle68_t cycle_ymtocpu(const ym_io68_t * const ymio, const cycle68_t cycle)
     u64 cycle64 = cycle;
     cycle64 *= ymio->clock.div;
     cycle64 /= ymio->clock.mul;
-    return cycle64;
+    return (cycle68_t) cycle64;
   }
 }
 

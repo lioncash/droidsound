@@ -1,25 +1,24 @@
 /**
  * @ingroup   emu68_lib
  * @file      emu68/mem68.h
+ * @brief     68k memory and IO manager header.
  * @author    Benjamin Gerard
  * @date      1999/03/13
- * @brief     68k memory and IO manager header.
- *
  */
+/* Time-stamp: <2013-08-04 23:14:22 ben> */
 
-/* $Id: mem68.h 121 2009-06-30 17:30:22Z benjihan $ */
+/* Copyright (C) 1998-2013 Benjamin Gerard */
 
-/* Copyright (C) 1998-2009 Benjamin Gerard */
-
-#ifndef _EMU68_MEM68_H_
-#define _EMU68_MEM68_H_
+#ifndef EMU68_MEM68_H
+#define EMU68_MEM68_H
 
 #include "emu68_api.h"
 #include "struct68.h"
 
-/** @defgroup  emu68_lib_mem68  68k memory and IO manager
- *  @ingroup   emu68_lib
- *  @brief     Handling memory and I/O access.
+/**
+ * @defgroup  emu68_lib_mem68  68k memory and IO manager
+ * @ingroup   emu68_lib
+ * @brief     Handling memory and I/O access.
  *
  *   EMU68 memory manager assumes that all addresses in the lowest
  *   half part of address space are memory access. A simple bit test
@@ -60,23 +59,28 @@
  * @{
  */
 
-/** Memory access flags for emu68_t::chk (debug mode only). */
+/**
+ * Memory access flags for emu68_t::chk (debug mode only).
+ */
 enum {
   EMU68_R = 0x01,  /**< Memory location has been read           */
   EMU68_W = 0x02,  /**< Memory location has been written        */
   EMU68_X = 0x04,  /**< Memory location has been executed       */
-  EMU68_B = 0x08,  /**< Memory location has emulator-breakpoint */
-  EMU68_M = 0xF0   /**< Breakpoint number                       */
+  EMU68_A = EMU68_R|EMU68_W|EMU68_X, /** All memory access bits */
 };
 
-/** @name  Memory/IO quick access tables.
- *  @{
+/**
+ * @name  Memory/IO quick access tables.
+ * @{
  */
 
 
-/** @} */
+/**
+ * @}
+ */
 
-/** @name Effective address calculation tables.
+/**
+ * @name Effective address calculation tables.
  *
  *   The get_ab[bwl] tables are used by EMU68 to calculate operand
  *   effective address. Each of them is indexed by operand addressing
@@ -108,8 +112,9 @@ addr68_t (*const get_eal68[8])(emu68_t * const,int reg);
 #define get_EAL(MODE,REG) get_eal68[MODE](emu68,REG)
 
 
-/** @name  68K onboard memory access.
- *  @{
+/**
+ * @name  68K onboard memory access.
+ * @{
  */
 
 EMU68_EXTERN
@@ -271,46 +276,59 @@ static inline void _write_EAL(emu68_t * const emu68,
 /** Write memory long at EA mode */
 #define write_EAL(MODE,PARM,V) _write_EAL(emu68,(MODE),(PARM),(V))
 
-/** @} */
+/**
+ * @}
+ */
 
 
-/** @name Instruction read.
- *  @{
+/**
+ * @name Instruction read.
+ * @{
  */
 EMU68_EXTERN
-int68_t mem68_nextw(emu68_t * emu68);  /**< Decode word and update PC */
+int68_t mem68_nextw(emu68_t * const emu68);  /**< Decode word and update PC */
 EMU68_EXTERN
-int68_t mem68_nextl(emu68_t * emu68);  /**< Decode long and update PC */
+int68_t mem68_nextl(emu68_t * const emu68);  /**< Decode long and update PC */
 
 /** mem68_nextw() convenience macro */
 #define get_nextw() mem68_nextw(emu68)
 /** mem68_nextl() convenience macro */
 #define get_nextl() mem68_nextl(emu68)
 
-/** @} */
-
-
-/** @name Stack access.
- *  @{
+/**
+ * @}
  */
-EMU68_EXTERN void mem68_pushl(emu68_t * emu68, int68_t v);  /**< Push long */
-EMU68_EXTERN void mem68_pushw(emu68_t * emu68, int68_t v);  /**< Push word */
-EMU68_EXTERN int68_t mem68_popl(emu68_t * emu68);           /**< Pop long  */
-EMU68_EXTERN int68_t mem68_popw(emu68_t * emu68);           /**< Pop word  */
 
-/** mem68_pushl() convenience macro */
+
+/**
+ * @name Stack access.
+ * @{
+ */
+/** Push long. */
+EMU68_EXTERN void mem68_pushl(emu68_t * const emu68, const int68_t v);
+/**< Push word. */
+EMU68_EXTERN void mem68_pushw(emu68_t * const emu68, const int68_t v);
+/**< Pop long.  */
+EMU68_EXTERN int68_t mem68_popl(emu68_t * const emu68);
+/**< Pop word.  */
+EMU68_EXTERN int68_t mem68_popw(emu68_t * const emu68);
+
+/** mem68_pushl() convenience macro. */
 #define pushl(V) mem68_pushl(emu68,(V));
-/** mem68_pushw() convenience macro */
+/** mem68_pushw() convenience macro. */
 #define pushw(V) mem68_pushw(emu68,(V));
-/** mem68_popl() convenience macro */
+/** mem68_popl() convenience macro. */
 #define popl() mem68_popl(emu68);
-/** mem68_popw() convenience macro */
+/** mem68_popw() convenience macro. */
 #define popw() mem68_popw(emu68);
 
-/** @} */
+/**
+ * @}
+ */
 
 EMU68_EXTERN
-/** Init memory quick access table.
+/**
+ *  Init memory quick access table.
  *
  *    The emu68_mem_init() function must be call at init time.
  *    Currently this function only call the emu68_mem_reset()
@@ -321,7 +339,8 @@ EMU68_EXTERN
 void emu68_mem_init(emu68_t * const emu68);
 
 EMU68_EXTERN
-/** Reset memory quick access table.
+/**
+ *  Reset memory quick access table.
  *
  *    The emu68_mem_reset() function restores all memory access to
  *    default. All mapped IO will be discard and replace by onboard
@@ -330,7 +349,8 @@ EMU68_EXTERN
 void emu68_mem_reset(emu68_t * const emu68);
 
 EMU68_EXTERN
-/** Add a new memory access control area (for new IO).
+/**
+ *  Add a new memory access control area (for new IO).
  *
  *  @param  area      Which area (bit 16 to 23 of address) to change.
  *  @param  read_bwl  Read function table (byte, word and long in this order)
@@ -343,14 +363,15 @@ void emu68_mem_new_area(emu68_t * const emu68, u8 area,
                         memfunc68_t *write_bwl);
 
 EMU68_EXTERN
-/** Reset memory access control area to default state.
+/**
+ *  Reset memory access control area to default state.
  *
- * @see emu68_mem_new_area()
+ *  @see emu68_mem_new_area()
  */
 void emu68_mem_reset_area(emu68_t * const emu68, u8 area);
 
 /**
- *  @}
+ * @}
  */
 
-#endif /* #ifndef _EMU68_MEM68_H_ */
+#endif

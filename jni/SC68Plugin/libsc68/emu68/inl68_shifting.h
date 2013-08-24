@@ -1,18 +1,16 @@
 /**
  * @ingroup   emu68_lib_inline
  * @file      emu68/inl68_shifting.h
+ * @brief     68k bit shifting inlines.
  * @author    Benjamin Gerard
  * @date      2009/05/18
- * @brief     68k bit shifting inlines.
- *
  */
+/* Time-stamp: <2013-08-04 23:10:29 ben>  */
 
-/* $Id: inst68.h 102 2009-03-14 17:21:58Z benjihan $ */
+/* Copyright (C) 1998-2013 Benjamin Gerard */
 
-/* Copyright (C) 1998-2009 Benjamin Gerard */
-
-#ifndef _INL68_SHIFTING_H_
-#define _INL68_SHIFTING_H_
+#ifndef INL68_SHIFTING_H
+#define INL68_SHIFTING_H
 
 static inline
 void inl_swap68(emu68_t * const emu68, int dn)
@@ -63,7 +61,7 @@ int68_t inl_lsr68(emu68_t * const emu68, uint68_t d, int s, const int l)
   } else {
     const uint68_t m = NRM_MSK(l);
     d >>= s;
-    ccr = -( ( d >> ( SIGN_BIT - l ) ) & 1 ) & ( SR_X | SR_C ); /* X & C */
+    ccr = -(int)( ( d >> ( SIGN_BIT - l ) ) & 1 ) & ( SR_X | SR_C ); /* X & C */
     d = ( d >> 1 ) & m;
   }
   ccr |= -!d & SR_Z;                              /* Z */
@@ -130,7 +128,7 @@ int68_t inl_rol68(emu68_t * const emu68, uint68_t d, int s, const int l)
     const uint68_t m = NRM_MSK(l);
     inl_addcycle68(emu68, 2*s);
     d    = ( ( d << ( s & l ) ) | ( d >> ( -s & l ) ) ) & m;
-    ccr |= -( ( d >> (SIGN_FIX - l) ) & 1 ) & SR_C; /* C is LSB */
+    ccr |= -(int)( ( d >> (SIGN_FIX - l) ) & 1 ) & SR_C; /* C is LSB */
   }
   ccr |= -!d & SR_Z;                              /* Z */
   ccr |= ( d >> ( SIGN_BIT - SR_N_BIT ) ) & SR_N; /* N */
@@ -166,7 +164,7 @@ int68_t inl_roxl68(emu68_t * const emu68, uint68_t d, int s, const int l)
     s %= (l+2);                         /* s := [0 .. l+1] */
     if (--s >= 0) {                     /* s := [0 .. l] */
       uint68_t x, c, r = d;
-      
+
       r <<= s;
       c   = (ccr >> SR_X_BIT) & 1;            /* old X */
       x   = r >> SIGN_BIT;                    /* new X */
@@ -220,4 +218,4 @@ int68_t inl_roxr68(emu68_t * const emu68, uint68_t d, int s, const int l)
   return d;
 }
 
-#endif /* #ifndef _INL68_SHIFTING_H_ */
+#endif

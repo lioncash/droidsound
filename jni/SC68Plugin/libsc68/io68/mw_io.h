@@ -7,7 +7,7 @@
  *
  */
 
-/* $Id: mw_io.h 126 2009-07-15 08:58:51Z benjihan $ */
+/* $Id: mw_io.h 233 2013-06-03 19:22:20Z benjihan $ */
 
 /* Copyright (C) 1998-2009 Benjamin Gerard */
 
@@ -45,7 +45,7 @@ void mwio_shutdown(void);
 
 IO68_EXTERN
 /** Create a microwire plugin instance. */
-io68_t * mwio_create(emu68_t * emu68, mw_parms_t * const parms);
+io68_t * mwio_create(emu68_t * const emu68, mw_parms_t * const parms);
 
 IO68_EXTERN
 /** Get/Set sampling rate.

@@ -30,16 +30,15 @@
 #include <stdio.h>
 
 #ifdef HAVE_CONFIG_OPTION68_H
-# include <config_option68.h>
+# include "config_option68.h"
 #else
 # include "default_option68.h"
 #endif
 
-
 #include "ymemul.h"
-#include <sc68/msg68.h>
-#include <sc68/string68.h>
-#include <sc68/option68.h>
+#include <sc68/file68_msg.h>
+#include <sc68/file68_str.h>
+#include <sc68/file68_opt.h>
 
 static int reset(ym_t * const ym, const cycle68_t ymcycle)
 {
@@ -70,9 +69,9 @@ static ym_waccess_t * advance_list( ym_waccess_t * regs[] )
 }
 
 static
-int buffersize(const ym_t const * ym, const cycle68_t ymcycles)
+int buffersize(const ym_t * const ym, const cycle68_t ymcycles)
 {
-  return ymcycles * ym->hz / ym->clock;
+  return (int) (ymcycles * ym->hz / ym->clock);
 }
 
 #define CYCLE_DIGITS 10

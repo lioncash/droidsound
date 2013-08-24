@@ -1,18 +1,16 @@
 /**
  * @ingroup   emu68_lib
  * @file      emu68/inl68_arithmetic.h
+ * @brief     68k arithmetical instruction inlines.
  * @author    Benjamin Gerard
  * @date      2009/05/18
- * @brief     68k arithmetical instruction inlines.
- *
  */
+/* Time-stamp: <2013-08-04 23:11:56 ben>  */
 
-/* $Id: inst68.h 102 2009-03-14 17:21:58Z benjihan $ */
+/* Copyright (C) 1998-2013 Benjamin Gerard */
 
-/* Copyright (C) 1998-2009 Benjamin Gerard */
-
-#ifndef _INL68_ARITHMETIC_H_
-#define _INL68_ARITHMETIC_H_
+#ifndef INL68_ARITHMETIC_H
+#define INL68_ARITHMETIC_H
 
 static inline
 int68_t inl_add68(emu68_t * const emu68, int68_t s, int68_t d, int68_t c)
@@ -173,4 +171,4 @@ int68_t inl_clr68(emu68_t * const emu68)
   return 0;
 }
 
-#endif /* #ifndef _INL68_ARITHMETIC_H_ */
+#endif

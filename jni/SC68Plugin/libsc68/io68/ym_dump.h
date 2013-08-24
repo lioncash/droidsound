@@ -1,6 +1,6 @@
 /**
  * @ingroup   emu68_devel
- * @file      emu68/ym_dump.h
+ * @file      io68/ym_dump.h
  * @author    Benjamin Gerard
  * @date      2009/02/10
  * @brief     sc68 register dump YM-2149 emulator header.

@@ -1,11 +1,11 @@
 /*
- * @file    mem68.c
+ * @file    emu68/mem68.c
  * @brief   68K memory and IO access
  * @author  http://sourceforge.net/users/benjihan
  *
- * Copyright (C) 1998-2011 Benjamin Gerard
+ * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2011-10-28 22:46:05 ben>
+ * Time-stamp: <2013-07-03 05:03:50 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -150,7 +150,7 @@ void mem68_read_l(emu68_t * const emu68)
  * `--------------------------------------------------------'
  */
 
-void mem68_write_b(emu68_t * emu68)
+void mem68_write_b(emu68_t * const emu68)
 {
   const addr68_t addr = emu68->bus_addr;
   if (ISIO68(addr)) {
@@ -164,7 +164,7 @@ void mem68_write_b(emu68_t * emu68)
   }
 }
 
-void mem68_write_w(emu68_t * emu68)
+void mem68_write_w(emu68_t * const emu68)
 {
   const addr68_t addr = emu68->bus_addr;
   if (ISIO68(addr)) {
@@ -180,7 +180,7 @@ void mem68_write_w(emu68_t * emu68)
   }
 }
 
-void mem68_write_l(emu68_t * emu68)
+void mem68_write_l(emu68_t * const emu68)
 {
   const addr68_t addr = emu68->bus_addr;
   if (ISIO68(addr)) {
@@ -244,26 +244,26 @@ int68_t mem68_nextl(emu68_t * const emu68)
   return v;
 }
 
-void mem68_pushw(emu68_t * emu68, int68_t v)
+void mem68_pushw(emu68_t * const emu68, const int68_t v)
 {
   REG68.a[7] -= 2;
   write_W(REG68.a[7],v);
 }
 
-void mem68_pushl(emu68_t * emu68, int68_t v)
+void mem68_pushl(emu68_t * const emu68, const int68_t v)
 {
   REG68.a[7] -= 4;
   write_L(REG68.a[7],v);
 }
 
-int68_t mem68_popl(emu68_t * emu68)
+int68_t mem68_popl(emu68_t * const emu68)
 {
   int68_t v = (s32)read_L(REG68.a[7]);
   REG68.a[7] += 4;
   return v;
 }
 
-int68_t mem68_popw(emu68_t * emu68)
+int68_t mem68_popw(emu68_t * const emu68)
 {
   s32 v = read_W(REG68.a[7]);
   REG68.a[7] += 2;
@@ -283,7 +283,7 @@ void emu68_pushw(emu68_t * const emu68, int68_t val)
 }
 
 
-int68_t emu68_popl(emu68_t * emu68)
+int68_t emu68_popl(emu68_t * const emu68)
 {
   return emu68
     ? mem68_popl(emu68)
@@ -291,7 +291,7 @@ int68_t emu68_popl(emu68_t * emu68)
     ;
 }
 
-int68_t emu68_popw(emu68_t * emu68)
+int68_t emu68_popw(emu68_t * const emu68)
 {
   return emu68
     ? mem68_popw(emu68)
@@ -301,14 +301,14 @@ int68_t emu68_popw(emu68_t * emu68)
 
 /* Init memory quick acces table for SC68
  */
-void emu68_mem_init(emu68_t * emu68)
+void emu68_mem_init(emu68_t * const emu68)
 {
   emu68_mem_reset(emu68);
 }
 
 /* Reset memory quick acces table for SC68
  */
-void emu68_mem_reset(emu68_t * emu68)
+void emu68_mem_reset(emu68_t * const emu68)
 {
   if (emu68) {
     int i;
@@ -320,7 +320,7 @@ void emu68_mem_reset(emu68_t * emu68)
 
 /*  Reset memory acces control area to normal state :
  */
-void emu68_mem_reset_area(emu68_t * emu68, u8 area)
+void emu68_mem_reset_area(emu68_t * const emu68, u8 area)
 {
   emu68->mapped_io[area] = &dummy_io;
 }

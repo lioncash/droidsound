@@ -3,9 +3,9 @@
  * @brief   gzip file loader
  * @author  http://sourceforge.net/users/benjihan
  *
- * Copyright (C) 2001-2011 Benjamin Gerard
+ * Copyright (C) 2001-2013 Benjamin Gerard
  *
- * Time-stamp: <2011-10-02 16:04:11 ben>
+ * Time-stamp: <2013-07-22 07:39:25 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -28,51 +28,67 @@
 # include "config.h"
 #endif
 #include "file68_api.h"
-#include "gzip68.h"
+#include "file68_zip.h"
 
 #ifdef HAVE_STDLIB_H
 # include <stdlib.h>
 #endif
-
-#ifdef HAVE_ZLIB_H
-# include <zlib.h>
-#else
-# define Z_DEFLATED   8 /* From zlib.h */
-#endif
-
 #ifdef HAVE_STRING_H
 # include <string.h>
 #endif
 
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+typedef uint8_t byte;
+#else
+typedef unsigned char byte;
+#endif
+
+#ifdef USE_Z
+# include <zlib.h>
+/* gzip flag byte (from gzio.c) */
+# define ASCII_FLAG   0x01 /* bit 0 set: file probably ascii text   */
+# define HEAD_CRC     0x02 /* bit 1 set: header CRC present         */
+# define EXTRA_FIELD  0x04 /* bit 2 set: extra field present        */
+# define ORIG_NAME    0x08 /* bit 3 set: original file name present */
+# define COMMENT      0x10 /* bit 4 set: file comment present       */
+# define RESERVED     0xE0 /* bits 5..7: reserved                   */
+#else
+# define Z_DEFLATED   8 /* From zlib.h */
+#endif
+
 /* gzip magic header */
-static char gz_magic[] = {0x1f, (char)0x8b, Z_DEFLATED};
+static byte gz_magic[] = {0x1f, (char)0x8b, Z_DEFLATED};
 
 int gzip68_is_magic(const void * buffer)
 {
   return !memcmp(gz_magic, buffer, sizeof(gz_magic));
 }
 
-#ifdef HAVE_ZLIB_H
+#ifdef USE_Z
 
-#include "error68.h"
-#include "alloc68.h"
+#include "file68_err.h"
 
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#ifdef HAVE_STRING_H
+# include <string.h>
+#endif
 
 #ifdef _MSC_VER
 # include <stdio.h>
+# define __STDC__ 0
 # include <io.h>
-#else
+#elif defined(HAVE_UNISTD_H)
 # include <unistd.h>
 #endif
 
 
 static int is_gz(int fd, int len)
 {
-  char magic[sizeof(gz_magic)];
+  byte magic[sizeof(gz_magic)];
   int inflate_len = -1;
 
   /* header + inflate len */
@@ -110,7 +126,6 @@ error:
   lseek(fd, 0, SEEK_SET);
   return inflate_len;
 }
-
 
 /* Windows opens streams in Text mode by default. */
 #ifndef _O_BINARY
@@ -159,7 +174,7 @@ void *gzip68_load(const char *fname, int *ptr_ulen)
   }
   fd = 0; /* $$$ Closed by gzclose(). Verify fdopen() rules. */
 
-  uncompr = alloc68(ulen);
+  uncompr = malloc(ulen);
   if (!uncompr) {
     error68("gzip68: load '%s' -- alloc error", fname);
     goto error;
@@ -174,7 +189,7 @@ void *gzip68_load(const char *fname, int *ptr_ulen)
 
 error:
   if (uncompr) {
-    free68(uncompr);
+    free(uncompr);
     uncompr = 0;
     ulen = 0;
   }
@@ -193,6 +208,92 @@ end:
   return uncompr;
 }
 
+int gzip68_buffer(void * dst, int dsize, const void * src, int csize)
+{
+  const struct {
+    byte magic[2]; /* gz header                */
+    byte method;   /* method (Z_DEFLATED)      */
+    byte flags;    /* Xtra,name,comment...     */
+    byte info[6];  /* time, xflags and OS code */
+  } * header = src;
+  int err = -(!dst || !src || csize < sizeof(*header) || dsize <= 0);
+  byte crc[2];
+  z_stream c_stream;
+
+  for (;;) {
+    int len = sizeof(*header), flags;
+    byte * d = (byte *)dst;
+    const byte * s = (const byte *) src;
+
+    /* check gzip header */
+    if (0
+        || gz_magic[0] != header->magic[0]
+        || gz_magic[1] != header->magic[1]
+        || header->method != Z_DEFLATED
+        || (header->flags & RESERVED) != 0) {
+      err = -1;
+      break;
+    }
+
+    /* Skip the extra field. */
+    if ((header->flags & EXTRA_FIELD) != 0) {
+      if (len + 2 < csize)
+        len += s[len] + (s[len+1]<<8);
+      len += 2;
+    }
+
+    /* Skip the original file name & .gz file comment. */
+    flags = header->flags & (ORIG_NAME|COMMENT);
+    while (len < csize && flags) {
+      if (flags & ORIG_NAME) {
+        flags &= ~ORIG_NAME;
+      } else {
+        flags &= ~COMMENT;
+      }
+      while (len < csize && !!s[len++])
+        ;
+    }
+
+    /* Skip the header crc */
+    if (header->flags & HEAD_CRC) {
+      if (len + 2 < csize) {
+        crc[0] = s[len+0];
+        crc[1] = s[len+1];
+      } else {
+        crc[0] = crc[1] = 0;
+      }
+      len += 2;
+    }
+
+    /* Deflate now  */
+    if (len < csize) {
+      const int z_flush_mode = Z_FINISH;
+
+      memset(&c_stream,0,sizeof(c_stream));
+      err = -(Z_OK != inflateInit2(&c_stream, -MAX_WBITS));
+      if (err)
+        break;
+
+      c_stream.next_in   = (byte *)(s + len);
+      c_stream.avail_in  = csize - len;
+      c_stream.next_out  = d;
+      c_stream.avail_out = dsize;
+      err = inflate(&c_stream, z_flush_mode);
+      inflateEnd(&c_stream);
+      if (err != Z_STREAM_END) {
+        err = -1;
+      } else {
+        err = c_stream.total_out;
+      }
+    } else {
+      err = -1;
+    }
+    break;
+  }
+
+  return err;
+}
+
 #else
 
 #include "error68.h"
@@ -202,6 +303,12 @@ void *gzip68_load(const char *fname, int *ptr_ulen)
   if (ptr_ulen) *ptr_ulen=0;
   error68("gzip68: *NOT SUPPORTED*");
   return 0;
+}
+
+int gzip68_buffer(void * dst, int dsize, const void * src, int csize)
+{
+  error68("gzip68: *NOT SUPPORTED*");
+  return -1;
 }
 
 #endif /* #ifdef HAVE_ZLIB_H */

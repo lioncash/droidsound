@@ -1,4 +1,3 @@
-/* This file exists for documentation purpose only. */
 /**
 @defgroup  unice68_prg  unice68 program
 @ingroup   usertools68
@@ -47,10 +46,12 @@ Ice depacker based on 68000 ICE 2.40 original.
 @section unice68_bugs BUGS
 
   Report bugs to <benjihan -4t- users.sourceforge -d0t- net>
-  
+
 
 @section unice68_seealso SEE ALSO
 
   @see info68_prg, sc68_prg
 
 */
+
+#error "You should not include this file."

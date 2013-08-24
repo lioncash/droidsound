@@ -1,6 +1,14 @@
-/* YM-2149 D/A output levels
+/**
+ * @ingroup  sc68_dev_lib_io68
+ * @file     io68/ymout1c5bit.h
+ * @brief    Recorded YM-2149 D/A output levels (not normalized)
+ * @author   Benjamin Gerard
+ * @date     2009-09-14
+ */
+/* Time-stamp: <2013-08-07 13:49:19 ben> */
+
+/* @ref  YAMAHA Corporation documentation (CATALOG No LSI-2121492)
  *
- * $Id: ymout1c5bit.h 127 2009-09-14 02:51:23Z benjihan $
  *
  */
 

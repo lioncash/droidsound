@@ -1,18 +1,16 @@
 /**
  * @ingroup   io68_lib
  * @file      io68/paulaemul.h
+ * @brief     Paula emulator header.
  * @author    Benjamin Gerard
  * @date      1998/07/18
- * @brief     Paula emulator header.
- *
  */
+/* Time-stamp: <2013-08-16 05:05:14 ben> */
 
-/* $Id: paulaemul.h 126 2009-07-15 08:58:51Z benjihan $ */
+/* Copyright (C) 1998-2013 Benjamin Gerard */
 
-/* Copyright (C) 1998-2009 Benjamin Gerard */
-
-#ifndef _IO68_PAULAEMUL_H_
-#define _IO68_PAULAEMUL_H_
+#ifndef IO68_PAULAEMUL_H
+#define IO68_PAULAEMUL_H
 
 #include "io68_api.h"
 
@@ -82,16 +80,17 @@ enum amiga_regs_e {
   /** Amiga Vertical/Horizontal electron bean position */
   PAULA_VHPOSR    = 0x06,
 
-  /** @name Amiga interrupt registers.
+  /**
+   * @name Amiga interrupt registers.
    *
-   *  All hardware registers involved with interruption handling use the
-   *  same bit organisation :
-   *   - bit 7   Audio channel A
-   *   - bit 8   Audio channel B
-   *   - bit 9   Audio channel C
-   *   - bit 10  Audio channel D
-   *   - bit 14  Master interrupt
-   *  @{
+   * All hardware registers involved with interruption handling use the
+   * same bit organisation :
+   *  - bit 7   Audio channel A
+   *  - bit 8   Audio channel B
+   *  - bit 9   Audio channel C
+   *  - bit 10  Audio channel D
+   *  - bit 14  Master interrupt
+   * @{
    */
   PAULA_INTREQR   = 0x1E,       /**< Interruption request read      */
   PAULA_INTREQRH  = 0x1E,       /**< Interruption request read MSB  */
@@ -108,18 +107,21 @@ enum amiga_regs_e {
   PAULA_INTENA    = 0x9A,       /**< Interruption enable write      */
   PAULA_INTENAH   = 0x9A,       /**< Interruption enable write MSB  */
   PAULA_INTENAL   = 0x9B,       /**< Interruption enable write LSB  */
-  /** @} */
+  /**
+   * @}
+   */
 
-  /** @name Amiga DMA registers.
+  /**
+   * @name Amiga DMA registers.
    *
-   *   Amiga DMA control register bits :
-   *   - bit 0  Audio DMA channel A
-   *   - bit 1  Audio DMA channel B
-   *   - bit 2  Audio DMA channel C
-   *   - bit 3  Audio DMA channel D
-   *   - bit 9  General DMA
+   *  Amiga DMA control register bits :
+   *  - bit 0  Audio DMA channel A
+   *  - bit 1  Audio DMA channel B
+   *  - bit 2  Audio DMA channel C
+   *  - bit 3  Audio DMA channel D
+   *  - bit 9  General DMA
    *
-   *  @{
+   * @{
    */
   PAULA_DMACONR   = 0x02,               /**< DMA control read      */
   PAULA_DMACONRH  = 0x02,               /**< DMA control read MSB  */
@@ -127,51 +129,62 @@ enum amiga_regs_e {
   PAULA_DMACON    = 0x96,               /**< DMA control write     */
   PAULA_DMACONH   = 0x96,               /**< DMA control write MSB */
   PAULA_DMACONL   = 0x97,               /**< DMA control write LSB */
-  /** @} */
+  /**
+   * @}
+   */
 
-  /** @name The Audio & Disk Control Registers.
+  /**
+   * @name The Audio & Disk Control Registers.
    *
-   *  Bits:
-   *  - 07   USE3PN    Use audio channel 3 to modulate nothing.
-   *  - 06   USE2P3    Use audio channel 2 to modulate period of channel 3.
-   *  - 05   USE1P2    Use audio channel 1 to modulate period of channel 2.
-   *  - 04   USE0P1    Use audio channel 0 to modulate period of channel 1.
-   *  - 03   USE3VN    Use audio channel 3 to modulate nothing.
-   *  - 02   USE2V3    Use audio channel 2 to modulate volume of channel 3.
-   *  - 01   USE1V2    Use audio channel 1 to modulate volume of channel 2.
-   *  - 00   USE0V1    Use audio channel 0 to modulate volume of channel 1.
+   * Bits:
+   * - 07   USE3PN    Use audio channel 3 to modulate nothing.
+   * - 06   USE2P3    Use audio channel 2 to modulate period of channel 3.
+   * - 05   USE1P2    Use audio channel 1 to modulate period of channel 2.
+   * - 04   USE0P1    Use audio channel 0 to modulate period of channel 1.
+   * - 03   USE3VN    Use audio channel 3 to modulate nothing.
+   * - 02   USE2V3    Use audio channel 2 to modulate volume of channel 3.
+   * - 01   USE1V2    Use audio channel 1 to modulate volume of channel 2.
+   * - 00   USE0V1    Use audio channel 0 to modulate volume of channel 1.
    *
-   *  @note If both period/volume are modulated on the same channel, the
-   *  period and volume will be alternated. First word xxxxxxxx V6-V0,
-   *  Second word P15-P0 (etc).
+   * @note If both period/volume are modulated on the same channel, the
+   * period and volume will be alternated. First word xxxxxxxx V6-V0,
+   * Second word P15-P0 (etc).
    *
-   *  @{
+   * @{
    */
   PAULA_ADKCON    = 0x9E,          /**< Audio, disk, control write. */
   PAULA_ADKCONR   = 0x10,          /**< Audio, disk, control read.  */
   PAULA_ADKCONRH  = PAULA_ADKCONR+0,
   PAULA_ADKCONRL  = PAULA_ADKCONR+1,
-  /** @} */
+  /**
+   * @}
+   */
 
-  /** @name Amiga Paula registers.
-   *  @{
+  /**
+   * @name Amiga Paula registers.
+   * @{
    */
   PAULA_VOICEA   = 0xA0,        /**< Paula channel A register base. */
   PAULA_VOICEB   = 0xB0,        /**< Paula channel B register base. */
   PAULA_VOICEC   = 0xC0,        /**< Paula channel C register base. */
   PAULA_VOICED   = 0xD0,        /**< Paula channel D register base. */
-  /** @} */
+  /**
+   * @}
+   */
 };
 
 #define PAULA_VOICE(I) ((0xA+(I))<<4) /**< Paula channel I register base. */
 
-/** Amiga Paula Clock frequencies. */
+/**
+ * Amiga Paula Clock frequencies.
+ */
 enum {
   PAULA_PAL_FRQ     = 3546897u, /**< Paula PAL clock frequency.     */
   PAULA_NTSC_FRQ    = 3579545u, /**< Paula NTSC clock frequency.    */
 };
 
-/** Type used by internal counters.
+/**
+ * Type used by internal counters.
  *
  *   This type must be an unsigned of at least 32-bit. Values are
  *   always fixed point. The amount of shifting is calculated so that
@@ -212,8 +225,9 @@ typedef struct {
   int      vhpos;      /**< Shadow VHPOSR. */
 } paula_t;
 
-/** @name  Initialization functions.
- *  @{
+/**
+ * @name  Initialization functions.
+ * @{
  */
 
 /** available emulation modes. */
@@ -253,129 +267,144 @@ typedef struct {
 } paula_setup_t;
 
 IO68_EXTERN
-/** Init paula library.
+/**
+ * Init paula library.
  *
- *    The paula_init() must be call prior to all other paula functions.
+ *   The paula_init() must be call prior to all other paula functions.
  *
- *  @return  error-code (always success)
- *  @return  0  Success
- *  @return  -1 Failure
+ * @return  error-code (always success)
+ * @return  0  Success
+ * @return  -1 Failure
  *
- *  @see paula_shutdown()
+ * @see paula_shutdown()
  */
 int paula_init(int * argc, char ** argv);
 
 IO68_EXTERN
-/** Shutdown paula library.
+/**
+ * Shutdown paula library.
  *
- *  @see paula_init()
+ * @see paula_init()
  */
 void paula_shutdown(void);
 
 IO68_EXTERN
-/** Paula hardware reset.
+/**
+ * Paula hardware reset.
  *
- *    The paula_reset() reset function perform a Paula reset.
- *    It performs following operations :
- *    - all registers zeroed
- *    - all internal voices set to dummy 2 samples len address.
- *    - general DMA enabled
- *    - all audio DMA disabled
- *    - interrupt master enabled
- *    - all audio interrupt disbled
+ *   The paula_reset() reset function perform a Paula reset.
+ *   It performs following operations :
+ *   - all registers zeroed
+ *   - all internal voices set to dummy 2 samples len address.
+ *   - general DMA enabled
+ *   - all audio DMA disabled
+ *   - interrupt master enabled
+ *   - all audio interrupt disbled
  *
- *    @return error-code (always success)
- *    @return  0  Success
+ * @return error-code (always success)
+ * @return  0  Success
  */
 int paula_reset(paula_t * const paula);
 
 IO68_EXTERN
-/** Paula emulator instance setup.
+/**
+ * Paula emulator instance setup.
  *
- *    @return error-code (always success)
- *    @return  0  Success
+ * @return error-code (always success)
+ * @return  0  Success
  *
- *  @see paula_reset()
+ * @see paula_reset()
  */
 int paula_setup(paula_t * const paula, paula_setup_t * const setup);
 
 IO68_EXTERN
-/** Paula emulator instance cleanup.
+/**
+ * Paula emulator instance cleanup.
  */
 void paula_cleanup(paula_t * const paula);
 
 IO68_EXTERN
-/** Set/Get paula emulator type.
+/**
+ * Set/Get paula emulator type.
  *
- *    The paula_emulation() function set and get the paula emulator
- *    type.
+ *   The paula_emulation() function set and get the paula emulator
+ *   type.
  *
- *    If engine is paula_engine_e::PAULA_ENGINE_QUERY the function
- *    returns the current value without modifying anything. Else the
- *    function set the current paula engine according to the value of
- *    engine. If paula parameter is NULL pointer the function works
- *    with the default parameters rather than a actual paula instance
- *    meaning it will read or write the default setting (addressed by
- *    paula_engine_e::PAULA_ENGINE_DEFAULT).
+ *   If engine is paula_engine_e::PAULA_ENGINE_QUERY the function
+ *   returns the current value without modifying anything. Else the
+ *   function set the current paula engine according to the value of
+ *   engine. If paula parameter is NULL pointer the function works
+ *   with the default parameters rather than a actual paula instance
+ *   meaning it will read or write the default setting (addressed by
+ *   paula_engine_e::PAULA_ENGINE_DEFAULT).
  *
- *  @param   paula   Paula emulator instance.
- *  @param   engine  @ref paula_engine_e "emulator type".
- *  @return  an @ref paula_engine_e "emulator type".
+ * @param   paula   Paula emulator instance.
+ * @param   engine  @ref paula_engine_e "emulator type".
+ * @return  an @ref paula_engine_e "emulator type".
  */
 int paula_engine(paula_t * const paula, int engine);
 
 IO68_EXTERN
-/** Set/Get paula clock type.
+/**
+ * Set/Get paula clock type.
  *
- *  The paula_clock() function is similar to the paula_engine()
- *  function except it concerns clock rate.
+ *   The paula_clock() function is similar to the paula_engine()
+ *   function except it concerns clock rate.
  *
- *  @param   paula  Paula emulator instance.
- *  @param   clock  @ref paula_clock_e "clock type".
- *  @return  a @ref paula_clock_e "clock type".
+ * @param   paula  Paula emulator instance.
+ * @param   clock  @ref paula_clock_e "clock type".
+ * @return  a @ref paula_clock_e "clock type".
  */
 int paula_clock(paula_t * const paula, int clock);
 
 IO68_EXTERN
-/** Set/Get paula emulator sampling rate.
+/**
+ * Set/Get paula emulator sampling rate.
  *
- *  The paula_sampling_rate() function is similar to the
- *  paula_engine() function except it concerns sampling rate.
+ *   The paula_sampling_rate() function is similar to the
+ *   paula_engine() function except it concerns sampling rate.
  *
- *  @param   paula  Paula emulator instance.
- *  @param   hz     @ref paula_hz_e "sampling rate" in Hz.
- *  @return  actual @ref paula_hz_e "sampling rate" in Hz.
+ * @param   paula  Paula emulator instance.
+ * @param   hz     @ref paula_hz_e "sampling rate" in Hz.
+ * @return  actual @ref paula_hz_e "sampling rate" in Hz.
  */
 int paula_sampling_rate(paula_t * const paula, int hz);
 
-/** @} */
+/**
+ * @}
+ */
 
 
-/** @name  Emulation functions
- *  @{
+/**
+ * @name  Emulation functions
+ * @{
  */
 
 IO68_EXTERN
-/** Execute Paula emulation.
+/**
+ * Execute Paula emulation.
  *
- *    The paula_mix() function processes sample mixing with current internal
- *    parameters for n samples. Mixed samples are stored in a large enough
- *    (at least n) 32 bit pcm buffer pointed by b. mem68 is a pointer to
- *    the 68K memory buffer. The Paula emulator assume that this buffer is
- *    at least the size of the Amiga "chip" RAM. This implies at leat 512Kb
- *    and PCM data must be in the first 512Kb.
+ *   The paula_mix() function processes sample mixing with current
+ *   internal parameters for n samples. Mixed samples are stored in a
+ *   large enough (at least n) 32 bit pcm buffer pointed by b. mem68
+ *   is a pointer to the 68K memory buffer. The Paula emulator assume
+ *   that this buffer is at least the size of the Amiga "chip"
+ *   RAM. This implies at leat 512Kb and PCM data must be in the first
+ *   512Kb.
  *
- *   @param  paula   Paula emulator instance
- *   @param  splbuf  Destination 32-bit sample buffer
- *   @param  n       Number of sample to mix in splbuf buffer
+ * @param  paula   Paula emulator instance
+ * @param  splbuf  Destination 32-bit sample buffer
+ * @param  n       Number of sample to mix in splbuf buffer
  *
  */
 void paula_mix(paula_t * const paula, s32 * splbuf, int n);
 
-/** @} */
-
 /**
- *  @}
+ * @}
  */
 
-#endif /* #ifndef _IO68_PAULAEMUL_H_ */
+/**
+ * @}
+ */
+
+#endif

@@ -1,8 +1,8 @@
 /* line4.c - EMU68 generated code by
- * gen68 2009-06-12 07:20:25
- * Copyright (C) 1998-2009 Benjamin Gerard
+ * gen68 2013-05-25 00:26:49
+ * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * $Id: line4.c 119 2009-06-29 05:11:19Z benjihan $
+ * $Id: line4.c 228 2013-05-24 23:28:08Z benjihan $
  */
 
 /* Line 4: Miscellaneous */
@@ -164,9 +164,9 @@ static void line4_r0_s0(emu68_t * const emu68, int mode, int reg0)
     NEGXB(b,b);
     REG68.d[reg0] = ( REG68.d[reg0] & BYTE_MSK ) + ( b >> BYTE_FIX );
   } else {
-    assert(mode != 1);
     /* NEGX.B <Ae> */
     const addr68_t addr = get_eab68[mode](emu68,reg0);
+    assert(mode != 1);
     b = read_B(addr) << BYTE_FIX;
     NEGXB(b,b);
     write_B(addr, b >> BYTE_FIX);
@@ -183,9 +183,9 @@ static void line4_r0_s1(emu68_t * const emu68, int mode, int reg0)
     NEGXW(b,b);
     REG68.d[reg0] = ( REG68.d[reg0] & WORD_MSK ) + ( b >> WORD_FIX );
   } else {
-    assert(mode != 1);
     /* NEGX.W <Ae> */
     const addr68_t addr = get_eaw68[mode](emu68,reg0);
+    assert(mode != 1);
     b = read_W(addr) << WORD_FIX;
     NEGXW(b,b);
     write_W(addr, b >> WORD_FIX);
@@ -202,9 +202,9 @@ static void line4_r0_s2(emu68_t * const emu68, int mode, int reg0)
     NEGXL(b,b);
     REG68.d[reg0] = ( b >> LONG_FIX );
   } else {
-    assert(mode != 1);
     /* NEGX.L <Ae> */
     const addr68_t addr = get_eal68[mode](emu68,reg0);
+    assert(mode != 1);
     b = read_L(addr) << LONG_FIX;
     NEGXL(b,b);
     write_L(addr, b >> LONG_FIX);
@@ -229,9 +229,9 @@ static void line4_r1_s0(emu68_t * const emu68, int mode, int reg0)
     CLRB(b,b);
     REG68.d[reg0] = ( REG68.d[reg0] & BYTE_MSK ) + ( b >> BYTE_FIX );
   } else {
-    assert(mode != 1);
     /* CLR.B <Ae> */
     const addr68_t addr = get_eab68[mode](emu68,reg0);
+    assert(mode != 1);
     CLRB(b,b);
     write_B(addr, b >> BYTE_FIX);
   }
@@ -246,9 +246,9 @@ static void line4_r1_s1(emu68_t * const emu68, int mode, int reg0)
     CLRW(b,b);
     REG68.d[reg0] = ( REG68.d[reg0] & WORD_MSK ) + ( b >> WORD_FIX );
   } else {
-    assert(mode != 1);
     /* CLR.W <Ae> */
     const addr68_t addr = get_eaw68[mode](emu68,reg0);
+    assert(mode != 1);
     CLRW(b,b);
     write_W(addr, b >> WORD_FIX);
   }
@@ -263,9 +263,9 @@ static void line4_r1_s2(emu68_t * const emu68, int mode, int reg0)
     CLRL(b,b);
     REG68.d[reg0] = ( b >> LONG_FIX );
   } else {
-    assert(mode != 1);
     /* CLR.L <Ae> */
     const addr68_t addr = get_eal68[mode](emu68,reg0);
+    assert(mode != 1);
     CLRL(b,b);
     write_L(addr, b >> LONG_FIX);
   }
@@ -286,9 +286,9 @@ static void line4_r2_s0(emu68_t * const emu68, int mode, int reg0)
     NEGB(b,b);
     REG68.d[reg0] = ( REG68.d[reg0] & BYTE_MSK ) + ( b >> BYTE_FIX );
   } else {
-    assert(mode != 1);
     /* NEG.B <Ae> */
     const addr68_t addr = get_eab68[mode](emu68,reg0);
+    assert(mode != 1);
     b = read_B(addr) << BYTE_FIX;
     NEGB(b,b);
     write_B(addr, b >> BYTE_FIX);
@@ -305,9 +305,9 @@ static void line4_r2_s1(emu68_t * const emu68, int mode, int reg0)
     NEGW(b,b);
     REG68.d[reg0] = ( REG68.d[reg0] & WORD_MSK ) + ( b >> WORD_FIX );
   } else {
-    assert(mode != 1);
     /* NEG.W <Ae> */
     const addr68_t addr = get_eaw68[mode](emu68,reg0);
+    assert(mode != 1);
     b = read_W(addr) << WORD_FIX;
     NEGW(b,b);
     write_W(addr, b >> WORD_FIX);
@@ -324,9 +324,9 @@ static void line4_r2_s2(emu68_t * const emu68, int mode, int reg0)
     NEGL(b,b);
     REG68.d[reg0] = ( b >> LONG_FIX );
   } else {
-    assert(mode != 1);
     /* NEG.L <Ae> */
     const addr68_t addr = get_eal68[mode](emu68,reg0);
+    assert(mode != 1);
     b = read_L(addr) << LONG_FIX;
     NEGL(b,b);
     write_L(addr, b >> LONG_FIX);
@@ -352,9 +352,9 @@ static void line4_r3_s0(emu68_t * const emu68, int mode, int reg0)
     NOTB(b,b);
     REG68.d[reg0] = ( REG68.d[reg0] & BYTE_MSK ) + ( b >> BYTE_FIX );
   } else {
-    assert(mode != 1);
     /* NOT.B <Ae> */
     const addr68_t addr = get_eab68[mode](emu68,reg0);
+    assert(mode != 1);
     b = read_B(addr) << BYTE_FIX;
     NOTB(b,b);
     write_B(addr, b >> BYTE_FIX);
@@ -371,9 +371,9 @@ static void line4_r3_s1(emu68_t * const emu68, int mode, int reg0)
     NOTW(b,b);
     REG68.d[reg0] = ( REG68.d[reg0] & WORD_MSK ) + ( b >> WORD_FIX );
   } else {
-    assert(mode != 1);
     /* NOT.W <Ae> */
     const addr68_t addr = get_eaw68[mode](emu68,reg0);
+    assert(mode != 1);
     b = read_W(addr) << WORD_FIX;
     NOTW(b,b);
     write_W(addr, b >> WORD_FIX);
@@ -390,9 +390,9 @@ static void line4_r3_s2(emu68_t * const emu68, int mode, int reg0)
     NOTL(b,b);
     REG68.d[reg0] = ( b >> LONG_FIX );
   } else {
-    assert(mode != 1);
     /* NOT.L <Ae> */
     const addr68_t addr = get_eal68[mode](emu68,reg0);
+    assert(mode != 1);
     b = read_L(addr) << LONG_FIX;
     NOTL(b,b);
     write_L(addr, b >> LONG_FIX);
@@ -418,9 +418,9 @@ static void line4_r4_s0(emu68_t * const emu68, int mode, int reg0)
     NBCDB(b,b);
     REG68.d[reg0] = ( REG68.d[reg0] & BYTE_MSK ) + ( b >> BYTE_FIX );
   } else {
-    assert(mode != 1);
     /* NBCD.B <Ae> */
     const addr68_t addr = get_eab68[mode](emu68,reg0);
+    assert(mode != 1);
     b = read_B(addr) << BYTE_FIX;
     NBCDB(b,b);
     write_B(addr, b >> BYTE_FIX);
@@ -474,9 +474,9 @@ static void line4_r5_s0(emu68_t * const emu68, int mode, int reg0)
     b = (uint68_t) REG68.d[reg0] << BYTE_FIX;
     TSTB(b,b);
   } else {
-    assert(mode != 1);
     /* TST.B <Ae> */
     const addr68_t addr = get_eab68[mode](emu68,reg0);
+    assert(mode != 1);
     b = read_B(addr) << BYTE_FIX;
     TSTB(b,b);
   }
@@ -491,9 +491,9 @@ static void line4_r5_s1(emu68_t * const emu68, int mode, int reg0)
     b = (uint68_t) REG68.d[reg0] << WORD_FIX;
     TSTW(b,b);
   } else {
-    assert(mode != 1);
     /* TST.W <Ae> */
     const addr68_t addr = get_eaw68[mode](emu68,reg0);
+    assert(mode != 1);
     b = read_W(addr) << WORD_FIX;
     TSTW(b,b);
   }
@@ -508,9 +508,9 @@ static void line4_r5_s2(emu68_t * const emu68, int mode, int reg0)
     b = (uint68_t) REG68.d[reg0] << LONG_FIX;
     TSTL(b,b);
   } else {
-    assert(mode != 1);
     /* TST.L <Ae> */
     const addr68_t addr = get_eal68[mode](emu68,reg0);
+    assert(mode != 1);
     b = read_L(addr) << LONG_FIX;
     TSTL(b,b);
   }

@@ -1,29 +1,29 @@
 /**
  * @ingroup   emu68_lib
  * @file      emu68/struct68.h
+ * @brief     Struture definitions header.
  * @author    Benjamin Gerard
  * @date      1999-03-13
- * @brief     Struture definitions header.
- *
  */
+/* Time-stamp: <2013-08-04 23:14:11 ben> */
 
-/* $Id: struct68.h 202 2011-10-16 01:14:21Z benjihan $ */
+/* Copyright (C) 1998-2013 Benjamin Gerard */
 
-/* Copyright (C) 1998-2010 Benjamin Gerard */
-
-#ifndef _EMU68_STRUCT68_H_
-#define _EMU68_STRUCT68_H_
+#ifndef EMU68_STRUCT68_H
+#define EMU68_STRUCT68_H
 
 #include "type68.h"
 
-/** @addtogroup emu68_lib_types
- *  @{
+/**
+ * @addtogroup emu68_lib_types
+ * @{
  */
 
-/** IO no pending interruption return value.
+/**
+ * IO no pending interruption return value.
  *
- *    The next_int function of IO plugin must return IO68_NO_INT when no
- *    interruption has been triggered.
+ *   The next_int function of IO plugin must return IO68_NO_INT when
+ *   no interruption has been triggered.
  */
 #define IO68_NO_INT (0x80000000)
 
@@ -34,16 +34,20 @@
 #define MEMMSK68 (emu68->memmsk)
 
 
-/** @name  Memory access caller type
- *  @{
+/**
+ * @name  Memory access caller type
+ * @{
  */
 
 /** Write memory function. */
 typedef void (*memwfunc68_t)(emu68_t * const);
+
 /** Write IO chip function. */
 typedef void (*iomemfunc68_t)(io68_t * const);
 
-/** @} */
+/**
+ * @}
+ */
 
 /** First level (16 lines) decoder function. */
 typedef void (linefunc68_t)(emu68_t * const, int, int);
@@ -59,7 +63,8 @@ typedef void (linefunc68_t)(emu68_t * const, int, int);
 #endif
 
 
-/**  68K interruption exception structure.
+/**
+ * 68K interruption exception structure.
  */
 typedef struct
 {
@@ -69,10 +74,11 @@ typedef struct
 } interrupt68_t;
 
 
-/** IO emulator plugin structure.
+/**
+ * IO emulator plugin structure.
  *
- *    All 68K IO must have a filled io68_t structure to be warm plug
- *    or unplug with ioplug interface.
+ *   All 68K IO must have a filled io68_t structure to be warm plug or
+ *   unplug with ioplug interface.
  *
  */
 struct io68_s
@@ -106,7 +112,8 @@ struct io68_s
 };
 
 
-/** 68K internal registers.
+/**
+ * 68K internal registers.
  */
 typedef struct
 {
@@ -141,19 +148,19 @@ typedef struct
 #define REG68_PC_IDX 021
 #define REG68_SR_IDX 022
 
-/** Exception trapping handler.
+/**
+ * Exception trapping handler.
  *
- *    The emu68_handler_t handler is called by EMU68 when an exception
- *    occurs. It does include interruption triggered by IO chip as
- *    well as software exception like TRACE, ILLEGAL, ZERO DIVIDE,
- *    CHK, TRAP, RESET ... and special emulator interrupts.
+ *   The emu68_handler_t handler is called by EMU68 when an exception
+ *   occurs. It does include interruption triggered by IO chip as well
+ *   as software exception like TRACE, ILLEGAL, ZERO DIVIDE, CHK,
+ *   TRAP, RESET ... and special emulator interrupts.
  *
  *  @param  emu68   emulator instance
  *  @param  vector  exception vector number
  *  @param  cookie  user-data pointer
- *  @return Execution break request (return non 0 to ask for a break)
 */
-typedef int (*emu68_handler_t)(emu68_t* const emu68, int vector, void * cookie);
+typedef void (*emu68_handler_t)(emu68_t* const emu68, int vector, void * cookie);
 
 /** Breakpoint definition. */
 typedef struct {
@@ -167,10 +174,12 @@ struct emu68_s {
   char name[32];                        /**< Identifier.            */
 
   /* Error. */
-  char err[128][4];                     /**< Error message stack.   */
+  char err[4][128];                     /**< Error message stack.   */
   int  nerr;                            /**< Error counter.         */
 
   reg68_t   reg;                     /**< 68000 internal registers. */
+  int       save_sr;                 /**< SR before exec            */
+
   cycle68_t cycle;                   /**< Internal cycle counter.   */
   uint68_t  clock;                   /**< Master clock frequency.   */
 
@@ -194,7 +203,7 @@ struct emu68_s {
   int      framechk;        /**< ORed chk change for current frame. */
   u8     * chk;             /**< Access-Control-Memory buffer.      */
 
-  emu68_bp_t breakpoints[16];           /**< Hardware breakpoints.  */
+  emu68_bp_t breakpoints[31];           /**< Hardware breakpoints.  */
 
   /* Onboard memory. */
   addr68_t memmsk;     /**< Onboard memory mask (2^log2mem-1).      */
@@ -219,14 +228,14 @@ void inl_addcycle68(emu68_t * const emu68, const cycle68_t n)
 #endif
 }
 
-#ifndef CUSTOM_ALLOC
+#ifndef emu68_alloc
 # include <stdlib.h>
 # define emu68_alloc(size) malloc(size)
 # define emu68_free(size)  free(size)
 #endif
 
 /**
- *  @}
+ * @}
  */
 
-#endif /* #ifndef _EMU68_STRUCT68_H_ */
+#endif

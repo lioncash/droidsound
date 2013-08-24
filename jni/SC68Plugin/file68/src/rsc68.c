@@ -3,9 +3,9 @@
  * @brief   resource functions
  * @author  http://sourceforge.net/users/benjihan
  *
- * Copyright (C) 1998-2011 Benjamin Gerard
+ * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2011-10-12 13:22:58 ben>
+ * Time-stamp: <2013-08-09 21:46:08 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -28,17 +28,20 @@
 # include "config.h"
 #endif
 #include "file68_api.h"
-#include "rsc68.h"
+#include "file68_rsc.h"
+#include "file68_err.h"
+#include "file68_uri.h"
+#include "file68_str.h"
+#include "file68_msg.h"
+#include "file68_zip.h"
+#include "file68_vfs_def.h"
+#include "file68_vfs_file.h"
+#include "file68_vfs_fd.h"
+#include "file68_vfs_curl.h"
+#include "file68_vfs_mem.h"
+#include "file68_vfs_z.h"
 
-#include "error68.h"
-#include "url68.h"
-#include "string68.h"
-#include "alloc68.h"
-#include "istream68_file.h"
-#include "istream68_fd.h"
-#include "istream68_curl.h"
-#include "msg68.h"
-
+#include <assert.h>
 #include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
@@ -52,6 +55,9 @@ int rsc68_cat = msg68_DEFAULT;
 
 static volatile int init = 0;
 
+/* in replay68.c */
+int replay68_get(const char * name, const void ** data, int * csize, int * dsize);
+
 /* The resource pathes are context independant consequently
  * each context use the same pathes.
  */
@@ -60,10 +66,15 @@ static const char * user_path   = 0; /* User resource path.   */
 static const char * lmusic_path = 0; /* Local music path.     */
 static const char * rmusic_path = 0; /* Remote music path.    */
 
-static istream68_t * default_open(rsc68_t type, const char *name, int mode,
+static vfs68_t * default_open(rsc68_t type, const char *name, int mode,
                                   rsc68_info_t * info);
 
 static rsc68_handler_t rsc68 = default_open;
+static int rsc68_ismine(const char *);
+static vfs68_t * rsc68_create(const char *, int, int, va_list);
+static scheme68_t rsc68_scheme = {
+  0, "vfs-sc68", rsc68_ismine, rsc68_create
+};
 
 #ifndef FILE68_SHARED_PATH
 # define FILE68_SHARED_PATH 0
@@ -87,6 +98,13 @@ static struct {
   const char * ext;
 } rsc68_table[rsc68_last];
 
+static int rsc68_ismine(const char * uri)
+{
+  if (!strncmp68(uri, "sc68://", 7))
+    return SCHEME68_ISMINE | SCHEME68_READ | SCHEME68_WRITE;
+  return 0;
+}
+
 static void rsc68_init_table(void)
 {
   memset(rsc68_table, 0, sizeof(rsc68_table));
@@ -101,16 +119,15 @@ static void rsc68_init_table(void)
   rsc68_table[rsc68_config].path = "/";
   rsc68_table[rsc68_config].ext  = ".cfg";
 
-  rsc68_table[rsc68_sample].type = rsc68_sample;
-  rsc68_table[rsc68_sample].name = "sample";
-  rsc68_table[rsc68_sample].path = "/Sample/";
-  rsc68_table[rsc68_sample].ext  = ".sc68";
+  /* rsc68_table[rsc68_sample].type = rsc68_sample; */
+  /* rsc68_table[rsc68_sample].name = "sample"; */
+  /* rsc68_table[rsc68_sample].path = "/Sample/"; */
+  /* rsc68_table[rsc68_sample].ext  = ".sc68"; */
 
-
-  rsc68_table[rsc68_dll].type = rsc68_dll;
-  rsc68_table[rsc68_dll].name = "dll";
-  rsc68_table[rsc68_dll].path = "/Dll/";
-  rsc68_table[rsc68_dll].ext  = 0;
+  /* rsc68_table[rsc68_dll].type = rsc68_dll; */
+  /* rsc68_table[rsc68_dll].name = "dll"; */
+  /* rsc68_table[rsc68_dll].path = "/Dll/"; */
+  /* rsc68_table[rsc68_dll].ext  = 0; */
 
   rsc68_table[rsc68_music].type = rsc68_music;
   rsc68_table[rsc68_music].name = "music";
@@ -134,7 +151,7 @@ static const char *default_rmusic_path(void)
 
 static const char * rsc_set_any(const char ** any, const char * path)
 {
-  free68((void *)*any);
+  free((void *)*any);
   return *any = strdup68(path) ;
 }
 
@@ -310,7 +327,7 @@ const char * rsc68_get_music_params(rsc68_info_t *info, const char *name)
 
   if (name) c = *name;
   if (!c || c == ':') {
-    int i, tinfo[3] = { -1, -1, -1 };
+    int i, tinfo[3] = { 0, 0, 0 };
 
     for (i=0; i<3 && c == ':'; ++i) {
       c = *++name;
@@ -330,9 +347,9 @@ const char * rsc68_get_music_params(rsc68_info_t *info, const char *name)
 
     if (info) {
       info->type = rsc68_music;
-      info->data.music.track = tinfo[0];
-      info->data.music.loop  = tinfo[1];
-      info->data.music.time  = tinfo[2];
+      info->data.music.track   = tinfo[0];
+      info->data.music.loops   = tinfo[1];
+      info->data.music.time_ms = tinfo[2] * 1000;
     }
   }
 
@@ -392,18 +409,16 @@ error:
   return 0;
 }
 
-static istream68_t * default_open(rsc68_t type, const char *name,
+static vfs68_t * default_open(rsc68_t type, const char *name,
                                   int mode, rsc68_info_t * info)
 {
-  istream68_t * is = 0;
+  vfs68_t * is = 0;
   int err = -1;
   const char *subdir = 0, *ext = 0;
   char tmp[1024], * apath = 0;
   char tmpname[512];
   int alen = 0;
-
   char_cv_t cv_path=0, cv_extra=0;
-
   struct {
     const char * path, * sdir, * ext;
     int curl;
@@ -435,6 +450,14 @@ static istream68_t * default_open(rsc68_t type, const char *name,
     pathes[npath++].path = user_path;
   }
 
+  switch (mode &= 3) {
+    case 1: case 2:
+      break;
+  default:
+    assert(!"invalid mode");
+    return 0;
+  }
+
   if (mode == 1 && share_path) {
     pathes[npath++].path = share_path;
   }
@@ -447,12 +470,91 @@ static istream68_t * default_open(rsc68_t type, const char *name,
     name = "sc68";
   }
 
-  TRACE68(rsc68_cat,"rsc68: open %c 'rsc68://%s/%s%s'\n",
+  TRACE68(rsc68_cat,"rsc68: open %c 'sc68://%s/%s%s'\n",
           (mode==1)?'R':'W',rsc68_table[type].name, name, ext?ext:"");
 
   /* Any specific stuff. */
   switch (type) {
   case rsc68_replay:
+
+#if defined (USE_REPLAY68) && 0
+
+    /* Method using vfs to inflate data. Notice that unfortunatly
+     * we can't use a proper Z stream because the replay loader needs
+     * to know the length and vfs68_z::length() method does not
+     * have this information before it has inflated the all data. This
+     * is a limitation that could probably be dealt with, at least
+     * with gziped stream as the information is available at the end
+     * of the stream. Also in this particular case the inflate size is
+     * available via the replay68_get() function.
+     */
+    if (mode == 1) {
+      const void * cdata;
+      int csize, dsize;
+      vfs68_t * is_in;
+
+      TRACE68(rsc68_cat,"rsc68: trying built-in replay -- %s\n", name);
+      if (!replay68_get(name, &cdata, &csize, &dsize)) {
+        TRACE68(rsc68_cat,"rsc68: found built-in replay -- %s %d %d\n",
+                name, csize, dsize);
+        is_in =
+          vfs68_z_create(
+            vfs68_mem_create(cdata, csize, mode),
+            mode|VFS68_SLAVE,
+            vfs68_z_default_option);
+        if (is_in) {
+          is = vfs68_mem_create(0, dsize, 3);
+          if (!vfs68_open(is_in) && !vfs68_open(is)) {
+            int n;
+            while (n = vfs68_read(is_in, tmpname, sizeof(tmpname)), n > 0)
+              if (vfs68_write(is, tmpname, n) != n) {
+                n = -1;
+                break;
+              }
+            err = -!!n;
+          }
+          vfs68_destroy(is_in);
+          vfs68_seek_to(is,0);
+        }
+      }
+    }
+
+#elif defined (USE_REPLAY68)
+
+    /* Method using gzip68_buffer() is probably faster (less memory
+     * copy) than the previous Z stream one. It still need to allocate
+     * a temporary buffer to store deflated data whereas a proper
+     * vfs could have deflated on the fly into the 68k memory
+     * buffer. See previous method comment on that matter.
+     */
+    if (mode == 1) {
+      const void * cdata;
+      void * ddata;
+      int csize, dsize;
+
+      TRACE68(rsc68_cat,"rsc68: trying built-in replay -- %s\n", name);
+      if (!replay68_get(name, &cdata, &csize, &dsize)) {
+        TRACE68(rsc68_cat,"rsc68: found built-in replay -- %s %d %d\n",
+                name, csize, dsize);
+        ddata = malloc(dsize);
+        if (ddata) {
+          int inflate = gzip68_buffer(ddata, dsize, cdata, csize);
+          if (inflate != dsize) {
+            msg68_error("rsc68: inflated size of built-in replay differs"
+                        " -- %s %d %d\n",name, inflate, dsize);
+            err = -1;
+          } else {
+            is = vfs68_mem_create(ddata, dsize, mode|VFS68_SLAVE);
+            if ( (err = -!is) != 0) {
+              free(ddata);
+            }
+          }
+        }
+      }
+    }
+
+#endif
+
     cv_extra = cv_lower; /* $$$ transform replay name to lower case. */
     break;
 
@@ -470,7 +572,7 @@ static istream68_t * default_open(rsc68_t type, const char *name,
     break;
   }
 
-  for (ipath=0; name && ipath < npath; ++ipath) {
+  for (ipath=0; !is && name && ipath < npath; ++ipath) {
     const char *cpath, * cdir, * cext;
     char *p, *pe, *path;
     int len, l;
@@ -490,8 +592,8 @@ static istream68_t * default_open(rsc68_t type, const char *name,
     } else if (len  <= sizeof(tmp)) {
       path = tmp;
     } else {
-      free68(apath);
-      apath = alloc68(len);
+      free(apath);
+      apath = malloc(len);
       alen = apath ? len : 0;
       path = apath;
     }
@@ -519,41 +621,29 @@ static istream68_t * default_open(rsc68_t type, const char *name,
       p += l;
     }
 
-    if (pathes[ipath].curl) {
-      TRACE68(rsc68_cat,"rsc68: try open '%s' with curl\n", path);
-      is = istream68_curl_create(path, mode);
-    } else {
-      TRACE68(rsc68_cat,"rsc68: try open '%s' with file\n", path);
-      is = istream68_file_create(path, mode);
-      if (!is) {
-        TRACE68(rsc68_cat,"rsc68: try open '%s' with FD\n", path);
-        is = istream68_fd_create(path, -1, mode);
-      }
-    }
-    err = istream68_open(is);
+    is = uri68_vfs(path, mode, 0);
+    err = vfs68_open(is);
     TRACE68(rsc68_cat, "rsc68: try [%s]\n", strok68(err));
-    if (!err) {
+    if (!err)
       break;
-    }
 
-    istream68_destroy(is);
+    vfs68_destroy(is);
     is = 0;
   }
 
-  if (apath != tmp) {
-    free68(apath);
-  }
+  if (apath != tmp)
+    free(apath);
   if (err) {
-    istream68_destroy(is);
+    vfs68_destroy(is);
     is = 0;
   }
 
-  if (is && info) {
+  if (is && info)
     info->type = type;
-  }
 
-  TRACE68(rsc68_cat, "rsc68: open '%s' => [%s,%s]\n",
-          strok68(!is), istream68_filename(is));
+  TRACE68(rsc68_cat, "rsc68: open '%s' -- *%s*\n",
+          vfs68_filename(is),
+          strok68(!is));
   return is;
 }
 
@@ -569,27 +659,32 @@ rsc68_handler_t rsc68_set_handler(rsc68_handler_t fct)
   return old;
 }
 
-istream68_t * rsc68_create_url(const char *url, int mode, rsc68_info_t * info)
+static vfs68_t * rsc68_create(const char *uri, int mode, int argc, va_list list)
 {
-  istream68_t * is;
+  rsc68_info_t * info = argc > 0 ? va_arg(list, rsc68_info_t *) : 0;
+  return rsc68_create_uri(uri, mode, info);
+}
 
+vfs68_t * rsc68_create_uri(const char *uri, int mode, rsc68_info_t * info)
+{
+  vfs68_t * vfs;
   /* $$$ Ugly haXXX we need to close since created stream are not
      supposed to be open but that's the only function we have
      for now. */
-  is = rsc68_open_url(url, mode, info);
-  istream68_close(is);
-  return is;
+  vfs = rsc68_open_uri(uri, mode, info);
+  vfs68_close(vfs);
+  return vfs;
+
 }
 
-
-istream68_t * rsc68_open_url(const char *url, int mode, rsc68_info_t * info)
+vfs68_t * rsc68_open_uri(const char *uri, int mode, rsc68_info_t * info)
 {
   int i;
-  char protocol[16];
-  istream68_t * is = 0;
+  vfs68_t * is = 0;
+  char scheme[32];
 
-  TRACE68(rsc68_cat,"rsc68: open url='%s' mode=%c%c%s)\n",
-          strnevernull68(url),
+  TRACE68(rsc68_cat,"rsc68: open uri='%s' mode=%c%c%s\n",
+          strnevernull68(uri),
           (mode&1) ? 'R' : '.',
           (mode&2) ? 'W' : '.',
           info ? " with info" : "");
@@ -597,34 +692,32 @@ istream68_t * rsc68_open_url(const char *url, int mode, rsc68_info_t * info)
   if (info) {
     info->type = rsc68_last;
   }
+
+  assert(rsc68);
   if (!rsc68) {
     msg68_critical("rsc68: no handler defined\n");
     goto error;
   }
-  if (mode < 1 || mode > 2) {
-    msg68_critical("rsc68: invalid open mode %d\n",mode);
-    goto error;
-  }
 
-  if (url68_get_protocol(protocol, sizeof(protocol), url) ||
-      strcmp68(protocol,"RSC68")) {
-    msg68_error("rsc68: missing or invalid protocol");
+  mode &= 3;
+
+  if (strncmp68(uri, "sc68://", 7)) {
+    msg68_error("rsc68: invalid scheme -- %s\n", uri);
     goto error;
   }
-  url += 5+3; /* Skip "RSC68://" */
+  uri += 7;                             /* skip sc68:// */
 
   /* Get resource type. */
   for (i=0; 1; ++i) {
-    int c = url[i] & 255;
+    int c = uri[i] & 255;
     if (!c || c == '/') {
-      protocol[i]=0;
-      url += i + (c=='/');
+      scheme[i]=0;
+      uri += i + (c=='/');
       break;
     }
-    protocol[i] = c;
-    if (i >= sizeof(protocol)-1) {
-      msg68_critical("rsc68: invalid RSC68 url; resource type too long '%s'",
-                     url);
+    scheme[i] = c;
+    if (i >= sizeof(scheme)-1) {
+      msg68_error("rsc68: invalid sc68 uri -- %s\n", uri);
       goto error;
     }
   }
@@ -632,23 +725,22 @@ istream68_t * rsc68_open_url(const char *url, int mode, rsc68_info_t * info)
   /* Table should be initialized by proper library initialization. */
   /* rsc68_init_table(); */
 
-  for (i=0; i<rsc68_last && strcmp68(rsc68_table[i].name, protocol); ++i)
+  for (i=0; i<rsc68_last && strcmp68(rsc68_table[i].name, scheme); ++i)
     ;
   if (i >= rsc68_last) {
-    msg68_critical("rsc68: invalid RSC68 url; invalid resource type '%s'",
-                   protocol);
+    msg68_error("rsc68: invalid sc68 uri -- %s\n", uri);
     goto error;
   }
-  TRACE68(rsc68_cat,"rsc68: resource type #%d '%s'\n", i, protocol);
-  is =  rsc68(i, url, mode, info);
+  TRACE68(rsc68_cat,"rsc68: resource type #%d '%s'\n", i, scheme);
+  is = rsc68(i, uri, mode, info);
 
 error:
   TRACE68(rsc68_cat,"rsc68: open => [%s,'%s']\n",
-          strok68(!is),istream68_filename(is));
+          strok68(!is),vfs68_filename(is));
   return is;
 }
 
-istream68_t * rsc68_open(rsc68_t type, const char *name, int mode,
+vfs68_t * rsc68_open(rsc68_t type, const char *name, int mode,
                          rsc68_info_t * info)
 {
   if (info) {
@@ -677,10 +769,12 @@ int rsc68_init(void)
     rsc68_set_music(FILE68_MUSIC_PATH);
     rsc68_set_remote_music(FILE68_RMUSIC_PATH);
 
-    TRACE68(rsc68_cat,"rsc68: shared-data = '%s'\n",share_path);
-    TRACE68(rsc68_cat,"rsc68: user_path   = '%s'\n",user_path);
-    TRACE68(rsc68_cat,"rsc68: lmusic_path = '%s'\n",lmusic_path);
-    TRACE68(rsc68_cat,"rsc68: rmusic_path = '%s'\n",rmusic_path);
+    uri68_register(&rsc68_scheme);
+
+    TRACE68(rsc68_cat,"rsc68: shared-data = '%s'\n",strnevernull68(share_path));
+    TRACE68(rsc68_cat,"rsc68: user_path   = '%s'\n",strnevernull68(user_path));
+    TRACE68(rsc68_cat,"rsc68: lmusic_path = '%s'\n",strnevernull68(lmusic_path));
+    TRACE68(rsc68_cat,"rsc68: rmusic_path = '%s'\n",strnevernull68(rmusic_path));
 
     init = 1;
     err = 0;
@@ -691,7 +785,7 @@ int rsc68_init(void)
 void rsc68_shutdown(void)
 {
   if (init) {
-    /* destroy pathes. */
+    /* destroy paths. */
     rsc68_set_share(0);
     rsc68_set_user(0);
     rsc68_set_music(0);
@@ -699,5 +793,5 @@ void rsc68_shutdown(void)
     rsc68 = default_open;
     init  = 0;
   }
-  TRACE68(rsc68_cat,"rsc68: *%s*\n","SHUTDOWN");
+  TRACE68(rsc68_cat,"rsc68: *%s*\n","shutdown");
 }

@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-27 12:01:21 ben>
+ * Time-stamp: <2013-08-16 19:48:26 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -29,7 +29,7 @@
 #endif
 
 #ifdef HAVE_CONFIG_OPTION68_H
-# include <config_option68.h>
+# include "config_option68.h"
 #else
 # include "default_option68.h"
 #endif
@@ -38,17 +38,15 @@
 #include "ymemul.h"
 #include "emu68/assert68.h"
 
-#include <sc68/msg68.h>
-#include <sc68/string68.h>
-#include <sc68/option68.h>
+#include <sc68/file68_msg.h>
+#include <sc68/file68_str.h>
+#include <sc68/file68_opt.h>
 
 extern int ym_cat;                      /* defined in ymemul.c */
 
 #ifndef INTMSB
 # define INTMSB (sizeof(int)*8-1)
 #endif
-
-#define YM_PULS_FILTER 1                /* 0:none 1:fast 2:slow */
 
 #define YM_OUT_MSK(C,B,A)                       \
   (((((C)&0x1F)<<10))                           \
@@ -80,10 +78,10 @@ static struct {
   ym_puls_filter_t filter;
 } filters[] = {
   { "2-poles", filter_2pole },   /* first is default */
-  { "none",    filter_none  },
-  { "boxcar",  filter_boxcar},
+  { "mixed",   filter_mixed },
   { "1-pole",  filter_1pole },
-  { "mixed",   filter_mixed }
+  { "boxcar",  filter_boxcar},
+  { "none",    filter_none  },
 };
 static const int n_filters = sizeof(filters) / sizeof(*filters);
 static int default_filter = 0;
@@ -507,8 +505,8 @@ static void do_envelop(ym_t * const ym, cycle68_t ymcycle)
 
     if (access->ymcycle > ymcycle) {
       TRACE68(ym_cat,"%s access reg %X out of frame!! (%u>%u %u)\n",
-              regs->name, access->reg, access->ymcycle, ymcycle,
-              access->ymcycle/ymcycle);
+              regs->name, (unsigned) access->reg, (unsigned) access->ymcycle,
+              (unsigned) ymcycle, (unsigned) (access->ymcycle/ymcycle) );
       break;
     }
 
@@ -654,8 +652,8 @@ static void do_tone_and_mixer(ym_t * const ym, cycle68_t ymcycle)
 
     if (access->ymcycle > ymcycle) {
       TRACE68(ym_cat,"%s access reg %X out of frame!! (%u>%u %u)\n",
-              regs->name, access->reg, access->ymcycle, ymcycle,
-              access->ymcycle/ymcycle);
+              regs->name, (unsigned) access->reg, (unsigned) access->ymcycle,
+              (unsigned) ymcycle, (unsigned) (access->ymcycle/ymcycle));
       break;
     }
 
@@ -1085,7 +1083,7 @@ int run(ym_t * const ym, s32 * output, const cycle68_t ymcycles)
 
 
 static
-int buffersize(const ym_t const * ym, const cycle68_t ymcycles)
+int buffersize(const ym_t * const ym, const cycle68_t ymcycles)
 {
   return ((ymcycles+7u) >> 3);
 }
@@ -1114,41 +1112,47 @@ int ym_puls_setup(ym_t * const ym)
   return err;
 }
 
+static int onchange_filter(const option68_t * opt, value68_t * val)
+{
+  int i;
+
+  TRACE68(ym_cat,"ym-2149: change YM filter model to -- *%s*\n", val->str);
+
+  for (i=0; i<n_filters; ++i) {
+    if (!strcmp68(val->str, filters[i].name)) {
+      default_filter = i;
+      msg68_notice("ym-2149: default filter -- *%s*\n",
+                   filters[default_filter].name);
+      return 0;
+    }
+  }
+  msg68_warning("ym-2149: invalid filter -- *%s*\n", val->str);
+  return -1;
+}
+
 /* command line options option */
 static const char prefix[] = "sc68-";
 static const char engcat[] = "ym-puls";
 static option68_t opts[] = {
-  { option68_STR, prefix, "ym-filter", engcat,
-    "set ym-2149 filter [none|boxcar|mixed|1-pole|2-pole*]" },
+  {
+    onchange_filter,
+    option68_STR, prefix, "ym-filter", engcat,
+    "set ym-2149 filter [2-poles*|mixed|1-pole|boxcar|none]"
+  },
 };
 
 int ym_puls_options(int argc, char ** argv)
 {
-  option68_t * opt;
   const int n_opts = sizeof(opts) / sizeof(*opts);
 
-  /* Add local options */
+  /* Register ym-puls options */
   option68_append(opts, n_opts);
+
+  /* Default option values */
+  option68_set(opts+0, filters[default_filter].name);
 
   /* Parse options */
   argc = option68_parse(argc,argv,0);
-
-  /* --sc68-ym-filter= */
-  opt = option68_get("ym-filter",1);
-  if (opt) {
-    int i;
-    for (i=0; i<n_filters; ++i) {
-      if (!strcmp68(opt->val.str, filters[i].name)) {
-        default_filter = i;
-        break;
-      }
-    }
-    if (i == n_filters) {
-      msg68_warning("ym-2149: invalid filter -- *%s*\n", opt->val.str);
-    }
-  }
-  msg68_notice("ym-2149: default filter -- *%s* \n",
-               filters[default_filter].name);
 
   return argc;
 }

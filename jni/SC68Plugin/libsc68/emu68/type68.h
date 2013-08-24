@@ -4,15 +4,13 @@
  * @brief     Type definitions header.
  * @date      1999/03/13
  * @author    Benjamin Gerard
- *
  */
+/* Time-stamp: <2013-08-04 23:06:48 ben> */
 
-/* $Id: type68.h 149 2011-08-25 04:10:37Z benjihan $ */
+/* Copyright (C) 1998-2013 Benjamin Gerard */
 
-/* Copyright (C) 1998-2009 Benjamin Gerard */
-
-#ifndef _EMU68_TYPE68_H_
-#define _EMU68_TYPE68_H_
+#ifndef EMU68_TYPE68_H
+#define EMU68_TYPE68_H
 
 #ifdef HAVE_STDINT_H
 # include <stdint.h>
@@ -25,16 +23,18 @@ typedef uint32_t uint_fast32_t;
 # include <sys/types.h>
 #endif
 
-/** @defgroup  emu68_lib_types  Type definitions
- *  @ingroup   emu68_lib
+/**
+ * @defgroup  emu68_lib_types  Type definitions
+ * @ingroup   emu68_lib
  *
  *   Definition of types used by EMU68 and SC68 related projects.
  *
- *  @{
+ * @{
  */
 
-/** @name Fixed size integer types.
- *  @{
+/**
+ * @name Fixed size integer types.
+ * @{
  */
 
 typedef  uint8_t  u8;      /**< Must be an unsigned 8 bit integer.  */
@@ -49,7 +49,9 @@ typedef  int32_t s32;      /**< Must be a    signed 32 bit integer. */
 typedef uint64_t u64;      /**< Must be an unsigned 64 bit integer. */
 typedef  int64_t s64;      /**< Must be a    signed 64 bit integer. */
 
-/** @} */
+/**
+ * @}
+ */
 
 #ifndef INT68_BITS
 
@@ -74,7 +76,7 @@ typedef           u64 uint68_t;    /**< 64bit unsigned integer type. */
 # error "invalid define INT68_BITS"
 #endif
 
-//typedef   unsigned int    uint_t; /**< natural unsigned int.           */
+typedef   unsigned int    uint_t; /**< natural unsigned int.           */
 typedef       uint68_t cycle68_t; /**< Type for cycle counters.        */
 typedef        int68_t  addr68_t; /**< Type for 68k memory addressing. */
 typedef struct  io68_s    io68_t; /**< IO chip instance type.          */
@@ -86,6 +88,9 @@ typedef void (*memfunc68_t)(emu68_t * const);
 /**
  * @}
  */
+
+#ifdef EMU68_EXPORT
+/* Should be only needed when compiling emu68 */
 
 #define BASE_FIX (sizeof(int68_t)<<3) /* number of bit of int68_t type. */
 #define BYTE_FIX (BASE_FIX-8)  /* shift to normalize byte operands. */
@@ -109,4 +114,6 @@ typedef void (*memfunc68_t)(emu68_t * const);
 #define NRM_WORD_ONE ( (int68_t) ( (int68_t) 0x00000001 << WORD_FIX ) )
 #define NRM_LONG_ONE ( (int68_t) ( (int68_t) 0x00000001 << LONG_FIX ) )
 
-#endif /* #ifndef _EMU68_TYPE68_H_ */
+#endif
+
+#endif

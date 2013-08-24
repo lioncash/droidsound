@@ -1,0 +1,94 @@
+This is ../../../sc68-code/unice68/unice68.info, produced by makeinfo
+version 4.8 from ../../../sc68-code/unice68/unice68.texi.
+
+INFO-DIR-SECTION sc68 - /|\ Atari ST and C= Amiga music player
+START-INFO-DIR-ENTRY
+* unice68: (unice68).             ice packer/depacker program and library.
+END-INFO-DIR-ENTRY
+
+   This is Edition 20130728 of `The `unice68' Manual', for `unice68'
+version 20130728, last updated 24 August 2013.
+
+   Copyright (C) 1998-2009 Benjamin Gerard
+
+   Permission is granted to make and distribute verbatim copies of this
+manual upon condition that the  provided the copyright notice and this
+permission notice are preserved on all copies.
+
+
+File: unice68.info,  Node: Top,  Next: Unice68 Program,  Prev: (dir),  Up: (dir)
+
+`unice68': ice packer/depacker program and library
+**************************************************
+
+The `unice68' is used to depacker ice packed files.
+
+* Menu:
+
+* Unice68 Program::             The `unice68' Program
+* Options Summary::             List of command line options
+* Parameters::                  Input and output
+
+     manual for unice68 version 20130728 edited on 24 August 2013
+
+
+File: unice68.info,  Node: Unice68 Program,  Next: Options Summary,  Prev: Top,  Up: Top
+
+The `unice68' Program
+=====================
+
+Description
+===========
+
+`unice68' is a program to depack ice packed files.
+
+Synopsis
+========
+
+     `unice68 [OPTION] [--] [<input> [<output>]]'
+
+
+File: unice68.info,  Node: Options Summary,  Next: Parameters,  Prev: Unice68 Program,  Up: Top
+
+Options Summary
+===============
+
+``-h''
+``--help''
+     Display help message and exit.
+
+``-V''
+``--version''
+     Display version and copyright and exit.
+
+``-v''
+``--verbose''
+     Be more verbose (multiple use possible).
+
+``-q''
+``--quiet''
+     Be less verbose (multiple use possible).
+
+
+File: unice68.info,  Node: Parameters,  Prev: Options Summary,  Up: Top
+
+Parameters
+==========
+
+`<input>'
+     an ice packed file. If `<input>' parameter is `-' or missing;
+     stdin is used.
+
+`<output>'
+     a regular file created containing depacked data. If `<output>'
+     parameter is `-' or missing; stdout is used.
+
+
+
+Tag Table:
+Node: Top660
+Node: Unice68 Program1140
+Node: Options Summary1425
+Node: Parameters1813
+
+End Tag Table

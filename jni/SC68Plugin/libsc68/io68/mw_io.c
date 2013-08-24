@@ -3,9 +3,9 @@
  * @brief   MicroWire I/O plugin (STE soundchip)
  * @author  http://sourceforge.net/users/benjihan
  *
- * Copyright (C) 1998-2011 Benjamin Gerard
+ * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2011-10-06 14:15:44 ben>
+ * Time-stamp: <2013-08-03 15:34:42 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -76,7 +76,7 @@ static void mwio_readB(io68_t * const io)
 {
   io->emu68->bus_data =
     _mw_readB((mw_io68_t *)io, io->emu68->bus_addr);
-/*   msg68_debug("microwire: read BYTE [%06x] => %02x\n", */
+/*   msg68_debug("ste-mw : read BYTE [%06x] => %02x\n", */
 /*               io->emu68->bus_addr & 0xFFFFFF, */
 /*               io->emu68->bus_data & 0xFFFFFFFF); */
 }
@@ -85,7 +85,7 @@ static void mwio_readW(io68_t * const io)
 {
   io->emu68->bus_data =
     _mw_readW((mw_io68_t *)io, io->emu68->bus_addr);
-/*   msg68_debug("microwire: read WORD [%06x] => %04x\n", */
+/*   msg68_debug("ste-mw : read WORD [%06x] => %04x\n", */
 /*               io->emu68->bus_addr & 0xFFFFFF, */
 /*               io->emu68->bus_data & 0xFFFF); */
 }
@@ -97,7 +97,7 @@ static void mwio_readL(io68_t * const io)
     |
     ( _mw_readW((mw_io68_t *)io, io->emu68->bus_addr+2)       )
     ;
-/*   msg68_debug("microwire: read LONG [%06x] => %08x\n", */
+/*   msg68_debug("ste-mw : read LONG [%06x] => %08x\n", */
 /*               io->emu68->bus_addr & 0xFFFFFF, */
 /*               io->emu68->bus_data & 0xFFFFFFFF); */
 }
@@ -166,14 +166,14 @@ static void _mw_writeL(mw_io68_t * const mwio, const u8 addr, int68_t v)
 
   } else if ( !(addr & 1) ) {
     /* Any other (even) long access are translate to word access */
-    _mw_writeW(mwio, addr+0, v);
-    _mw_writeW(mwio, addr+2, v >> 16);
+    _mw_writeW(mwio, addr+0, v >> 16);
+    _mw_writeW(mwio, addr+2, v);
   }
 }
 
 static void mwio_writeB(io68_t * const io)
 {
-/*   msg68_debug("microwire: write BYTE [%06x] <= %02x\n", */
+/*   msg68_debug("ste-mw : write BYTE [%06x] <= %02x\n", */
 /*               io->emu68->bus_addr & 0xFFFFFF, */
 /*               io->emu68->bus_data & 0xFF); */
   _mw_writeB((mw_io68_t *)io,
@@ -182,7 +182,7 @@ static void mwio_writeB(io68_t * const io)
 
 static void mwio_writeW(io68_t * const io)
 {
-/*   msg68_debug("microwire: write WORD [%06x] <= %04x\n", */
+/*   msg68_debug("ste-mw : write WORD [%06x] <= %04x\n", */
 /*               io->emu68->bus_addr & 0xFFFFFF, */
 /*               io->emu68->bus_data & 0xFFFF); */
   _mw_writeW((mw_io68_t *)io,
@@ -191,7 +191,7 @@ static void mwio_writeW(io68_t * const io)
 
 static void mwio_writeL(io68_t * const io)
 {
-/*   msg68_debug("microwire: write LONG [%06x] <= %08x\n", */
+/*   msg68_debug("ste-mw : write LONG [%06x] <= %08x\n", */
 /*               io->emu68->bus_addr & 0xFFFFFF, */
 /*               io->emu68->bus_data & 0xFFFFFFFF); */
   _mw_writeL((mw_io68_t *)io,

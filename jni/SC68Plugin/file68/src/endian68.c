@@ -28,7 +28,7 @@
 # include "config.h"
 #endif
 #include "file68_api.h"
-#include "endian68.h"
+#include "file68_ord.h"
 
 int endian68_byte_order(void)
 {

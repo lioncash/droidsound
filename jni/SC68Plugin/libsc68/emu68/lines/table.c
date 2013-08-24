@@ -1,13 +1,11 @@
 /* table.c - EMU68 generated code by
- * gen68 2009-06-12 07:20:25
- * Copyright (C) 1998-2009 Benjamin Gerard
+ * gen68 2013-05-25 00:26:49
+ * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * $Id: table.c 117 2009-06-29 02:24:08Z benjihan $
+ * $Id: table.c 228 2013-05-24 23:28:08Z benjihan $
  */
 
-/* Line 10: d[reg0] */
-
-#include "../struct68.h"
+#include "struct68.h"
 
 #ifndef EMU68_MONOLITIC
 EMU68_EXTERN linefunc68_t

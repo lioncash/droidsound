@@ -4,12 +4,10 @@
  * @author    Benjamin Gerard
  * @date      1998/06/18
  * @brief     Paula IO plugin header.
- *
  */
+/* Time-stamp: <2013-08-01 19:33:11 ben> */
 
-/* $Id: paula_io.h 126 2009-07-15 08:58:51Z benjihan $ */
-
-/* Copyright (C) 1998-2009 Benjamin Gerard */
+/* Copyright (C) 1998-2013 Benjamin Gerard */
 
 #ifndef _IO68_PAULA_IO_H_
 #define _IO68_PAULA_IO_H_

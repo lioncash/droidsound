@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2001-2011 Benjamin Gerard
  *
- * Time-stamp: <2011-10-02 16:04:20 ben>
+ * Time-stamp: <2013-07-22 00:43:13 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -27,8 +27,8 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-#include "error68.h"
-#include "msg68.h"
+#include "file68_err.h"
+#include "file68_msg.h"
 
 #include <string.h>
 

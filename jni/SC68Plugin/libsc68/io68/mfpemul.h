@@ -4,10 +4,10 @@
  * @author    Benjamin Gerard
  * @date      1999/03/20
  * @brief     MFP-68901 emulator header.
- *
  */
+/* Time-stamp: <2013-07-26 03:08:28 ben> */
 
-/* Copyright (C) 1998-2011 Benjamin Gerard */
+/* Copyright (C) 1998-2013 Benjamin Gerard */
 
 #ifndef _IO68_MFPEMUL_H_
 #define _IO68_MFPEMUL_H
@@ -21,13 +21,13 @@
  *  @brief     MFP-68901 (Atari-ST timers) emulator.
  *
  *  Motorola Multi Function Peripheral is a multi purpose IO chip:
- *   - 8 bit parallele port.
- *   - Each bit has indepedant direction
- *   - Each bit can be a interruption source
- *   - 16 interruption sources
- *   - 4 universal timers (most part of this emulator)
- *   - Integrated serial interface.
- *   - 24 registers
+ * - 8 bit parallele port.
+ * - Each bit has indepedant direction
+ * - Each bit can be a interruption source
+ * - 16 interruption sources
+ * - 4 universal timers (most part of this emulator)
+ * - Integrated serial interface.
+ * - 24 registers
  *
  *  @p Registers
  *
@@ -86,7 +86,7 @@
  * - 08 @b ISRB (Interrupt In Service Register B)
  *
  *         In AEI mode the bit is cleared after the MFP has produced
- *         the interruptio n vector and a new event can trigger a new
+ *         the interruption vector and a new event can trigger a new
  *         interruption while another is been proced by the CPU. In
  *         SEI mode the bit is set and the interrupt routine have to
  *         clear it by writing this register (~1<<bit). While ISR bit
@@ -164,6 +164,29 @@
  * - 17 UDR,USART (DataRegister)
  *
  *      Data to send (write access) or recieve (read access)
+ *
+ *  @p MFP interrupt vector table
+ *
+ *   MSB of the vector number (the x value below) is stored in the MFP
+ *   vector register (register #11) bit#4 to bit#7.
+ *
+ * - x0 (initially disabled)-Parallel port interrupt handler
+ * - x1 (initially disabled)-RS-232 carrier detect pin handler
+ * - x2 (initially disabled)-RS-232 clear to send pin handler
+ * - x3 (initially disabled)-Graphics blitter chip done interrupt
+ *      handler (see below!)
+ * - x4 (initially disabled) MFP Timer D done handler
+ * - x5 200Hz System Clock (MFP Timer C) Handler
+ * - x6 Keyboard or MIDI interrupt handler
+ * - x7 (initially disabled) Floppy/hard disk data request handler
+ * - x8 (initially disabled) Horizontal blank counter/MFP Timer B
+ * - x9 RS-232 transmit error handler
+ * - xA RS-232 transmit buffer empty handler
+ * - xB RS-232 receive error handler
+ * - xC RS-232 receive buffer full handler
+ * - xD (initially disabled) MFP timer A
+ * - xE (initially disabled) RS-232 ring detect pin
+ * - xF (initially disabled) Monochrome/color monitor change detecter
  *
  *  @p Programming MFP Timers
  *
@@ -308,7 +331,7 @@ IO68_EXTERN
  *  @retval  0  Success
  *  @retval -1  Failure
  */
-int mfp_reset(mfp_t * const mfp, bogoc68_t bogoc);
+int mfp_reset(mfp_t * const mfp, const bogoc68_t bogoc);
 
 IO68_EXTERN
 /** Destroy mfp instance.
@@ -365,7 +388,7 @@ IO68_EXTERN
  *  @retval 0 no pending interruption.
  *
  */
-interrupt68_t * mfp_interrupt(mfp_t * const mfp, bogoc68_t bogoc);
+interrupt68_t * mfp_interrupt(mfp_t * const mfp, const bogoc68_t bogoc);
 
 IO68_EXTERN
 /** Get cycle for the next MFP interruption.

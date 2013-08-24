@@ -1,11 +1,11 @@
 /**
  * @ingroup   emu68_devel
- * @file      emu68/ym_puls.h
+ * @file      io68/ym_puls.h
+ * @brief     sc68 pulse YM-2149 emulator header.
  * @author    Benjamin Gerard
  * @date      2009/02/10
- * @brief     sc68 pulse YM-2149 emulator header.
- *
  */
+/* Time-stamp: <2013-08-07 13:44:31 ben> */
 
 IO68_EXTERN
 /** Setup function for sc68 pulse ym engine.
