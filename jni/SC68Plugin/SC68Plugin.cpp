@@ -77,6 +77,9 @@ JNIEXPORT jlong JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1load(JNIEn
             __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "Init failed");
             return 0;
         }
+
+        /* Init resets all paths */
+        rsc68_set_share(data_dir);
     }
 
     sc68_t *sc68 = sc68_create(NULL);
@@ -236,13 +239,9 @@ JNIEXPORT jint JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1getIntInfo(
 
 JNIEXPORT void JNICALL Java_com_ssb_droidsound_plugins_SC68Plugin_N_1setDataDir(JNIEnv *env, jclass klass, jstring dataDir)
 {
-    static char data_dir[1024];
     const char *filename = env->GetStringUTFChars(dataDir, 0);
     __android_log_print(ANDROID_LOG_VERBOSE, "SC68Plugin", "DataDir: %s", filename);
-
     strcpy(data_dir, filename);
-    rsc68_set_share(data_dir);
-
     env->ReleaseStringUTFChars(dataDir, filename);
 }
 
