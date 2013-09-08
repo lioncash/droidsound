@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2001-2013 Benjamin Gerard
  *
- * Time-stamp: <2013-08-06 00:51:35 ben>
+ * Time-stamp: <2013-08-30 10:29:15 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -43,9 +43,9 @@ static unsigned int msg68_bitmsk =
 #if defined(DEBUGMSG_MASK)
   DEBUGMSG_MASK
 #elif defined(DEBUG)
-  (1 << msg68_TRACE) - 1
+  (1 << (msg68_DEBUG+1)) - 1
 #else
-  (1 << msg68_NOTICE) - 1
+  (1 << (msg68_INFO+1)) - 1
 #endif
   ;
 
@@ -87,8 +87,8 @@ void msg68x_va(int cat, void * cookie, const char * fmt, va_list list)
     default:
       if (cat >= 0) {
         const int bit = cat & (MAX_CATEGORIES-1);
-        const int msk = (1 << bit) | ( (bit > msg68_TRACE) << msg68_TRACE);
-        if ( ! (msg68_bitmsk & msk ) )
+        const int msk = (1 << bit) | ((bit > msg68_TRACE) << msg68_TRACE);
+        if ( ! (msg68_bitmsk & msk) )
           break;
       } else break;
     case msg68_ALWAYS:
@@ -316,13 +316,15 @@ void msg68_cat_free(int category)
 /* Set all predefined categories mask according to given level. */
 int msg68_cat_level(int category)
 {
-  int ret = -(category < msg68_CRITICAL || category > msg68_TRACE);
-  if (!ret) {
-    unsigned int v = msg68_bitmsk & ~((1<<(msg68_TRACE+1))-1);
-    v |= (1<<(category+1))-1;
-    msg68_bitmsk = v;
+  if (category == msg68_NEVER)
+    msg68_bitmsk &= ~((1<<(msg68_TRACE+1))-1);
+  else if (category == msg68_ALWAYS)
+    msg68_bitmsk |= ((1<<(msg68_TRACE+1))-1);
+  else if (category >= msg68_CRITICAL && category <= msg68_TRACE) {
+    msg68_bitmsk &= ~((1<<(msg68_TRACE+1))-1);
+    msg68_bitmsk |= (1<<(category+1))-1;
   }
-  return ret;
+  return msg68_bitmsk;
 }
 
 /* Get info on category */

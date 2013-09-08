@@ -5,7 +5,7 @@
  * @author    Benjamin Gerard
  * @date      2009/05/18
  */
-/* Time-stamp: <2013-08-04 23:10:15 ben>  */
+/* Time-stamp: <2013-09-03 17:33:18 ben>  */
 
 /* Copyright (C) 1998-2013 Benjamin Gerard */
 
@@ -59,8 +59,9 @@ void inl_stop68(emu68_t * const emu68)
     exception68(emu68, HWSTOP_VECTOR, -1);
 
     /* Entering the instruction in trace mode will disable the stop
-     * status. */
-    if ( (emu68->save_sr & SR_T) && emu68->status == EMU68_STP)
+     * status.
+     */
+    if ( (emu68->inst_sr & SR_T) && emu68->status == EMU68_STP)
       emu68->status = EMU68_NRM;
   } else {
     /* User mode triggers a privilege violation exception */

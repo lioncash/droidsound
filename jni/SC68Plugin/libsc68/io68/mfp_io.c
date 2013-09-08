@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2011 Benjamin Gerard
  *
- * Time-stamp: <2013-08-12 19:02:16 ben>
+ * Time-stamp: <2013-09-01 11:05:04 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -30,6 +30,7 @@
 
 #include "mfp_io.h"
 #include "mfpemul.h"
+#include <assert.h>
 
 #ifdef DEBUG
 # include <sc68/file68_msg.h>
@@ -61,6 +62,8 @@ static const char * const regnames[] = {
   "UDR",  /* 2F - UDR,USART (DataRegister)               */
 };
 
+#define MYHD "mfp    : "
+
 static const char * regname(int reg)
 {
   if (! (reg & 1) )
@@ -72,10 +75,17 @@ static const char * regname(int reg)
 }
 
 extern int mfp_cat;
-# define REPORTR(N)   TRACE68(mfp_cat, "mfp: R [%02x] -> $%02x (%s)\n", N, mfp->map[N], regname(N))
-# define REPORTW(N,V) TRACE68(mfp_cat, "mfp: W [%02x] <- $%02x (%s)\n", N, V, regname(N))
+
+# define REPORTR(N) REPORTA(N,mfp->map[N])
+# define REPORTA(N,V)                                   \
+  TRACE68(mfp_cat, MYHD "R [%02x]  > $%02x (%s)\n",     \
+          N, (unsigned) (V), regname(N))
+# define REPORTW(N,V)                                   \
+  TRACE68(mfp_cat, MYHD "W [%02x] <  $%02x (%s)\n",     \
+          N, (unsigned)(V), regname(N))
 #else
 # define REPORTR(N)
+# define REPORTA(N,V)
 # define REPORTW(N,V)
 #endif
 
@@ -88,172 +98,260 @@ typedef struct {
 #define cpu2bogo(mfpio,cycle) ((bogoc68_t)((cycle)*192u))
 #define bogo2cpu(mfpio,bogoc) ((cycle68_t)((bogoc)/* +191u */)/192u)
 
-/* 0  GPIP   General purpose I/O */
+/* 00/01 GPIP   General Purpose I/O */
 static int68_t mfpr_01(mfp_t * const mfp, const bogoc68_t bogoc) {
   REPORTR(GPIP);
   return mfp->map[GPIP];
 }
 static void mfpw_01(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
-  REPORTW(GPIP,(unsigned)v);
+  REPORTW(GPIP,v);
   mfp->map[GPIP] = v;
 }
 
-/* 1  AER    Active edge register */
+/* 01/03 AER    Active Edge Register */
 static int68_t mfpr_03(mfp_t * const mfp, const bogoc68_t bogoc) {
   REPORTR(AER);
   return mfp->map[AER];
 }
 static void mfpw_03(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
   /* $$$ Writing AER might trigger an interrupt */
-  REPORTW(AER,(unsigned)v);
+  REPORTW(AER,v);
   mfp->map[AER]=v;
 }
 
-/* 2  DDR    Data direction register */
+/* 02/05  DDR   Data Direction Register */
 static int68_t mfpr_05(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(DDR);
   return mfp->map[DDR];
 }
 static void mfpw_05(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  REPORTW(DDR,v);
   mfp->map[DDR] = v;
 }
 
-/* 3  IERA   Interrupt enable register A */
+/* 03/07 IERA   Interrupt Enable Register A */
 static int68_t mfpr_07(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(IERA);
   return mfp->map[IERA];
 }
 static void mfpw_07(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
   /* Disabling a line clears pending interrupt on that line */
+  REPORTW(IERA,v);
   mfp->map[IPRA] &= v;
   mfp->map[IERA]  = v;
+  REPORTW(IPRA,mfp->map[IPRA]);
 }
 
-/* 4  IERB   Interrupt enable register B */
+/* 04/09  IERB  Interrupt Enable Register B */
 static int68_t mfpr_09(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(IERB);
   return mfp->map[IERB];
 }
 static void mfpw_09(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
   /* Disabling a line clears pending interrupt on that line */
+  REPORTW(IERB,v);
   mfp->map[IPRB] &= v;
   mfp->map[IERB]  = v;
+  REPORTW(IPRB,mfp->map[IPRB]);
 }
 
-/* 5  IPRA   Interrupt pending register A */
+/* 05/0B IPRA   Interrupt Pending Register A */
 static int68_t mfpr_0B(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(IPRA);
   return mfp->map[IPRA];
 }
 static void mfpw_0B(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
   /* Writing IP register only clears pending interrupts. */
   mfp->map[IPRA] &= v;
+  REPORTW(IPRA,mfp->map[IPRA]);
 }
 
-/* 6  IPRB   Interrupt pending register B */
+/* 06/0D  IPRB  Interrupt Pending Register B */
 static int68_t mfpr_0D(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(IPRB);
   return mfp->map[IPRB];
 }
 static void mfpw_0D(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
   /* Writing IP register only clears pending interrupts. */
-  mfp->map[IPRB] &=v;
+  mfp->map[IPRB] &= v;
+  REPORTW(IPRA,mfp->map[IPRB]);
 }
 
-/* 7  ISRA   Interrupt in-service register A */
+/* 07/0F ISRA   Interrupt In-Service Register A */
 static int68_t mfpr_0F(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(ISRA);
   return mfp->map[ISRA];
 }
 static void mfpw_0F(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  REPORTW(ISRA,v);
   mfp->map[ISRA] = v;
 }
 
-/* 8  ISRB   Interrupt in-service register B */
+/* 08/11 ISRB   Interrupt In-Service Register B */
 static int68_t mfpr_11(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(ISRB);
   return mfp->map[ISRB];
 }
 static void mfpw_11(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  REPORTW(ISRB,v);
   mfp->map[ISRB] = v;
 }
 
-/* 9  IMRA   Interrupt mask register A */
+/* 09/13 IMRA   Interrupt Mask Register A */
 static int68_t mfpr_13(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(IMRA);
   return mfp->map[IMRA];
 }
 static void mfpw_13(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  REPORTW(IMRA,v);
   mfp->map[IMRA] = v;
 }
 
-/* A  IMRB   Interrupt mask register B */
+/* 0A/15 IMRB   InterrupT Mask Register B */
 static int68_t mfpr_15(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(IMRB);
   return mfp->map[IMRB];
 }
 static void mfpw_15(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  REPORTW(IMRB,v);
   mfp->map[IMRB] = v;
 }
 
-/* B  VR     Vector register */
+/* 0B/17 VR     Vector Register */
 static int68_t mfpr_17(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(VR);
   return mfp->map[VR];
 }
 static void mfpw_17(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
+  REPORTW(VR,v);
   mfp->map[VR] = v;
 }
 
-/* C  TACR   Timer A control register */
+/* 0C/19 TACR   Timer A Control Register */
 static int68_t mfpr_19(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(TACR);
   return mfp->map[TACR];
 }
+static void mfpw_19(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
+{
+  REPORTW(TACR,v);
+  mfp_put_tcr(mfp, TIMER_A, v, bogoc);
+}
 
-/* D  TBCR   Timer B control register */
+/* 0D/1B TBCR   Timer B Control Register */
 static int68_t mfpr_1B(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(TBCR);
   return mfp->map[TBCR];
 }
-/* E  TCDCR  Timers C and D control registers */
+static void mfpw_1B(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
+{
+  REPORTW(TBCR,v);
+  mfp_put_tcr(mfp, TIMER_B, v, bogoc);
+}
+
+/* 0E/1D TCDCR  Timers C and D Control Register */
 static int68_t mfpr_1D(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(TCDCR);
   return mfp->map[TCDCR];
 }
+static void mfpw_1D(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
+{
+  REPORTW(TCDCR,v);
+  mfp_put_tcr(mfp, TIMER_C, v, bogoc);
+}
 
-/* F  TADR   Timer A data register */
+/* 0F/1F TADR   Timer A Data Register */
 static int68_t mfpr_1F(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp_get_tdr(mfp, TIMER_A, bogoc);
+  const int68_t ret = mfp_get_tdr(mfp, TIMER_A, bogoc);
+  REPORTA(TADR,ret);
+  return ret;
+}
+static void mfpw_1F(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
+{
+  REPORTW(TADR,v);
+  mfp_put_tdr(mfp, TIMER_A, v, bogoc);
 }
 
-/* 10 TBDR   Timer B data register */
+/* 10/21 TBDR   Timer B Data Register */
 static int68_t mfpr_21(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp_get_tdr(mfp, TIMER_B, bogoc);
+  const int68_t ret = mfp_get_tdr(mfp, TIMER_B, bogoc);
+  REPORTA(TBDR,ret);
+  return ret;
 }
-/* 11 TCDR   Timer C data register */
-static int68_t mfpr_23(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp_get_tdr(mfp, TIMER_C, bogoc);
-}
-/* 12 TDDR   Timer D data register */
-static int68_t mfpr_25(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp_get_tdr(mfp, TIMER_D, bogoc);
+static void mfpw_21(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
+{
+  REPORTW(TBDR,v);
+  mfp_put_tdr(mfp, TIMER_B, v, bogoc);
 }
 
-/* 13 SCR    Sync character register */
+/* 11/23 TCDR   Timer C Data Register */
+static int68_t mfpr_23(mfp_t * const mfp, const bogoc68_t bogoc) {
+  const int68_t ret = mfp_get_tdr(mfp, TIMER_C, bogoc);
+  REPORTA(TCDR,ret);
+  return ret;
+}
+static void mfpw_23(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
+{
+  REPORTW(TCDR,v);
+  mfp_put_tdr(mfp, TIMER_C, v, bogoc);
+}
+
+/* 12/25 TDDR   Timer D Data Register */
+static int68_t mfpr_25(mfp_t * const mfp, const bogoc68_t bogoc) {
+  const int68_t ret = mfp_get_tdr(mfp, TIMER_D, bogoc);
+  REPORTA(TDDR,ret);
+  return ret;
+}
+static void mfpw_25(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
+{
+  REPORTW(TDDR,v);
+  mfp_put_tdr(mfp, TIMER_D, v, bogoc);
+}
+
+/* 13/27 SCR    Sync Character Register */
 static int68_t mfpr_27(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(SCR);
   return mfp->map[SCR];
 }
 static void mfpw_27(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc) {
   mfp->map[SCR] = v;
 }
 
-
-
-/* 14 UCR    USART control register */
+/* 14/29 UCR    USART Control Register */
 static int68_t mfpr_29(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x29];
+  REPORTR(UCR);
+  return mfp->map[UCR];
 }
-/* 15 RSR    Receiver status register */
-static int68_t mfpr_2B(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x2B];
-}
-/* 16 TSR    Transmitter status register */
-static int68_t mfpr_2D(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x2D];
-}
-/* 17 UDR    USART data register */
-static int68_t mfpr_2F(mfp_t * const mfp, const bogoc68_t bogoc) {
-  return mfp->map[0x2F];
-}
+static void mfpw_29(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
+{ mfp->map[UCR]=v; }
 
+/* 15/2B RSR    Receiver Status Register */
+static int68_t mfpr_2B(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(RSR);
+  return mfp->map[RSR];
+}
+static void mfpw_2B(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
+{ mfp->map[RSR]=v; }
+
+
+/* 16/2D TSR    Transmitter Status Register */
+static int68_t mfpr_2D(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(TSR);
+  return mfp->map[TSR];
+}
+static void mfpw_2D(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
+{ mfp->map[TSR]=v; }
+
+/* 17/2F UDR    USART Data Register */
+static int68_t mfpr_2F(mfp_t * const mfp, const bogoc68_t bogoc) {
+  REPORTR(UDR);
+  return mfp->map[UDR];
+}
+static void mfpw_2F(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
+{ mfp->map[UDR]=v; }
+
+
+/* Following access are not real MFP port. Not sure what happen. */
 static int68_t mfpr_31(mfp_t * const mfp, const bogoc68_t bogoc) {
   return mfp->map[0x31];
 }
@@ -278,37 +376,6 @@ static int68_t mfpr_3D(mfp_t * const mfp, const bogoc68_t bogoc) {
 static int68_t mfpr_3F(mfp_t * const mfp, const bogoc68_t bogoc) {
   return mfp->map[0x3F];
 }
-
-static void mfpw_19(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp_put_tcr(mfp, TIMER_A, v, bogoc); }
-
-static void mfpw_1B(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp_put_tcr(mfp, TIMER_B, v, bogoc); }
-
-static void mfpw_1D(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp_put_tcr(mfp, TIMER_C, v, bogoc); }
-
-static void mfpw_1F(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp_put_tdr(mfp, TIMER_A, v, bogoc); }
-
-static void mfpw_21(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp_put_tdr(mfp, TIMER_B, v, bogoc); }
-
-static void mfpw_23(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp_put_tdr(mfp, TIMER_C, v, bogoc); }
-
-static void mfpw_25(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp_put_tdr(mfp, TIMER_D, v, bogoc); }
-
-
-static void mfpw_29(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x29]=v; }
-static void mfpw_2B(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x2B]=v; }
-static void mfpw_2D(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x2D]=v; }
-static void mfpw_2F(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
-{ mfp->map[0x2F]=v; }
 static void mfpw_31(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
 { mfp->map[0x31]=v; }
 static void mfpw_33(mfp_t * const mfp, const int68_t v, const bogoc68_t bogoc)
@@ -440,65 +507,12 @@ static interrupt68_t * mfpio_interrupt(io68_t * const io,
   interrupt68_t * const inter =
     mfp_interrupt(&mfpio->mfp, bogoc);
   if (inter) {
-#ifdef DEBUG
-    if (inter->cycle >= bogoc) {
-      *(int *)0 = 0xDEADBEEF;
-    }
-#endif
-
+    assert(inter->cycle < bogoc);
     inter->cycle = bogo2cpu(io,inter->cycle);
-
-#ifdef DEBUG
-    if (inter->cycle >= cycle) {
-      *(int *)0 = 0xDEADBEEF;
-    }
-
-    /* Happen in 'Wave is my Passion.sc68' with the version +191u
-
-       Register dump:
-       CS:0073 SS:007b DS:007b ES:007b FS:0033 GS:003b
-       EIP:0040b38c ESP:008dfd70 EBP:008dfd88 EFLAGS:00010246(- 00 -RIZP1)
-       EAX:deadbeef EBX:01d58000 ECX:00164c88 EDX:00027200
-       ESI:00027200 EDI:0007fff0
-
-       Stack dump:
-       0x008dfd70:  00164bec 01d58000 00000005 004071a1
-       0x008dfd80:  00164c54 00166618 008dfda8 004078f5
-       0x008dfd90:  00164b90 00027200 00008008 00164408
-       0x008dfda0:  00164408 00000000 008dfe08 004042cb
-       0x008dfdb0:  00166618 00027200 00000095 64703380
-       0x008dfdc0:  00008000 001fcec8 00000020 00000001
-
-       Backtrace:
-       =>1 0x0040b38c mfpio_interrupt+0x4c(io=0x164b90, cycle=0x27200)
-       [./libsc68/io68/mfp_io.c:348]
-       in sc68 (0x008dfd88)
-
-       2 0x004078f5 emu68_level_and_interrupt+0x165(emu68=0x166618,
-       cycleperpass=0x27200)
-       [./libsc68/emu68/emu68.c:341]
-       in sc68 (0x008dfda8)
-
-       0x0040b38c mfpio_interrupt+0x4c [./libsc68/io68/mfp_io.c:348]
-       in sc68: movl %eax,0x00000000 348 *(int *)0 = 0xDEADBEEF;
-       Modules:
-    */
-
-#endif
-
+    assert(inter->cycle < cycle);
   }
   return inter;
 }
-
-/* static cycle68_t mfpio_nextinterrupt(io68_t * const io, */
-/*                                   const cycle68_t cycle) */
-/* { */
-/*   mfp_io68_t * const mfpio = (mfp_io68_t * const)io; */
-/*   cycle68_t const ret = mfp_nextinterrupt(&mfpio->mfp); */
-/*   return ret == IO68_NO_INT */
-/*     ? IO68_NO_INT */
-/*     : bogo2cpu(io,ret); */
-/* } */
 
 static void mfpio_adjust_cycle(io68_t * const io,
                                const cycle68_t cycle)

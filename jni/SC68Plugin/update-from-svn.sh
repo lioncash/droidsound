@@ -36,3 +36,5 @@ find "$TARGET" -name '*~' -type f -exec rm -rf '{}' ';'
 
 echo "Adding new file set to git..."
 git add "$TARGET"
+
+echo "If any files turn out to be missing, see if they can be found from the build directory."

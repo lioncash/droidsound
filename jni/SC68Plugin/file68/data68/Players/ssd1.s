@@ -2,7 +2,7 @@
 ;;; 
 ;;; by Benjamin Gerard <http://sourceforge.net/users/benjihan>
 ;;;
-;;; Time-stamp: <2011-09-12 15:18:50 ben>
+;;; Time-stamp: <2013-09-02 12:18:33 ben>
 ;;;
 ;;; More info on sc68 ssd1 in file custom/ssd1-sc68.s
 
@@ -12,7 +12,7 @@
 	bra	player+4
 	bra	player+8
 	
-;; something gor wrong with relocation ... probably as68 screwing up.
+;; something got wrong with relocation ... probably as68 screwing up.
 
 if 0
 {

@@ -3,9 +3,9 @@
  * @brief   YM-2149 emulator - YM-2149 pulse engine
  * @author  http://sourceforge.net/users/benjihan
  *
- * Copyright (C) 1998-2011 Benjamin Gerard
+ * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2013-08-16 19:48:26 ben>
+ * Time-stamp: <2013-08-26 09:02:57 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -28,10 +28,12 @@
 # include "config.h"
 #endif
 
+#if 0
 #ifdef HAVE_CONFIG_OPTION68_H
 # include "config_option68.h"
 #else
 # include "default_option68.h"
+#endif
 #endif
 
 
@@ -73,17 +75,26 @@ static void filter_1pole(ym_t * const);
 static void filter_2pole(ym_t * const);
 static void filter_mixed(ym_t * const);
 static void filter_boxcar(ym_t * const);
+
+static const char f_2poles[] = "2-poles";
+static const char f_mixed[]  = "mixed";
+static const char f_1pole[]  = "1-pole";
+static const char f_boxcar[] = "boxcar";
+static const char f_none[]   = "none";
+
 static struct {
   const char * name;
   ym_puls_filter_t filter;
 } filters[] = {
-  { "2-poles", filter_2pole },   /* first is default */
-  { "mixed",   filter_mixed },
-  { "1-pole",  filter_1pole },
-  { "boxcar",  filter_boxcar},
-  { "none",    filter_none  },
+  { f_2poles, filter_2pole  },          /* first is default */
+  { f_mixed,  filter_mixed  },
+  { f_1pole,  filter_1pole  },
+  { f_boxcar, filter_boxcar },
+  { f_none,   filter_none   },
 };
-static const int n_filters = sizeof(filters) / sizeof(*filters);
+
+static const char * f_names[] = { f_2poles,f_mixed,f_1pole,f_boxcar,f_none };
+static const int n_filters = sizeof(filters)/sizeof(*filters);
 static int default_filter = 0;
 
 static int reset(ym_t * const ym, const cycle68_t ymcycle)
@@ -1114,32 +1125,26 @@ int ym_puls_setup(ym_t * const ym)
 
 static int onchange_filter(const option68_t * opt, value68_t * val)
 {
-  int i;
-
-  TRACE68(ym_cat,"ym-2149: change YM filter model to -- *%s*\n", val->str);
-
-  for (i=0; i<n_filters; ++i) {
-    if (!strcmp68(val->str, filters[i].name)) {
-      default_filter = i;
-      msg68_notice("ym-2149: default filter -- *%s*\n",
-                   filters[default_filter].name);
-      return 0;
-    }
+  if (val->num >= 0 && val->num < n_filters) {
+    default_filter = val->num;
+    msg68_notice("ym-2149: default filter -- *%s*\n",
+                 filters[default_filter].name);
+    return 0;
   }
-  msg68_warning("ym-2149: invalid filter -- *%s*\n", val->str);
+  msg68_warning("ym-2149: invalid filter -- *%d*\n", val->num);
   return -1;
 }
 
 /* command line options option */
-static const char prefix[] = "sc68-";
+/* static const char prefix[] = "sc68-"; */
+#define prefix 0
 static const char engcat[] = "ym-puls";
 static option68_t opts[] = {
-  {
-    onchange_filter,
-    option68_STR, prefix, "ym-filter", engcat,
-    "set ym-2149 filter [2-poles*|mixed|1-pole|boxcar|none]"
-  },
+  OPT68_ENUM(prefix,"ym-filter",engcat,
+             "set ym-2149 filter (pulse only)",
+             f_names,sizeof(f_names)/sizeof(*f_names),1,onchange_filter)
 };
+#undef prefix
 
 int ym_puls_options(int argc, char ** argv)
 {
@@ -1149,10 +1154,10 @@ int ym_puls_options(int argc, char ** argv)
   option68_append(opts, n_opts);
 
   /* Default option values */
-  option68_set(opts+0, filters[default_filter].name);
+  option68_iset(opts+0, default_filter, opt68_NOTSET, opt68_CFG);
 
   /* Parse options */
-  argc = option68_parse(argc,argv,0);
+  argc = option68_parse(argc,argv);
 
   return argc;
 }

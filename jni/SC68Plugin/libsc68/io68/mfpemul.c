@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2013-08-12 19:10:04 ben>
+ * Time-stamp: <2013-09-01 10:24:29 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -34,6 +34,8 @@
 
 #define cpp(V)      (V*prediv_width[(int)ptimer->tcr])
 #define timerfrq(V) ((8000000u*192u)/cpp(V))
+
+#define MYHD "mfp    : "
 
 #define MFP_VECTOR_BASE (mfp->map[0x17] & 0xF0)
 #define SEI             (mfp->map[0x17] & 0x08)
@@ -169,7 +171,7 @@ void reconf_timer(mfp_timer_t * const ptimer, int tcr, const bogoc68_t bogoc)
 
   if (bogoc > ptimer->cti) {
     TRACE68(mfp_cat,
-          "mfp: timer-%c -- reconf out of range -- @%u > cti:%u\n",
+          MYHD "timer-%c -- reconf out of range -- @%u > cti:%u\n",
           ptimer->def.letter, (unsigned) bogoc, (unsigned) ptimer->cti);
     ptimer->cti = bogoc + psw * ptimer->tdr_res;
   } else {
@@ -180,7 +182,7 @@ void reconf_timer(mfp_timer_t * const ptimer, int tcr, const bogoc68_t bogoc)
   ptimer->tcr = tcr;
 
   TRACE68(mfp_cat,
-          "mfp: timer-%c -- reconf @%u cti:%u cpp:%u -- %u:%uhz\n",
+          MYHD "timer-%c -- reconf @%u cti:%u cpp:%u -- %u:%uhz\n",
           ptimer->def.letter, (unsigned) bogoc,
           (unsigned) ptimer->cti, (unsigned) cpp(ptimer->tdr_res),
           (unsigned) frq, (unsigned) timerfrq(ptimer->tdr_res));
@@ -224,7 +226,7 @@ void resume_timer(mfp_timer_t * const ptimer, int tcr, bogoc68_t bogoc)
   ptimer->cti = bogoc + ptimer->tdr_cur * prediv_width[tcr] - ptimer->psc;
 
   TRACE68(mfp_cat,
-          "mfp: timer-%c  -- resume @%u cti:%u cpp:%u "
+          MYHD "timer-%c  -- resume @%u cti:%u cpp:%u "
           "tdr:%u/%u psw:%u(%u) -- %uhz\n",
           ptimer->def.letter, (unsigned) bogoc, (unsigned) ptimer->cti,
           (unsigned) cpp(ptimer->tdr_res),
@@ -291,14 +293,14 @@ void mfp_put_tdr(mfp_t * const mfp, int timer, int68_t v, const bogoc68_t bogoc)
   if (!ptimer->tcr) {
     ptimer->tdr_cur = v;
     TRACE68(mfp_cat,
-          "mfp: timer-%c -- reload TDR @%u -- %u\n",
+          MYHD "timer-%c -- reload TDR @%u -- %u\n",
             ptimer->def.letter, (unsigned) bogoc, (unsigned) ptimer->tdr_res);
   }
 #ifndef NDEBUG
   else if (ptimer->tcr && v != old_tdr) {
     uint_t old_frq = timerfrq(old_tdr);
     TRACE68(mfp_cat,
-            "mfp: timer-%c -- change @%u cti:%u psw:%u(%u) cpp:%u"
+            MYHD "timer-%c -- change @%u cti:%u psw:%u(%u) cpp:%u"
             " -- %u(%u) -> %u(%u)hz\n",
             ptimer->def.letter, (unsigned) bogoc, (unsigned) ptimer->cti,
             (unsigned) prediv_width[ptimer->tcr], (unsigned) ptimer->tcr,
@@ -342,7 +344,7 @@ void mfp_put_tcr(mfp_t * const mfp,
     /* $$$ Event mode + Pulse mode is NOT simulate yet ! */
     if (v&0x10) {
       TRACE68(mfp_cat,
-            "mfp: timer-%c -- mode not supported --  %02x\n",
+            MYHD "timer-%c -- mode not supported --  %02x\n",
             timer_def[timer].letter,(int)(u8)v);
       assert(0 == "mfp mode not supported");
     }
@@ -446,7 +448,7 @@ void mfp_adjust_bogoc(mfp_t * const mfp, const bogoc68_t bogoc)
     if (ptimer->tcr) {
       if (ptimer->cti < bogoc) {
         TRACE68(mfp_cat,
-              "mfp: timer-%c -- adjust -- cti:%u cycle:%u\n",
+              MYHD "timer-%c -- adjust -- cti:%u cycle:%u\n",
               ptimer->def.letter, (unsigned) ptimer->cti, (unsigned) bogoc);
       }
       assert(ptimer->cti >= bogoc);
@@ -456,7 +458,7 @@ void mfp_adjust_bogoc(mfp_t * const mfp, const bogoc68_t bogoc)
         ptimer->cti += cpp(ptimer->tdr_res);
       }
       if (ptimer->int_lost) {
-        msg68_critical("mfp: timer-%c -- adjust has lost interrupt -- %d\n",
+        msg68_critical(MYHD "timer-%c -- adjust has lost interrupt -- %d\n",
                        ptimer->def.letter, ptimer->int_lost);
         ptimer->int_lost = 0;
       }

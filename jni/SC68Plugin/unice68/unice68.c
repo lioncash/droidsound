@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2013-07-23 19:22:11 ben>
+ * Time-stamp: <2013-08-29 18:11:11 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -83,6 +83,9 @@ enum {
   E = -1                        /* Message level error   */
 };
 
+static inline int myabs(const int v) {
+  return v < 0 ? -v : v;
+}
 
 static void message_va(const int level, const char *fmt, va_list list)
 {
@@ -161,7 +164,7 @@ static int print_usage(void)
       ice_d_version/100, ice_d_version%100,
       ice_p_version/100, ice_p_version%100
       );
-  return 1;
+  return 0;
 }
 
 static int print_version(void)
@@ -235,9 +238,27 @@ static int exactread(void * buf, int len, FILE * inp, const char * name)
   return n;
 }
 
+/* return codes */
+enum {
+  ERR_OK        = 0,                    /* no error */
+  ERR_UNDEFINED,                        /* undefined  */
+  ERR_CLI,                              /* command line parsing */
+  ERR_INPUT,                           /* input file op */
+  ERR_OUTPUT,                          /* output file op */
+
+  ERR_UNPACK_NOT_ICE=10,      /* no ICE! header */
+  ERR_UNPACK_TOO_SMALL,       /* too snall for being ICE! */
+  ERR_UNPACK_SIZE_MISMATCH,   /* file size and header size mismatch */
+
+  ERR_PACKER = 20,
+  ERR_PACKER_SIZE_MISMATCH,
+  ERR_PACKER_OVERFLOW,
+  ERR_PACKER_STRESS,
+};
+
 int main(int argc, char *argv[])
 {
-  int err = 255;
+  int err = ERR_UNDEFINED;
   int mode = 0, oneop = 0, sens = 0;
 
   char * finp = 0, *fout = 0;
@@ -245,6 +266,7 @@ int main(int argc, char *argv[])
   FILE * inp = 0, * out = 0;
   int    ilen = -1, olen = -1;
   int   csize = 0, dsize = -1;
+  int    iextra = 0;
 
   int i, n, hread;
   char header[12];
@@ -296,7 +318,7 @@ int main(int argc, char *argv[])
         c = 'n';
       } else {
         error("invalid option `--%s'.\n", arg);
-        return 255;
+        return ERR_CLI;
       }
       arg += strlen(arg);
     }
@@ -317,14 +339,14 @@ int main(int argc, char *argv[])
         if (!sens) sens = 'p';
         if (mode != 0) {
           error("only one mode can be specified.\n");
-          return 255;
+          return ERR_CLI;
         }
         oneop = !!strchr("tTs", c);
         mode = c;
         break;
       default:
         error("invalid option `-%c'.\n", c);
-        return 255;
+        return ERR_CLI;
       }
       c = *arg++;
     } while (c);
@@ -338,7 +360,7 @@ int main(int argc, char *argv[])
 
   if (argc > 2 + !oneop) {
     error("too many argument -- `%s'\n", argv[2 + !oneop]);
-    return 255;
+    return ERR_CLI;
   }
   if (argc > 1) {
     finp = (argv[1][0] == '-' && !argv[1][1])
@@ -358,6 +380,7 @@ int main(int argc, char *argv[])
   /***********************************************************************
    * Input
    **********************************************************************/
+  err = ERR_INPUT;
   ilen = -1;
   if (!finp) {
     finp = "<stdin>";
@@ -366,9 +389,9 @@ int main(int argc, char *argv[])
     inp = fopen(finp,"rb");
     if (inp) {
       if (fseek(inp, 0, SEEK_END) != -1) {
-        long err = ftell(inp);
+        long pos = ftell(inp);
         if (fseek(inp, 0, SEEK_SET) != -1) {
-          ilen = err;
+          ilen = pos;
         }
       }
       if (ilen == -1) {
@@ -391,6 +414,7 @@ int main(int argc, char *argv[])
 
   if (hread < sizeof(header)) {
     if (sens == 'd') {
+      err = ERR_UNPACK_TOO_SMALL;
       error("input is too small, not ice packed.\n");
       goto error;
     }
@@ -404,6 +428,7 @@ int main(int argc, char *argv[])
     if (dsize == -1) {
       message(D,"Not ice\n");
       if (sens == 'd') {
+        err = ERR_UNPACK_NOT_ICE;
         error("input is not ice packed.\n");
         goto error;
       }
@@ -416,22 +441,29 @@ int main(int argc, char *argv[])
     }
 
     if (sens == 'd') {
-      if (ilen != -1 && ilen != csize) {
+      const int margin = 16;
+
+      if (ilen == -1 || ilen == csize)
+        ilen = csize;
+      else if ( myabs(ilen-csize) > margin ) {
+        err = ERR_UNPACK_SIZE_MISMATCH;
         error("file size (%d) and packed size (%d) do not match.\n",
-              ilen, csize+sizeof(header));
+              ilen, csize);
         goto error;
+      } else if (csize > ilen) {
+        iextra = csize - ilen;
       }
-      ilen = csize;
 
       if (mode == 't') {
-        err = dsize == -1;
+        err = ( dsize == -1 ) ? ERR_UNPACK_NOT_ICE : ERR_OK;
         goto error;
       }
     }
   }
 
+  err = ERR_INPUT;
   if (ilen != -1) {
-    if (ibuffer = myalloc(0,ilen,"input"), !ibuffer)
+    if (ibuffer = myalloc(0,ilen+iextra,"input"), !ibuffer)
       goto error;
     memcpy(ibuffer, header, hread);
     if (-1 == exactread(ibuffer+hread, ilen-hread, inp, finp))
@@ -462,6 +494,7 @@ int main(int argc, char *argv[])
   }
   message(D,"Have read all %d input bytes from `%s' ...\n", ilen, finp);
 
+  err = ERR_OUTPUT;
   olen = (sens == 'd') ? dsize : (ilen + (ilen>>1) + 1000);
   if (obuffer = myalloc(0, olen, "output"), !obuffer)
     goto error;
@@ -474,18 +507,21 @@ int main(int argc, char *argv[])
     message(V, "ice packing \"%s\" (%d bytes) ...\n", finp, ilen);
     err = unice68_packer(obuffer, olen, ibuffer, ilen);
     message(D, "packing returns with %d\n", err);
-    if (err == -1)
+    if (err == -1) {
+      err = ERR_PACKER;
       break;
+    }
     if (err > olen) {
       error("CRITICAL ! ice packer buffer overflow (%d > %d)\n",
             err , olen);
-      exit(66);
+      exit(ERR_PACKER_OVERFLOW);
     }
     csize = err;
     dsize = unice68_depacked_size(obuffer, &csize);
     if (dsize == -1 || dsize != ilen) {
       if (dsize != -1) dsize = ~dsize;
       error("size inconsistency (%d != %d)\n", dsize, ilen);
+      err = ERR_PACKER_SIZE_MISMATCH;
       goto error;
     }
     olen = csize;
@@ -513,60 +549,63 @@ int main(int argc, char *argv[])
       err = - (hash1 != hash2);
       verified = !err;
     }
-    if (err)
+    if (err) {
+      err = ERR_PACKER_STRESS;
       error("stress has failed\n");
+    }
     break;
 
-  default:
-    assert(!"!!!! internal error !!!! invalid sens");
-  }
+    default:
+      assert(!"!!!! internal error !!!! invalid sens");
+    }
 
 
 /***********************************************************************
  * Output
  **********************************************************************/
-  if (!oneop && !err) {
-    err = -1;
-    if (!fout) {
-      fout = "<stdout>";
-      out = freopen(0,"wb", stdout);
-    } else {
-      out = fopen(fout,"wb");
+    if (!oneop && !err) {
+      err = ERR_OUTPUT;
+      if (!fout) {
+        fout = "<stdout>";
+        out = freopen(0,"wb", stdout);
+      } else {
+        out = fopen(fout,"wb");
+      }
+      message(D,"output: %s (%d)\n", fout, olen);
+      if (!fout) {
+        syserror(fout);
+        goto error;
+      }
+      n = fwrite(obuffer,1,olen,out);
+      message(D,"Have written %d bytes to %s\n", n, fout);
+      if (n != olen) {
+        syserror(fout);
+        goto error;
+      }
+      err = 0;
     }
-    message(D,"output: %s (%d)\n", fout, olen);
-    if (!fout) {
-      syserror(fout);
-      goto error;
+
+  error:
+    if (inp && inp != stdin) {
+      fclose(inp);
     }
-    n = fwrite(obuffer,1,olen,out);
-    message(D,"Have written %d bytes to %s\n", n, fout);
-    if (n != olen) {
-      syserror(fout);
-      goto error;
+    if (out) {
+      fflush(out);
+      if (out != stdout) {
+        fclose(out);
+      }
     }
-    err = 0;
-  }
+    free(ibuffer);
+    free(obuffer);
 
-error:
-  if (inp && inp != stdin) {
-    fclose(inp);
-  }
-  if (out) {
-    fflush(out);
-    if (out != stdout) {
-      fclose(out);
+    if (!err) {
+      message(N,"ICE! compressed:%d uncompressed:%d ratio:%d%%%s\n",
+              csize, dsize, dsize?(csize+50)*100/dsize:-1,
+              verified ? " (verified)" : "");
     }
+
+    err &= 127;
+    message(D,"exit with code %d\n", err);
+
+    return err;
   }
-  free(ibuffer);
-  free(obuffer);
-
-  if (!err) {
-    message(N,"ICE! compressed:%d uncompressed:%d ratio:%d%%%s\n",
-            csize, dsize, (csize+50)*100/dsize,verified?" (verified)":"");
-  }
-
-  err &= 255;
-  message(D,"exit with code %d\n", err);
-
-  return err;
-}

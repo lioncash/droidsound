@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2013-08-17 05:40:35 ben>
+ * Time-stamp: <2013-09-08 13:39:58 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -28,12 +28,7 @@
 #include "config.h"
 #endif
 
-#ifdef HAVE_IO68_CONFIG_OPTION68_H
-# include "io68/config_option68.h"
-#else
-# include "io68/default_option68.h"
-#endif
-
+#include "io68/default.h"
 #include <sc68/file68_vfs.h> /* Need vfs68.h before sc68.h */
 
 /* libsc68 includes */
@@ -83,27 +78,25 @@ enum {
   /* TOS emulator */
   TRAP_ADDR = 0x500,
   /* # of instructions for music play code */
+  TRAP_MAX_INST = 10000u,
+  /* # of instructions for music play code */
   PLAY_MAX_INST = 1000000u,
   /* # of instructions for music init code */
   INIT_MAX_INST = 10000000u,
   /* default music time in seconds  */
   TIME_DEF = 3 * 60,
-  /* default music time in millisec */
-  TIMEMS_DEF = (TIME_DEF * 1000),
   /* sc68_t magic identifier value. */
   SC68_MAGIC = MK4CC('s','c','6','8'),
   /* disk68_t magic identifier value. */
   DISK_MAGIC = SC68_DISK_ID,
   /* Error message maximum length */
   ERRMAX = 96,
-  /* Default sampling rate */
-  SPR_DEF = SAMPLING_RATE_DEF,
-  /* Minimal sampling rate */
-  SPR_MIN = SAMPLING_RATE_MIN,
-  /* Maxinal sampling rate */
-  SPR_MAX = SAMPLING_RATE_MAX,
   /* Default amiga blend */
-  AGA_BLEND = 0x5000,
+  AGA_BLEND = 0x50,
+  /* Option "force-loop" off */
+  CFG_LOOP_OFF = 0,
+  /* Option "force-loop" infinite */
+  CFG_LOOP_INF = -1,
 };
 
 /* Atari-ST trap emulator (see trap.s)
@@ -119,12 +112,13 @@ static const char * trap_type[16] =
 
 /** sc68 config */
 static struct {
-  config68_t  * cfg;
-  int version;
+  int loaded;
   int allow_remote;
   int aga_blend;
+#ifdef WITH_FORCE
   int force_track;
   int force_loop;
+#endif
   int asid;
   int def_time_ms;
   int spr;
@@ -157,8 +151,10 @@ struct _sc68_s {
   int            loop_to;     /**< Loop to set (0:default -1:infinite).  */
   int            asid;        /**< aSIDifier flags.                      */
   int            asid_timers; /**< timer assignment 4cc (0:not asid).    */
+#ifdef WITH_FORCE
   int            cfg_track;   /**< from config "force-track".            */
   int            cfg_loop;    /**< from config "force-loop".             */
+#endif
   int            cfg_asid;    /**< from config "asid".                   */
 
   unsigned int   playaddr;    /**< Current play address in 68 memory.    */
@@ -173,15 +169,14 @@ struct _sc68_s {
 /** Playing time info. */
   struct {
     unsigned int def_ms;      /**< default time in ms.                   */
-//    unsigned int disk_ms;     /**< current disk length in ms.            */
-//    unsigned int track_ms;    /**< current track length in ms.           */
     unsigned int origin_ms;   /**< elapsed ms at track origin.           */
     unsigned int elapsed_ms;  /**< elapsed ms since track start.         */
   } time;
 
 /** IRQ handler. */
   struct {
-    int pc;                   /**< value of PC at last IRQ.              */
+    int pc;                   /**< value of PC for last IRQ.             */
+    int sr;                   /**< value of sr for lasr IRQ.             */
     int vector;               /**< what was the last IRQ type.           */
     int sysfct;               /**< Last gemdos/bios/xbios function       */
   } irq;
@@ -197,7 +192,7 @@ struct _sc68_s {
     int            buflen;       /**< PCM count in buffer.               */
     int            stdlen;       /**< Default number of PCM per pass.    */
     unsigned int   cycleperpass; /**< Number of 68K cycles per pass.     */
-    int            aga_blend;    /**< Amiga LR blend factor [0..65536].  */
+    int            aga_blend;    /**< Amiga LR blend factor [0..65535].  */
 
     unsigned int   pass_count;   /**< Pass counter.                      */
     unsigned int   loop_count;   /**< Loop counter.                      */
@@ -227,8 +222,6 @@ static int           sc68_cat = msg68_NEVER;
 static int           sc68_id;        /* counter for auto generated name */
 static volatile int  sc68_init_flag; /* Library init flag     */
 static int           sc68_spr_def = SPR_DEF;
-extern option68_t  * config68_options;   /* conf68.c */
-extern int           config68_opt_count; /* conf68.c */
 static int           dbg68k;
 static const char    not_available[] = SC68_NOFILENAME;
 static char          appname[16];
@@ -448,7 +441,7 @@ void except_name(const int vector, char * irqname)
 /* Exception handler (runs when emu68 runs in debug mode (--sc68-dbg68k=1).
  *
  * It's default behaviour is to dump the exception and to break
- * exection. That will generate an error later in the simulation loop.
+ * execution. That will generate an error later in the simulation loop.
  *
  * HW-trace and MFP timer interrupts are ignored.
  *
@@ -468,7 +461,8 @@ static void irqhandler(emu68_t* const emu68, int vector, void * cookie)
   u32     sr, pc;
 
   /* Store last interruption */
-  sc68->irq.pc     = emu68->reg.pc;
+  sc68->irq.pc     = emu68->inst_pc;   /* or real register values ? */
+  sc68->irq.sr     = emu68->inst_sr;   /* or real register values ? */
   sc68->irq.vector = vector;
 
   /* Exit those really fast as they happen quiet a lot, specially
@@ -491,7 +485,7 @@ static void irqhandler(emu68_t* const emu68, int vector, void * cookie)
 
   switch (savest) {
   case EMU68_NRM:
-    /* Assume break, set back to NRM only hen the exception is known */
+    /* Assume break, set back to NRM only if the exception is known */
     emu68->status = EMU68_BRK;
     break;
 
@@ -509,9 +503,8 @@ static void irqhandler(emu68_t* const emu68, int vector, void * cookie)
    */
   if ( vector < 0x100 ) {
     /* normal vectors, get sr and pc from the stack */
-    sr = Wpeek(emu68, emu68->reg.a[7]);
-    pc = Lpeek(emu68, emu68->reg.a[7]+2);
-    sc68->irq.pc = pc;
+    sc68->irq.sr = sr = Wpeek(emu68, emu68->reg.a[7]);
+    sc68->irq.pc = pc = Lpeek(emu68, emu68->reg.a[7]+2);
 
     if (vector >= TRAP_VECTOR(0) && vector <= TRAP_VECTOR(15)) {
       subvec = vector - TRAP_VECTOR(0);
@@ -673,10 +666,14 @@ static int init68k(sc68_t * sc68, int log2mem, int emu68_debug)
           "CPU emulator created");
 
   /* Install cookie and interruption handler (debug mode only). */
-  emu68_set_handler(sc68->emu68, (emu68_debug& 1 ) ? irqhandler : 0);
+  emu68_set_handler(sc68->emu68, (emu68_debug & 1) ? irqhandler : 0);
   emu68_set_cookie(sc68->emu68, sc68);
-  sc68->irq.pc     = 0xDEAD;
+
+  /* Some invalid values. */
+  sc68->irq.sysfct = -1;
+  sc68->irq.sr     = -1;
   sc68->irq.vector = -1;
+  sc68->irq.pc     = 0xDEADDAD1;
 
   /* Setup critical 68K registers (SR and SP) */
   sc68->emu68->reg.sr   = 0x2000;
@@ -751,116 +748,93 @@ error:
  * Config functions
  **********************************************************************/
 
-
 /* Get integer config vaue.
  * - just command line if available
  * - else get the value from the config file
  * - fallback to default otherwise.
  */
-static int optcfg_get_int(config68_t * c,
-                          const char * name,
-                          int def)
+static int optcfg_get_int(const char * name, int def)
 {
-  option68_t    * opt;
-  int             v = def, idx = -1;
-
-  switch (option68_type(opt = option68_get(name, 1))) {
-  case option68_BOL: case option68_INT:
-    v = opt->val.num;
-    TRACE68(sc68_cat,
-            "libsc68: get config from cli -- name='%s' val=%d\n", name, v);
-    break;
-  default:
-    if ( config68_get(c, &idx, &name) == CONFIG68_INT ) {
-      v = idx;
-      TRACE68(sc68_cat,
-              "libsc68: get config from cfg -- name='%s' val=%d\n", name, v);
-    }
+  option68_t * opt = option68_get(name, opt68_ALWAYS);
+  if (opt && opt->type != opt68_STR) {
+    if (opt->org == opt68_UDF)
+      option68_iset(opt,def,opt68_ALWAYS,opt68_CFG);
+    if (opt->org != opt68_UDF)
+      return opt->val.num;
   }
-  return v;
+  return def;
 }
 
+#if 0
 /* Get string config value
  * @optcfg_get_int for details,
  */
-static const char * optcfg_get_str(config68_t * c,
-                                   const char * name,
-                                   const char * def)
+static const char * optcfg_get_str(const char * name, const char * def)
 {
-  option68_t    * opt;
-  const char    * v = def, *key = name;
-  int             idx = -1;
+  option68_t * opt = option68_get(name, opt68_ISSET);
+  const char * v = def;
 
-  switch (option68_type(opt = option68_get(name, 1))) {
-  case option68_STR:
-    v = opt->val.str;
-    TRACE68(sc68_cat,
-            "libsc68: get config from cli -- name='%s' val='%s'\n", name, v);
-    break;
-  default:
-    if ( config68_get(c, &idx, &key) == CONFIG68_STR ) {
-      v = key;
-      TRACE68(sc68_cat,
-              "libsc68: get config from cfg -- name='%s' val='%s'\n",
-              name, strnevernull68(v));
+  if (opt) {
+    switch (opt->type) {
+    case opt68_STR:
+      v = opt->val.str;
+      break;
+    case opt68_ENU:
+      v = opt->val.num[(const char **)opt->set];
+      break;
     }
   }
   return v;
 }
+#endif
 
-static void optcfg_set_int(config68_t * c,
-                           const char * name,
-                           int v)
+static void optcfg_set_int(const char * name, int v)
 {
-  if (c)
-    config68_set(c, -1, name, v, 0);
+  option68_t * opt = option68_get(name, opt68_ALWAYS);
+  option68_iset(opt, v, opt68_ALWAYS, opt68_APP);
 }
 
-static void optcfg_set_str(config68_t * c,
-                           const char * name,
-                           const char * v)
+#if 0
+static void optcfg_set_str(const char * name, const char * v)
 {
-  if (c)
-    config68_set(c, -1, name, 0, v);
+  option68_t * opt = option68_get(name, opt68_ALWAYS);
+  option68_set(opt, v, opt68_ALWAYS);
+}
+#endif
+
+static void config_default(void)
+{
+  config.loaded       = 0;
+  config.allow_remote = 1;
+  config.aga_blend    = AGA_BLEND;
+#ifdef WITH_FORCE
+  config.force_track  = 0;
+  config.force_loop   = CFG_LOOP_DEF;
+#endif
+  config.asid         = 0;
+  config.def_time_ms  = TIME_DEF * 1000;
+  config.spr          = SPR_DEF;
 }
 
+#define set_CONFIG(KEY,NAME) config.KEY = optcfg_get_int(NAME,config.KEY)
 
 static int config_load(void)
 {
   int err;
-  config68_t * c;
 
-  if (!config.cfg)
-    config.cfg = config68_create(appname, 0);
-  err = config68_load(config.cfg);
+  config_default();
+  err = config68_load(appname);
+  config.loaded = !err;
 
-  /* Set version number will force a save in case of upgrading */
-  optcfg_set_int(config.cfg, "version", PACKAGE_VERNUM);
-
-  if (c = config.cfg, c) {
-    const char * lmusic = 0, * rmusic = 0;
-
-    /* copy config values for faster access */
-    config.version      = optcfg_get_int(c, "version",       PACKAGE_VERNUM);
-    config.allow_remote = optcfg_get_int(c, "allow-remote",  1);
-    config.aga_blend    = optcfg_get_int(c, "amiga-blend",   0x4000);
-    config.force_track  = optcfg_get_int(c, "force-track",   0);
-    config.force_loop   = optcfg_get_int(c, "force-loop",    0);
-    config.asid         = optcfg_get_int(c, "asid",          0);
-    config.def_time_ms  = optcfg_get_int(c, "default-time",  TIME_DEF) * 1000;
-    config.spr          = optcfg_get_int(c, "sampling-rate", SPR_DEF);
-
-    /* set resource path */
-    rsc68_get_path(0,0,&lmusic, &rmusic);
-    if (!lmusic) {
-      lmusic = optcfg_get_str(c, "music_path", 0);
-      rsc68_set_music(lmusic);
-    }
-    if (!rmusic) {
-      rmusic = optcfg_get_str(c, "remote_music_path", 0);
-      rsc68_set_remote_music(rmusic);
-    }
-  }
+  set_CONFIG(allow_remote,"allow-remote");
+  set_CONFIG(aga_blend,"amiga-blend");
+#ifdef WITH_FORCE
+  set_CONFIG(force_track,"force-track");
+  set_CONFIG(force_loop,"force-loop");
+#endif
+  set_CONFIG(asid,"asid");
+  config.def_time_ms = optcfg_get_int("default-time", TIME_DEF) * 1000;
+  set_CONFIG(spr,"sampling-rate");
 
   sc68_debug(0,"libsc68: load config -- %s\n", strok68(err));
   return err;
@@ -868,9 +842,8 @@ static int config_load(void)
 
 static int config_save(void)
 {
-  int err = -1;
-  if (config.cfg)
-    err = config68_save(config.cfg);
+  int err
+    = config68_save(appname);
   sc68_debug(0,"libsc68: save config -- %s\n", strok68(err));
   return err;
 }
@@ -878,22 +851,18 @@ static int config_save(void)
 /* update config values with current sc68 ones. */
 static void config_update(const sc68_t * sc68)
 {
-  const char * share, * user, * lmusic, * rmusic;
-
-  config68_t * const c = config.cfg;
-  if (!c)
-    return;
   if (is_sc68(sc68)) {
-    config.version = sc68->version;
     config.allow_remote = sc68->remote;
-    config.aga_blend = sc68->mix.aga_blend;
-    config.force_track = sc68->cfg_track;
+    config.aga_blend = sc68->mix.aga_blend >> 8;
+#ifdef WITH_FORCE
+    config.force_track = sc68->cfg_track < 0 ? 0 : sc68->cfg_track;
     if (sc68->cfg_loop == SC68_INF_LOOP)
-      config.force_loop = -1;
+      config.force_loop = CFG_LOOP_INF;
     else if (sc68->cfg_loop == SC68_DEF_LOOP)
-      config.force_loop = 0;
+      config.force_loop = CFG_LOOP_DEF;
     else if (sc68->cfg_loop > 0)
       config.force_loop = sc68->cfg_loop;
+#endif
     config.asid = sc68->cfg_asid & (SC68_ASID_ON|SC68_ASID_FORCE);
     if (config.asid == (SC68_ASID_ON|SC68_ASID_FORCE))
       config.asid = SC68_ASID_FORCE;
@@ -901,44 +870,47 @@ static void config_update(const sc68_t * sc68)
     config.spr = sc68->mix.spr;
   }
 
-  optcfg_set_int(c, "version",       PACKAGE_VERNUM);
-  optcfg_set_int(c, "allow-remote",  !!config.allow_remote);
-  optcfg_set_int(c, "amiga-blend",   config.aga_blend);
-  optcfg_set_int(c, "force-track",   config.force_track);
-  optcfg_set_int(c, "force-loop",    config.force_loop);
-  optcfg_set_int(c, "asid",          config.asid);
-  optcfg_set_int(c, "default-time",  (config.def_time_ms+999)/1000);
-  optcfg_set_int(c, "sampling-rate", config.spr);
+  if (config.loaded) {
+    optcfg_set_int("allow-remote",  !!config.allow_remote);
+    optcfg_set_int("amiga-blend",   config.aga_blend);
+#ifdef WITH_FORCE
+    optcfg_set_int("force-track",   config.force_track);
+    optcfg_set_int("force-loop",    config.force_loop);
+#endif
+    optcfg_set_int("asid",          config.asid);
+    optcfg_set_int("default-time",  (config.def_time_ms+999) / 1000u);
+    optcfg_set_int("sampling-rate", config.spr);
+  }
 
-  /* set resource path */
-  rsc68_get_path(&share, &user, &lmusic, &rmusic);
-  optcfg_set_str(c, "music_path", lmusic);
-  optcfg_get_str(c, "remote_music_path", rmusic);
+  TRACE68(sc68_cat, "libsc68: %s\n", "config updated");
+}
 
-  TRACE68(sc68_cat, "libsc68: %s\n", "config update");
+
+static int aga_blend(int v)
+{
+  v -= 128;
+  return ((v << 8) | (-(v&1)&255)) + 0x8000;
 }
 
 /* Apply config to sc68 instance */
 static void config_apply(sc68_t * sc68)
 {
-  if (!config.cfg)
-    config_load();
-  if (config.cfg && is_sc68(sc68)) {
-    sc68->version       = PACKAGE_VERNUM/* config.version */;
+  if (is_sc68(sc68)) {
     sc68->remote        = config.allow_remote;
 
     /* $$$ HAXX: reloading because it might have changed. */
-    config.aga_blend    = optcfg_get_int(config.cfg, "amiga-blend", AGA_BLEND);
-    sc68->mix.aga_blend = config.aga_blend;
-
+    config.aga_blend    = optcfg_get_int("amiga-blend", AGA_BLEND);
+    sc68->mix.aga_blend = aga_blend(config.aga_blend);
+#ifdef WITH_FORCE
     sc68->cfg_track     = SC68_DEF_TRACK;
     if (config.force_track > 0)
       sc68->cfg_track = config.force_track;
     sc68->cfg_loop      = SC68_DEF_LOOP;
-    if (config.force_loop == -1)
+    if (config.force_loop == CFG_LOOP_INF)
       sc68->cfg_loop      = SC68_INF_LOOP;
-    if (config.force_loop > 0)
+    else if (config.force_loop > 0)
       sc68->cfg_loop      = config.force_loop;
+#endif
     sc68->cfg_asid      = config.asid;
     sc68->time.def_ms   = config.def_time_ms;
     sc68->mix.spr       = config.spr;
@@ -947,6 +919,25 @@ static void config_apply(sc68_t * sc68)
             sc68->name, "config applied");
   }
 }
+
+/* HAXXX: should be eval when a message category is added/removed */
+static void eval_debug(void)
+{
+  static option68_t * opt;
+  /* HaXXX: force a call "debug" callback. */
+  if (!opt)
+    opt = option68_get("debug", opt68_ALWAYS);
+  if (opt && opt->org != opt68_UDF) {
+    int org = opt->org;
+    char * s = strdup(opt->val.str);
+    if (s) {
+      option68_unset(opt);
+      option68_set(opt, s, opt68_ALWAYS, org);
+      free(s);
+    }
+  }
+}
+
 
 /***********************************************************************
  * API functions
@@ -959,11 +950,7 @@ int sc68_init(sc68_init_t * init)
   sc68_init_t dummy_init;
 
   static option68_t debug_options[] = {
-    {
-      0,
-      option68_BOL, "sc68-","dbg68k","debug",
-      "run m68K in debug mode"
-    }
+    OPT68_BOOL("sc68-","dbg68k","sc68","run m68K in debug mode",0,0)
   };
 
   /* Just a stupid test to check if this host arythmetic unit use 2's
@@ -990,33 +977,38 @@ int sc68_init(sc68_init_t * init)
     memset(&dummy_init, 0, sizeof(dummy_init));
     init = &dummy_init;
   }
-
   sc68_cat = msg68_cat("sc68","sc68 library",DEBUG_SC68_O);
 
-  /* 1st thing to do : set debug handler. */
+  /* Set debug handler and filters. */
   msg68_set_handler((msg68_t)init->msg_handler);
   msg68_set_cookie(0);
-
   msg68_cat_filter(init->debug_clr_mask,init->debug_set_mask);
 
+  /* Get application name. */
   appname[0] = 0;
   if (init->argc > 0 && init->argv)
     appname_from_path(init->argv[0], appname, sizeof(appname));
   if (!appname[0])
     strcpy(appname,"sc68");
-
-  /* Init config module */
-  config68_init(0);
+  if (init->argc > 0 && init->argv)
+    init->argv[0] = appname;
 
   /* Intialize file68. */
   init->argc = file68_init(init->argc, init->argv);
+  eval_debug();
 
+  /* Init config module */
+  init->argc = config68_init(init->argc, init->argv);
+  eval_debug();
+  config_default();
+
+  /* Add and parse local options */
   option68_append(debug_options,sizeof(debug_options)/sizeof(*debug_options));
-  option68_append(config68_options, config68_opt_count);
-  init->argc = option68_parse(init->argc, init->argv, 0);
+  init->argc = option68_parse(init->argc, init->argv);
 
   /* Initialize emulators. */
   err = init_emu68(&init->argc, init->argv);
+  eval_debug();
 
   /* Load config */
   config_load();
@@ -1024,18 +1016,7 @@ int sc68_init(sc68_init_t * init)
   /* Set default sampling rate. */
   set_spr(0, SC68_SPR_DEFAULT);
 
-  /* $$$: No good */
-  opt = option68_get("debug", 1);
-  if (opt) {
-    int val;
-    if (!strcmp(opt->val.str, "yes"))
-      val = 1 << sc68_cat;
-    else
-      val = strtoul(opt->val.str,0,0);
-    msg68_cat_filter(~0,val);
-  }
-
-  opt    = option68_get("dbg68k", 1);
+  opt    = option68_get("dbg68k", opt68_ISSET);
   dbg68k = opt ? opt->val.num : 0;
 
   sc68_init_flag = !err;
@@ -1050,11 +1031,8 @@ error_no_shutdown:
 
 void sc68_shutdown(void)
 {
-  if (config.cfg) {
+  if (!config.loaded)    /* Save config if none has been loaded one */
     config_save();
-    config68_destroy(config.cfg);
-    config.cfg = 0;
-  }
 
   if (sc68_init_flag) {
     sc68_init_flag = 0;
@@ -1104,7 +1082,7 @@ sc68_t * sc68_create(sc68_create_t * create)
     sc68->mix.spr = sc68_spr_def;
   }
   if (!sc68->time.def_ms) {
-    sc68->time.def_ms = TIMEMS_DEF;
+    sc68->time.def_ms = TIME_DEF * 1000;
   }
 
   /* aSIDifier. */
@@ -1255,16 +1233,6 @@ static int set_asid(sc68_t * sc68, int asid)
   return asid;
 }
 
-/* void sc68_set_share(sc68_t * sc68, const char * path) */
-/* { */
-/*   rsc68_set_share(path); */
-/* } */
-
-/* void sc68_set_user(sc68_t * sc68, const char * path) */
-/* { */
-/*   rsc68_set_user(path); */
-/* } */
-
 static inline unsigned int fr_to_ms(unsigned int frames, unsigned int hz) {
   return (unsigned int) ( (u64)frames * 1000u / hz );
 }
@@ -1298,8 +1266,6 @@ static void stop_track(sc68_t * sc68, const int real_stop)
   }
 
   sc68->time.elapsed_ms = 0;
-  /* sc68->time.disk_ms    = 0; */
-  /* sc68->time.track_ms   = 0; */
   sc68->mix.pass_count  = 0;
   sc68->mix.loop_count  = 0;
   sc68->mix.bufpos      = 0;
@@ -1309,28 +1275,40 @@ static void stop_track(sc68_t * sc68, const int real_stop)
 static int finish(sc68_t * sc68, addr68_t pc, int sr, uint68_t maxinst)
 {
   int status;
+  emu68_t * const emu68 = sc68->emu68;
 
-  sc68->emu68->reg.pc  = pc;
-  sc68->emu68->reg.sr  = sr;
-  sc68->emu68->reg.a[7] = sc68->emu68->memmsk+1-16;
-  emu68_pushl(sc68->emu68, 0);
+  emu68->reg.pc  = pc;
+  emu68->reg.sr  = sr;
+  emu68->reg.a[7] = emu68->memmsk+1-16;
+  emu68_pushl(emu68, 0);
 
-  status = emu68_finish(sc68->emu68, maxinst);
+  status = emu68_finish(emu68, maxinst);
   while (status == EMU68_STP) {
     sc68_debug(sc68,
                "libsc68: stop #$%04X ignored @ $%6X\n",
-               sc68->emu68->reg.sr, sc68->emu68->reg.pc);
-    status = emu68_finish(sc68->emu68, EMU68_CONT);
+               emu68->reg.sr, emu68->reg.pc);
+    status = emu68_finish(emu68, EMU68_CONT);
   }
 
   if (status != EMU68_NRM) {
     char irqname[32];
-    if (status == EMU68_HLT && (sc68->emu68->reg.sr & 0X3F00) == 0X2F00) {
+    const char * s;
+
+    /* Might have some error stacked in emu68. */
+    while (s = emu68_error_get(emu68), s)
+      error_addx(sc68,"libsc68: %s\n", s);
+
+    if (status == EMU68_HLT && (emu68->reg.sr & 0X3F00) == 0X2F00) {
       addr68_t vaddr;
-      sc68->irq.vector = sc68->emu68->reg.sr & 0xFF;
-      strcpy(irqname,"NC-");
+
+      sc68->irq.vector = emu68->reg.sr & 0xFF;
+      strcpy(irqname,"NC-");            /* Non-Catched Exception */
       except_name(sc68->irq.vector,irqname+3);
-      vaddr = Lpeek(sc68->emu68, sc68->irq.vector * 4);
+      vaddr = Lpeek(emu68, sc68->irq.vector * 4);
+      if (sc68->irq.sr == -1) {
+        sc68->irq.sr = Wpeek(emu68, emu68->reg.a[7]);
+        sc68->irq.pc = Lpeek(emu68, emu68->reg.a[7]+2);
+      }
       if (vaddr != INTR_ADDR + sc68->irq.vector * 8)
         strcpy(irqname,"CH-");
       if (sc68->irq.vector >= TRAP_VECTOR(0) &&
@@ -1339,7 +1317,7 @@ static int finish(sc68_t * sc68, addr68_t pc, int sr, uint68_t maxinst)
         if (trap_type[n])
           sprintf(irqname+3, "%s-$%X", trap_type[n], sc68->irq.sysfct);
       }
-    } else if (status == EMU68_BRK && !sc68->emu68->instructions) {
+    } else if (status == EMU68_BRK && !emu68->instructions) {
       strcpy(irqname,"inst-overflow");
     } else {
       except_name(sc68->irq.vector,irqname);
@@ -1350,7 +1328,7 @@ static int finish(sc68_t * sc68, addr68_t pc, int sr, uint68_t maxinst)
                " $%X/$%04X irq#%d (%s) @$%X\n",
                sc68->mix.pass_count, (unsigned) pc,
                emu68_status_name(status), status,
-               (unsigned) sc68->emu68->reg.pc, (unsigned) sc68->emu68->reg.sr,
+               (unsigned) emu68->reg.pc, (unsigned) emu68->reg.sr,
                sc68->irq.vector, irqname, (unsigned) sc68->irq.pc);
   }
   return status;
@@ -1395,6 +1373,8 @@ static int reset_emulators(sc68_t * sc68, const hwflags68_t * const hw)
   if (emu68_debugmode(sc68->emu68)) {
     TRACE68(sc68_cat," -> %s\n","clear 68k memory");
     emu68_memset(sc68->emu68,0,0,0);
+    /* This is done by emu68_reset() */
+    /* emu68_chkset(sc68->emu68,0,0,0); */
   }
   memptr = emu68_memptr(sc68->emu68,0,0x1000);
 
@@ -1447,7 +1427,7 @@ static int reset_emulators(sc68_t * sc68, const hwflags68_t * const hw)
     sc68->emu68->cycle = 0;
     TRACE68(sc68_cat," -> Running trap init code -- $%06x ...\n",
             (unsigned) TRAP_ADDR);
-    status = finish(sc68, TRAP_ADDR, 0x2300, INIT_MAX_INST);
+    status = finish(sc68, TRAP_ADDR, 0x2300, TRAP_MAX_INST);
     if ( status != EMU68_NRM ) {
       error_addx(sc68,
                  "libsc68: abnormal 68K status %d (%s) in trap code\n",
@@ -1564,7 +1544,8 @@ static int change_track(sc68_t * sc68, int track)
   m = d->mus + track - 1;
 
   /* ReInit 68K & IO */
-  reset_emulators(sc68, &m->hwflags);
+  if (reset_emulators(sc68, &m->hwflags) != SC68_OK)
+    return SC68_ERROR;
 
   /* Set music replay address in 68K memory. */
   sc68->playaddr = a0 = m->a0;
@@ -1850,8 +1831,14 @@ int sc68_process(sc68_t * sc68, void * buf16st, int * _n)
 
         /* Run 68K emulator */
         status = finish(sc68, sc68->playaddr+8, 0x2300, PLAY_MAX_INST);
-        if (status == EMU68_NRM)
+        if (status == EMU68_NRM) {
+          /* $$$ Fix some replays (tao's intensity 200 for one) that
+             assumes the music driver is running under interruption
+             and do not restore the SR by themself. Need to be sure
+             this does not disrupt other musics. */
+          sc68->emu68->reg.sr = 0x2300;
           status = emu68_interrupt(sc68->emu68, sc68->mix.cycleperpass);
+        }
         if (status != EMU68_NRM) {
           error_addx(sc68,
                      "libsc68: abnormal 68K status %d (%s) in play pass %u\n",
@@ -1891,7 +1878,8 @@ int sc68_process(sc68_t * sc68, void * buf16st, int * _n)
             mw_mix(sc68->mw, (s32 *)sc68->mix.buffer, sc68->mix.buflen);
           else
             /* Else simply process with left channel duplication. */
-            mixer68_dup_L_to_R(sc68->mix.buffer, sc68->mix.buffer, sc68->mix.buflen, 0);
+            mixer68_dup_L_to_R(sc68->mix.buffer, sc68->mix.buffer,
+                               sc68->mix.buflen, 0);
         }
 
         /* Advance time */
@@ -2035,12 +2023,14 @@ int sc68_play(sc68_t * sc68, int track, int loop)
     TRACE68(sc68_cat,"libsc68: disk's forced track -- *%02d*\n",track);
   } else if (track == SC68_DEF_TRACK) {
     track = d->def_mus + 1;
+#ifdef WITH_FORCE
     if (in_range(d, sc68->cfg_track)) {
       /* track forced in config only applied if default track was
        * asked and it is not out of range. */
       track = sc68->cfg_track;
       TRACE68(sc68_cat,"libsc68: config's forced track -- *%02d*\n", track);
     }
+#endif
   }
 
   /* Unless disk has an overide. */
@@ -2048,10 +2038,12 @@ int sc68_play(sc68_t * sc68, int track, int loop)
     loop = d->force_loops;
     TRACE68(sc68_cat,"libsc68: disk has a forced loop -- %02d\n",loop);
   }
+#ifdef WITH_FORCE
   else if (loop == SC68_DEF_LOOP && sc68->cfg_loop != SC68_DEF_LOOP) {
     loop = sc68->cfg_loop;
     TRACE68(sc68_cat,"libsc68: config has a forced loop -- %02d\n", loop);
   }
+#endif
 
   /* Check track range. */
   if (check_track_range(sc68, sc68->disk, track)) {
@@ -2156,8 +2148,6 @@ static int calc_disk_len(const disk68_t * disk, const int loop)
   assert(is_disk(disk));
   for (i = 1; i <= disk->nb_mus; ++i)
     len += calc_track_len(disk,i,loop);
-  /* sc68_debug(0, "libsc68: %s(%s,%d) -> %d\n", __FUNCTION__, */
-  /*            disk->tags.tag.title.val, loop, len); */
   return len;
 }
 
@@ -2170,16 +2160,6 @@ static int get_len(sc68_t * sc68, int track)
   return (unsigned) track <= (unsigned) sc68->disk->nb_mus
     ? sc68->tinfo[track].len_ms
     : -1;
-
-  /* if (track == SC68_DSK_TRACK) { */
-  /*   len = sc68->time.disk_ms; */
-  /* } else if (track == sc68->track) { */
-  /*   len = sc68->time.track_ms; */
-  /* } else if (track <= sc68->disk->nb_mus) { */
-  /*   len = calc_track_len(sc68->disk, track, sc68->loop_to); */
-  /* } */
-  /* sc68_debug(sc68,"libsc68: %s(%d) -> %d\n", __FUNCTION__, track, len); */
-  /* return len; */
 }
 
 
@@ -2433,26 +2413,24 @@ int sc68_cntl(sc68_t * sc68, int fct, ...)
   case SC68_ENUM_OPT: {
     option68_t * opt = option68_enum(va_arg(list, int));
     res = option68_type(opt);
-    if (res != option68_ERR)
+    if (res != -1)
       *va_arg(list,const  char **) = opt->name;
   } break;
 
-  case SC68_SET_OPT: case SC68_GET_OPT: {
-    option68_t * opt = option68_get(va_arg(list, const char *), 1);
-    res = option68_type(opt);
-    switch (res) {
-    case option68_BOL: case option68_INT:
-      if (fct == SC68_GET_OPT)
-        *va_arg(list, int *) = opt->val.num;
-      else
-        option68_iset(opt, va_arg(list, int));
-      break;
-    case option68_STR:
-      if (fct == SC68_GET_OPT)
-        *va_arg(list,const  char **) = opt->val.str;
-      else
-        option68_set(opt, va_arg(list, const char *));
-    }
+  case SC68_GET_OPT: {
+    option68_t * opt = option68_get(va_arg(list, const char *), opt68_ISSET);
+    if (opt->type == opt68_STR)
+      *va_arg(list,const  char **) = opt->val.str;
+    else
+      *va_arg(list, int *) = opt->val.num;
+  } break;
+
+  case SC68_SET_OPT: {
+    option68_t * opt = option68_get(va_arg(list, const char *), opt68_ALWAYS);
+    if (opt->type == opt68_STR)
+      option68_set(opt, va_arg(list, const char *), opt68_ALWAYS, opt68_APP);
+    else
+      option68_iset(opt, va_arg(list, int), opt68_ALWAYS, opt68_APP);
   } break;
 
   case SC68_GET_PCM:

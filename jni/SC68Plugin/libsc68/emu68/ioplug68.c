@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2013-07-03 05:08:10 ben>
+ * Time-stamp: <2013-09-06 21:11:50 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -30,29 +30,36 @@
 
 #include "ioplug68.h"
 #include "mem68.h"
+#include "assert68.h"
 
 static void do_io_unplug(emu68_t * const emu68, io68_t * const io)
 {
   /* Remove memory acces handler */
-  emu68_mem_reset_area(emu68, (io->addr_lo>>8)&255);
+  const int ioline = (io->addr_lo>>8) & 255;
+  assert( emu68->mapped_io[ioline] == io );
+  emu68_mem_reset_area(emu68, ioline);
+  io->next = 0;
 }
 
 /* Unplug all IO */
 static void _ioplug_unplug_all(emu68_t * const emu68, const int destroy)
 {
   io68_t *next = emu68->iohead;
+
   while (next) {
-    io68_t *io = next;
+    io68_t * io = next;
     next = io->next;
     do_io_unplug(emu68, io);
-    if (destroy && io->destroy) {
-      io->destroy(io);
+    if (destroy) {
+      if (io->destroy)
+        io->destroy(io);
+      else
+        emu68_free(io);
     }
   }
   emu68->iohead = 0;
   emu68->nio    = 0;
 }
-
 
 /* Unplug all IO */
 void emu68_ioplug_unplug_all(emu68_t * const emu68)
@@ -79,9 +86,9 @@ int emu68_ioplug_unplug(emu68_t * const emu68, io68_t * const this_io)
   io68_t *io,**pio;
 
   if (emu68) {
-    if (!this_io) {
+    if (!this_io)
       return 0;
-    }
+
     for (io = emu68->iohead, pio = &emu68->iohead;
          io;
          pio=&io->next, io=io->next) {
@@ -105,11 +112,14 @@ void emu68_ioplug(emu68_t * const emu68, io68_t * const io)
 {
   if (emu68 && io) {
     int i;
+    assert(!io->next);
     io->next = emu68->iohead;
     emu68->iohead = io;
     io->emu68 = emu68;
     ++emu68->nio;
     for (i=(u8)(io->addr_lo>>8); i<=(u8)(io->addr_hi>>8); ++i) {
+      /* To be sure we don't overlap IOs */
+      assert(emu68->mapped_io[i] == &emu68->errio);
       emu68->mapped_io[i] = io;
     }
   }

@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2013-07-03 05:06:05 ben>
+ * Time-stamp: <2013-08-28 17:51:08 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -30,11 +30,17 @@
 
 #include "error68.h"
 #include "assert68.h"
+#include "excep68.h"
 #include "mem68.h"
+
+EMU68_EXTERN
+void exception68(emu68_t * const emu68, const int vector, const int level);
 
 static addr68_t ea_error(emu68_t * const emu68, const int reg)
 {
   assert(EMU68_BREAK);
+  /* $$$ must trigger an exception just not sure which exactly */
+  exception68(emu68, ADRERR_VECTOR, -1);
   return 0;
 }
 

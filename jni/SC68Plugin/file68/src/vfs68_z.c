@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2001-2013 Benjamin Gerard
  *
- * Time-stamp: <2013-08-09 21:43:30 ben>
+ * Time-stamp: <2013-08-26 10:42:45 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -854,7 +854,7 @@ vfs68_t * vfs68_z_create(vfs68_t * is, int mode,
 int vfs68_z_init(void)
 {
 #ifdef USE_Z
-  zlib_cat = msg68_cat("zlib","Zlib stream message",DEBUG_ZLIB_O);
+  zlib_cat = msg68_cat("zlib","Zlib VFS",DEBUG_ZLIB_O);
 #endif
   return 0;
 }

@@ -5,7 +5,7 @@
  * @author   Benjamin Gerard
  * @date     2009-02-04
  */
-/* Time-stamp: <2013-08-16 05:08:15 ben> */
+/* Time-stamp: <2013-08-25 09:16:18 ben> */
 
 /* Copyright (C) 1998-2013 Benjamin Gerard */
 
@@ -26,17 +26,41 @@
  */
 
 /**
- * option argument types.
+ * Option value types.
  */
-enum option68_e {
-  option68_BOL = 0,             /**< Boolean (set or unset). */
-  option68_STR = 1,             /**< String value.           */
-  option68_INT = 2,             /**< Integer value.          */
-  option68_ERR = -1             /**< Errorcode.              */
+enum option68_type_e {
+  opt68_BOL = 0,                        /**< Value type boolean. */
+  opt68_STR,                            /**< Value type string.  */
+  opt68_INT,                            /**< Value type integer. */
+  opt68_ENU,                            /**< Value type enum.    */
+  opt68_TYP                             /**< Number of types.    */
 };
 
 /**
- * option type.
+ * Option value origin (sorted by priority).
+ */
+enum option68_org_e {
+  opt68_UDF  = 0,            /**< Option not defined (set).      */
+  opt68_CFG,                 /**< Option set by config.          */
+  opt68_ENV,                 /**< Option set by environment var. */
+  opt68_CLI,                 /**< Option set by command line.    */
+  opt68_APP,                 /**< Option set by application.     */
+  opt68_ORG                  /**< Number of origin.              */
+};
+
+/**
+ * Option set polocies.
+ */
+enum option68_set_e {
+  opt68_NEVER  = 0,    /**< Never set.                              */
+  opt68_ALWAYS,        /**< Always set.                             */
+  opt68_NOTSET,        /**< If not already set.                     */
+  opt68_ISSET,         /**< If is already set.                      */
+  opt68_PRIO,          /**< If origin priority is higher or same .  */
+};
+
+/**
+ * Option type.
  */
 typedef struct option68_s option68_t;
 
@@ -50,39 +74,93 @@ typedef union {
 
 /**
  * Options help display function.
- *
- *  -# user data
- *  -# option
- *  -# envvar
- *  -# short description
  */
-typedef void (*option68_help_t)(void *, const char*, const char*, const char*);
+typedef void (*option68_help_t)(void * cookie,
+                                const char * option,
+                                const char * envvar,
+                                const char * values,
+                                const char * desc);
 
 /**
  * Callback on change value.
+ *
+ * @retval  0  Accept new value
  */
 typedef int (*option68_cb_t)(const option68_t *, value68_t *);
 
-/** Command line option description and parsing info. */
+/**
+ * Macro to declare a generic option.
+ */
+#define OPT68(PREFIX,NAME,CAT,DESC,SET,NSET,MIN,MAX,TYPE,SAVE,ONCHG)    \
+  { PREFIX,NAME,CAT,DESC,ONCHG,MIN,MAX,SET,NSET,TYPE,SAVE,opt68_UDF,{0} }
+
+/**
+ * Macro to declare a boolean option
+ */
+#define OPT68_BOOL(PREFIX,NAME,CAT,DESC,SAVE,ONCHG)             \
+  OPT68(PREFIX,NAME,CAT,DESC,0,0,-1,0,opt68_BOL,SAVE,ONCHG)
+
+/**
+ * Macro to declare a simple integer option.
+ */
+#define OPT68_INTE(PREFIX,NAME,CAT,DESC,SAVE,ONCHG)             \
+  OPT68(PREFIX,NAME,CAT,DESC,0,0,0,0,opt68_INT,SAVE,ONCHG)
+
+/**
+ * Macro to declare a integer enum option.
+ */
+#define OPT68_ENUM(PREFIX,NAME,CAT,DESC,SET,NSET,SAVE,ONCHG)            \
+  OPT68(PREFIX,NAME,CAT,DESC,SET,NSET,0,(NSET)-1,opt68_ENU,SAVE,ONCHG)
+
+/**
+ * Macro to declare a simple string option.
+ */
+#define OPT68_STRG(PREFIX,NAME,CAT,DESC,SAVE,ONCHG)             \
+  OPT68(PREFIX,NAME,CAT,DESC,0,0,0,0,opt68_STR,SAVE,ONCHG)
+
+/**
+ * Macro to declare an integer option with a set of values.
+ */
+#define OPT68_ISET(PREFIX,NAME,CAT,DESC,SET,NSET,SAVE,ONCHG)            \
+    OPT68(PREFIX,NAME,CAT,DESC,SET,NSET,0,0,opt68_INT,SAVE,ONCHG)
+
+/**
+ * Macro to declare an string option with a set of values.
+ */
+#define OPT68_SSET(PREFIX,NAME,CAT,DESC,SET,NSET,SAVE,ONCHG)            \
+  OPT68(PREFIX,NAME,CAT,DESC,SET,NSET,0,0,opt68_STR,SAVE,ONCHG)
+
+/**
+ * Macro to declare an integer option within a range.
+ */
+#define OPT68_IRNG(PREFIX,NAME,CAT,DESC,MIN,MAX,SAVE,ONCHG)             \
+    OPT68(PREFIX,NAME,CAT,DESC,0,0,MIN,MAX,opt68_INT,SAVE,ONCHG)
+
+/**
+ * Command line option description and parsing info.
+ */
 struct option68_s {
-  option68_cb_t   onchange;    /**< Call on value change.           */
-  int             has_arg;     /**< @see option68_e. ~val => setted */
   const char    * prefix;      /**< Key prefix.                     */
   const char    * name;        /**< Key name (bare).                */
   const char    * cat;         /**< Category name.                  */
-  const char    * desc;        /**< Sh-ort description.             */
+  const char    * desc;        /**< Short description.              */
+
+  option68_cb_t   onchange;    /**< Call on value change.           */
+
+  int             min;         /**< Mininal for integer values.     */
+  int             max;         /**< Maximal for integer values.     */
+
+  const void    * set;         /**< Set of acceptable values.       */
+
+  unsigned int    sets : 5;    /**< Size of set                     */
+  unsigned int    type : 2;    /**< @see option68_type_e.           */
+  unsigned int    save : 1;    /**< Save in config.                 */
+  unsigned int    org  : 3;    /**< @see option68_org_e.            */
   value68_t       val;         /**< Option value.                   */
 
-  /**
-   * @name internals
-   * @{
-   */
-  int          prefix_len;       /**< length of option68_t::prefix. */
-  int          name_len;         /**< length of option68_t::name.   */
-  option68_t * next;             /**< Chain to next option.         */
-  /**
-   * @}
-   */
+  int             prefix_len;  /**< length of option68_t::prefix.   */
+  int             name_len;    /**< length of option68_t::name.     */
+  option68_t    * next;        /**< Chain to next option.           */
 };
 
 FILE68_API
@@ -112,10 +190,9 @@ FILE68_API
  *
  * @param  argc     argument count
  * @param  argv     arguments
- * @param  reset    reset all options before parsing
  * @retval remaining argc
  */
-int option68_parse(int argc, char ** argv, int reset);
+int option68_parse(int argc, char ** argv);
 
 FILE68_API
 /**
@@ -141,12 +218,12 @@ FILE68_API
 /**
  * Get option by name.
  *
- * @param   key      argument count
- * @param   setonly  only if option has been set
+ * @param   key     argument count
+ * @param   set     set policy (@see option68_set_e)
  * @return  option
  * @retval  0        not found
  */
-option68_t * option68_get(const char * key, int setonly);
+option68_t * option68_get(const char * key, int set);
 
 FILE68_API
 /**
@@ -162,21 +239,36 @@ FILE68_API
 /**
  * Set option.
  *
- * @param   option  option to set
- * @retval  0       on success
- * @retval -1       on failure
+ * @param   opt  option to set
+ * @return  option origin (@see option68_org_e)
  */
-int option68_set(option68_t * opt, const char * str);
+int option68_org(const option68_t * opt);
 
 FILE68_API
 /**
  * Set option (integer and boolean only).
  *
  * @param   opt  option to set
+ * @param   val  integer value
+ * @param   set  set policy (@see option68_set_e)
+ * @param   org  origin (@see option68_org_e)
  * @retval  0    on success
  * @retval -1    on failure
  */
-int option68_iset(option68_t * opt, int val);
+int option68_iset(option68_t * opt, int val, int set, int org);
+
+FILE68_API
+/**
+ * Set option.
+ *
+ * @param   opt  option to set
+ * @param   str  integer value
+ * @param   set  set policy (@see option68_set_e)
+ * @param   org  origin (@see option68_org_e)
+ * @retval  0    on success
+ * @retval -1    on failure
+ */
+int option68_set(option68_t * opt, const char * str, int set, int org);
 
 FILE68_API
 /**
@@ -188,37 +280,16 @@ FILE68_API
  */
 int option68_unset(option68_t * opt);
 
+
 FILE68_API
 /**
  * Get associate environment variable value.
  *
  * @param   opt  option
- * @param   set  enable option set at the same time
+ * @param   set  set policy (@see option68_set_e)
  * @retval  0    on error (or envvar does not exist)
  */
 const char * option68_getenv(option68_t * opt, int set);
-
-FILE68_API
-/**
- * Add symbolic value.
- *
- * @param   key  symbolic value
- * @param   val  integer value
- * @retval  0    on success
- * @retval  -1   on error
- */
-int option68_add_symb(const char * key, int val);
-
-FILE68_API
-/**
- * Get symbolic value.
- *
- * @param   key  symbolic value
- * @param   val  pointer to integer for storage
- * @retval  0    on success
- * @retval  -1   on error
- */
-int option68_get_symb(const char * key, int * val);
 
 /**
  * @}

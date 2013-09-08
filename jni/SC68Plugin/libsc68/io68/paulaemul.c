@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2013-08-16 06:42:40 ben>
+ * Time-stamp: <2013-08-26 14:15:11 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -28,12 +28,7 @@
 # include "config.h"
 #endif
 
-#ifdef HAVE_CONFIG_OPTION68_H
-# include "config_option68.h"
-#else
-# include "default_option68.h"
-#endif
-
+#include "default.h"
 #include "paulaemul.h"
 #include "emu68/assert68.h"
 
@@ -56,9 +51,13 @@ int pl_cat = msg68_DEFAULT;
 # include <stdio.h>
 #endif
 
-#define PL_VOL_FIX   16
-#define PL_VOL_MUL   (1<<PL_VOL_FIX)
-#define PL_MIX_FIX   (PL_VOL_FIX+1+8-16) /*(PL_VOL_FIX+2+8-16) */
+#define PLHD "paula  : "
+
+enum {
+  PL_VOL_FIX = 16,
+  PL_VOL_MUL = (1<<PL_VOL_FIX),
+  PL_MIX_FIX = (PL_VOL_FIX+1+8-16)
+};
 
 #ifdef PAULA_CALCUL_TABLE
 
@@ -126,64 +125,39 @@ static int onchange_filter(const option68_t * opt, value68_t * val)
   return 0;
 }
 
-static int onchange_blend(const option68_t * opt, value68_t * val)
-{
-  int v = val->num;
-  if (v < 0)
-    v = 0;
-  else if (v >= 256)
-    v = 255;
-  v -= 128;
-  v = ((v << 8) | (-(v&1)&255)) + 0x8000;
-  val->num = v;
-  return 0;
-}
-
 static int onchange_clock(const option68_t * opt, value68_t * val)
 {
-  int clock;
-  if (!strcmp68(val->str,"pal"))
-    clock = PAULA_CLOCK_PAL;
-  else if (!strcmp68(val->str,"ntsc"))
-    clock = PAULA_CLOCK_NTSC;
-  else
-    return -1;
-  paula_clock(0, clock);
+  paula_clock(0,!val->num?PAULA_CLOCK_PAL:PAULA_CLOCK_NTSC);
   return 0;
 }
 
+static const char * f_clock[] = { "pal","ntsc" };
 
 /* Command line options */
-static const char prefix[] = "sc68-";
+/* static const char prefix[] = "sc68-"; */
+#define prefix NULL
 static const char engcat[] = "paula";
 static option68_t opts[] = {
-  {
-    onchange_filter,
-    option68_BOL, prefix, "amiga-filter", engcat,
-    "active paula resample filter"
-  },
-  {
-    onchange_blend,
-    option68_INT, prefix, "amiga-blend", engcat,
-    "left/right voices blending factor [0..255] {128:mono}"
-  },
-  {
-    onchange_clock,
-    option68_STR, prefix, "amiga-clock", engcat,
-    "paula clock [pal*|ntsc]"
-  }
+  OPT68_BOOL(prefix,"amiga-filter",engcat,
+             "active paula resample filter",1,onchange_filter),
+  OPT68_IRNG(prefix,"amiga-blend",engcat,
+             "left/right voices blending factor {128:mono}",
+             0,0xFF,1,0),
+  OPT68_ENUM(prefix,"amiga-clock",engcat,"paula clock",
+             f_clock,sizeof(f_clock)/sizeof(*f_clock),1,onchange_clock),
 };
-
+#undef prefix
 
 /* ,-----------------------------------------------------------------.
  * |                         Paula init                              |
  * `-----------------------------------------------------------------'
  */
 
-static const u32 tmp = 0x1234;
 
 int paula_init(int * argc, char ** argv)
 {
+  static const u32 msw = 0x1234;
+
   if (pl_cat == msg68_DEFAULT)
     pl_cat = msg68_cat("paula","amiga sound emulator", DEBUG_PL_O);
 
@@ -191,23 +165,25 @@ int paula_init(int * argc, char ** argv)
   init_volume();
 
   /* Setup little/big endian swap */
-  msw_first = !(*(const u8 *)&tmp);
+  msw_first = !(*(const u8 *)&msw);
 
   /* Set default default */
   default_parms.engine = PAULA_ENGINE_SIMPLE;
   default_parms.clock  = PAULA_CLOCK_PAL;
-  default_parms.hz     = SAMPLING_RATE_DEF;
+  default_parms.hz     = SPR_DEF;
 
   /* Register amiga options */
   option68_append(opts,sizeof(opts)/sizeof(*opts));
 
   /* Default option values */
-  option68_iset(opts+0,default_parms.engine!=PAULA_ENGINE_SIMPLE);
-  option68_iset(opts+1,32);
-  option68_set (opts+2,"pal");
+  option68_iset(opts+0, default_parms.engine!=PAULA_ENGINE_SIMPLE,
+                opt68_NOTSET,opt68_CFG);
+  option68_iset(opts+1, 0x50, opt68_NOTSET, opt68_CFG);
+  option68_iset(opts+2, default_parms.clock!=PAULA_CLOCK_PAL,
+                opt68_NOTSET,opt68_CFG);
 
   /* Parse options */
-  *argc = option68_parse(*argc,argv,0);
+  *argc = option68_parse(*argc,argv);
 
   return 0;
 }
@@ -242,7 +218,8 @@ static int set_clock(paula_t * const paula, int clock_type, uint68_t f)
     tmp >>= fix - ct_fix;
   else
     tmp <<= ct_fix - fix;
-  TRACE68(pl_cat, "paula  : clock -- *%s*\n",
+  TRACE68(pl_cat,
+          PLHD "clock -- *%s*\n",
           clock_type == PAULA_CLOCK_PAL ? "PAL" : "NTSC");
   paula->clkperspl = (plct_t) tmp;
   return f;
@@ -259,18 +236,16 @@ int paula_sampling_rate(paula_t * const paula, int hz)
       hz = default_parms.hz;
 
   default:
-    if (hz < SAMPLING_RATE_MIN) {
-      hz = SAMPLING_RATE_MIN;
-    }
-    if (hz > SAMPLING_RATE_MAX) {
-      hz = SAMPLING_RATE_MAX;
-    }
-    if (!paula) {
+    if (hz < SPR_MIN)
+      hz = SPR_MIN;
+    else if (hz > SPR_MAX)
+      hz = SPR_MAX;
+    if (!paula)
       default_parms.hz = hz;
-    } else {
+    else
       set_clock(paula, paula->clock, hz);
-    }
-    TRACE68(pl_cat,"paula  : %s sampling rate -- *%dhz*\n",
+    TRACE68(pl_cat,
+            PLHD "%s sampling rate -- *%dhz*\n",
             paula ? "select" : "default", hz);
     break;
   }
@@ -310,13 +285,14 @@ int paula_engine(paula_t * const paula, int engine)
     break;
 
   default:
-    msg68_warning("paula  : invalid engine -- %d\n", engine);
+    msg68_warning(PLHD "invalid engine -- %d\n", engine);
   case PAULA_ENGINE_DEFAULT:
     engine = default_parms.engine;
   case PAULA_ENGINE_SIMPLE:
   case PAULA_ENGINE_LINEAR:
     *(paula ? &paula->engine : &default_parms.engine) = engine;
-    TRACE68(pl_cat, "paula  : %s engine -- *%s*\n",
+    TRACE68(pl_cat,
+            PLHD "%s engine -- *%s*\n",
             paula ? "select" : "default",
             pl_engine_name(engine));
     break;
@@ -386,9 +362,9 @@ void paula_cleanup(paula_t * const paula) {}
 
 static void pl_info(paula_t * const paula)
 {
-  msg68_notice("paula  : engine -- *%s*\n", pl_engine_name(paula->engine));
-  msg68_notice("paula  : clock -- *%s*\n", pl_clock_name(paula->clock));
-  msg68_notice("paula  : sampling rate -- *%dhz*\n", (int)paula->hz);
+  msg68_notice(PLHD "engine -- *%s*\n", pl_engine_name(paula->engine));
+  msg68_notice(PLHD "clock -- *%s*\n", pl_clock_name(paula->clock));
+  msg68_notice(PLHD "sampling rate -- *%dhz*\n", (int)paula->hz);
 }
 
 int paula_setup(paula_t * const paula,
@@ -528,9 +504,6 @@ static void mix_one(paula_t * const paula,
     v0  *= vol;
     v0 >>= PL_MIX_FIX;
 
-    if (v0 < -16384 || v0 >= 16384)
-      msg68_critical("paula  : pcm clipping -- %d\n", (int) v0);
-
     assert(v0 >= -16384);
     assert(v0 <   16384);
 
@@ -630,7 +603,8 @@ void paula_mix(paula_t * const paula, s32 * splbuf, int n)
 
 #if DEBUG_PL_O == 1
 #   define ONE "%c:%06x-%06x->%06x,%04x,%02d"
-    TRACE68(pl_cat,"paula  : %d " ONE " " ONE " " ONE " " ONE "\n",
+    TRACE68(pl_cat,
+            PLHD "%d " ONE " " ONE " " ONE " " ONE "\n",
             n,
             d[0].on?'A':'.', d[0].adr, d[0].end, d[0].start, d[0].per,d[0].vol,
             d[1].on?'B':'.', d[1].adr, d[1].end, d[1].start, d[1].per,d[1].vol,

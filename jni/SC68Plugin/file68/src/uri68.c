@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2001-2013 Benjamin Gerard
  *
- * Time-stamp: <2013-08-10 01:11:12 ben>
+ * Time-stamp: <2013-08-26 11:14:35 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -42,8 +42,10 @@
 #include <ctype.h>
 #include <assert.h>
 
+#define MYHD "uri68  : "
 
 static scheme68_t * schemes;
+static int uri_cat = msg68_DEFAULT;
 
 /**
  * @retval -1  on error
@@ -91,7 +93,7 @@ int uri68_get_scheme(char * scheme, int max, const char *uri)
 void uri68_unregister(scheme68_t * scheme)
 {
   if (scheme) {
-    msg68_debug("uri68: unregister scheme -- %s\n", scheme->name);
+    TRACE68(uri_cat, MYHD "unregister scheme -- %s\n", scheme->name);
     if (scheme == schemes)
       schemes = scheme->next;
     else if (schemes) {
@@ -114,7 +116,7 @@ int uri68_register(scheme68_t * scheme)
   assert(!scheme->next);
   scheme->next = schemes;
   schemes = scheme;
-  msg68_debug("uri68: registered scheme -- %s\n", scheme->name);
+  TRACE68(uri_cat, MYHD "registered scheme -- %s\n", scheme->name);
 
   return 0;
 }
@@ -135,12 +137,13 @@ vfs68_t * uri68_vfs_va(const char * uri, int mode, int argc, va_list list)
   if (scheme)
     vfs = scheme->create(uri, mode, argc, list);
 
-  msg68_debug("url68: create url='%s' %c%c => [%s,'%s']\n",
-              strnevernull68(uri),
-              (mode&1) ? 'R' : '.',
-              (mode&2) ? 'W' : '.',
-              strok68(!vfs),
-              vfs68_filename(vfs));
+  TRACE68(uri_cat, MYHD
+          "create url='%s' %c%c => [%s,'%s']\n",
+          strnevernull68(uri),
+          (mode&1) ? 'R' : '.',
+          (mode&2) ? 'W' : '.',
+          strok68(!vfs),
+          vfs68_filename(vfs));
 
   return vfs;
 }

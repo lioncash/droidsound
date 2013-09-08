@@ -5,7 +5,7 @@
  * @author    Benjamin Gerard
  * @date      2009/06/12
  */
-/* Time-stamp: <2013-08-04 23:12:56 ben> */
+/* Time-stamp: <2013-08-28 17:37:28 ben> */
 
 /* Copyright (C) 1998-2013 Benjamin Gerard */
 
@@ -26,11 +26,7 @@
 #endif
 
 #ifndef EMU68_BREAK
-# ifndef DEBUG
-#  define EMU68_BREAK 1                 /* NOT debug mode */
-# else
-#  define EMU68_BREAK 0                 /*     debug mode */
-# endif
+# define EMU68_BREAK 1                  /* Don't break anymore */
 #endif
 
 #endif

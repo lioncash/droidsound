@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2001-2011 Benjamin Gerard
  *
- * Time-stamp: <2013-08-10 01:14:23 ben>
+ * Time-stamp: <2013-08-26 10:42:30 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -724,7 +724,7 @@ static const vfs68_t vfs68_curl = {
 int vfs68_curl_init(void)
 {
   if (curl_cat == msg68_DEFAULT) {
-    curl_cat = msg68_cat("curl","cURL stream message",DEBUG_CURL_O);
+    curl_cat = msg68_cat("curl","cURL VFS",DEBUG_CURL_O);
     curl_cat = curl_cat != -1 ? curl_cat : msg68_DEFAULT;
   }
   if (!init) {

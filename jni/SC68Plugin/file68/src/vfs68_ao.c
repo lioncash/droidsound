@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2011 Benjamin Gerard
  *
- * Time-stamp: <2013-08-10 01:18:43 ben>
+ * Time-stamp: <2013-08-26 10:54:38 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -31,10 +31,12 @@
 #include "file68_vfs_ao.h"
 #include "file68_msg.h"
 
+#define AOHD "libao68: "
+
 #ifndef DEBUG_AO68_O
 # define DEBUG_AO68_O 0
 #endif
-int ao68_cat = msg68_DEFAULT;
+static int ao68_cat = msg68_DEFAULT;
 
 /* Define this if you want xiph libao support. */
 #ifdef USE_AO
@@ -42,6 +44,7 @@ int ao68_cat = msg68_DEFAULT;
 #include "file68_vfs_def.h"
 #include "file68_str.h"
 #include "file68_uri.h"
+#include "file68_features.h"
 
 #include <ao/ao.h>
 #include <string.h>
@@ -60,7 +63,7 @@ typedef struct ao68_info_s ao68_info_t;
 
 /** vfs ao structure. */
 typedef struct {
-  vfs68_t vfs;        /**< vfs function.                */
+  vfs68_t vfs;                /**< vfs function.                    */
   unsigned int count;         /**< current position.                */
   ao68_info_t ao;             /**< ao specific struct.              */
   int  no_overwrite;          /**< overwriting file output.         */
@@ -70,9 +73,9 @@ typedef struct {
 } vfs68_ao_t;
 
 enum {
-  AO_SPR_MIN = 8000,
-  AO_SPR_MAX = 96000,
-  AO_SPR_DEF = 44100
+  AO_SPR_MIN = FILE68_SPR_MIN,
+  AO_SPR_MAX = FILE68_SPR_MAX,
+  AO_SPR_DEF = FILE68_SPR_DEF
 };
 
 static volatile int init;
@@ -109,7 +112,7 @@ int vfs68_ao_init(void)
 {
   if (ao68_cat == msg68_DEFAULT) {
     ao68_cat =
-      msg68_cat("audio","Xiph AO audio stream",DEBUG_AO68_O);
+      msg68_cat("audio","Xiph libao audio VFS",DEBUG_AO68_O);
     if (ao68_cat == -1)
       ao68_cat = msg68_DEFAULT;
   }
@@ -123,12 +126,12 @@ static int init_aolib(void)
   int err = -1;
 
   if (init) {
-    msg68_critical("libao68: *%s*\n","already done");
+    msg68_critical(AOHD "*%s*\n","already done");
   } else {
     ao_initialize();
     err = 0;
     init = 1;
-    TRACE68(ao68_cat,"libao68: *%s*\n","initialized");
+    TRACE68(ao68_cat,AOHD "*%s*\n","initialized");
   }
   return err;
 }
@@ -138,7 +141,8 @@ static void shutdown_aolib(void)
   if (init) {
     init = 0;
     ao_shutdown();
-    TRACE68(ao68_cat,"libao68: *%s*\n","shutdowned");
+    TRACE68(ao68_cat,
+            AOHD "*%s*\n","shutdowned");
   }
 }
 
@@ -173,7 +177,7 @@ static void dump_ao_info(const int id, const ao_info * info, const int full)
   if (info) {
     TRACE68(ao68_cat,
       "\n"
-      "libao68: ao_driver #%02d\n"
+      AOHD "ao_driver #%02d\n"
       "         ,------------\n"
       "         | type    : %s\n"
       "         | name    : %s\n"
@@ -199,7 +203,7 @@ static void dump_ao_info(const int id, const ao_info * info, const int full)
 static void dump_ao_format(const ao_sample_format * fmt)
 {
   TRACE68(ao68_cat,
-          "libao68: sample format -- %d-bits %d-hz %d-chan %c-endian %s\n",
+          AOHD "sample format -- %d-bits %d-hz %d-chan %c-endian %s\n",
           fmt->bits, fmt->rate, fmt->channels,
           fmt->byte_format == AO_FMT_LITTLE ? 'L' :
           (fmt->byte_format == AO_FMT_BIG ? 'B' : 'N'),
@@ -213,7 +217,7 @@ static int isao_open(vfs68_t * vfs)
   ao_info * info = 0;
   char * url;
 
-  TRACE68(ao68_cat,"libao68: open -- '%s'\n", vfs68_filename(vfs));
+  TRACE68(ao68_cat,AOHD "open -- '%s'\n", vfs68_filename(vfs));
   if (!is || is->ao.device) {
     goto error;
   }
@@ -227,11 +231,13 @@ static int isao_open(vfs68_t * vfs)
       char * key = url;
       char * val = s2+1;
       *s2 = 0;
-      TRACE68(ao68_cat,"libao68: open -- have a key -- [%s]='%s'\n", key, val);
+      TRACE68(ao68_cat,
+              AOHD "open -- have a key -- [%s]='%s'\n", key, val);
       if (!strcmp68(key,"output")) {
         if (s) *s = '/';
         s = 0;
-        TRACE68(ao68_cat,"libao68: open -- *FILENAME* '%s'\n", val);
+        TRACE68(ao68_cat,
+                AOHD "open -- *FILENAME* '%s'\n", val);
         is->outname = val;
       } else if (!strcmp68(key,"driver")) {
         int id = !strcmp68(val,"default")
@@ -240,7 +246,7 @@ static int isao_open(vfs68_t * vfs)
         info = ao_driver_info(id);
         if (info) {
           is->ao.driver_id = id;
-          TRACE68(ao68_cat,"libao68: open -- *DRIVER* #%d (%s) %s\n",
+          TRACE68(ao68_cat,AOHD "open -- *DRIVER* #%d (%s) %s\n",
                   id, info->short_name, info->name);
         }
       } else if (!strcmp68(key,"rate")) {
@@ -248,7 +254,7 @@ static int isao_open(vfs68_t * vfs)
         while (*val>='0' && *val<='9') frq = frq*10 + *val++ - '0';
         if (frq) {
           frq = spr_in_range(frq);
-          TRACE68(ao68_cat,"libao68: open -- *SAMPLING-RATE* %d\n",frq);
+          TRACE68(ao68_cat,AOHD "open -- *SAMPLING-RATE* %d\n",frq);
           is->ao.format.rate = frq;
         }
       } else if (!strcmp68(key,"format")) {
@@ -268,7 +274,7 @@ static int isao_open(vfs68_t * vfs)
 
             /* SIGN */
           case '+': /* unsigned */
-            msg68_warning("libao68: ignoring -- *%s* request\n", "UNSIGNED");
+            msg68_warning(AOHD "ignoring -- *%s* request\n", "UNSIGNED");
           case '-': /*   signed */
             break;
 
@@ -288,14 +294,14 @@ static int isao_open(vfs68_t * vfs)
             is->ao.format.bits = 8;
             break;
           case 'F': /* float  */
-            msg68_warning("libao68: open -- ignoring *%s* request\n","FLOAT");
+            msg68_warning(AOHD "open -- ignoring *%s* request\n","FLOAT");
             break;
           } /* switch */
         } /* while */
       } else {
         int i = 0;
         if (!info)
-          msg68_warning("libao68: choose driver before options -- [%s]='%s'\n",
+          msg68_warning(AOHD "choose driver before options -- [%s]='%s'\n",
                         key, val);
         else
           for (; i<info->option_count && strcmp68(info->options[i],key); ++i)
@@ -303,10 +309,10 @@ static int isao_open(vfs68_t * vfs)
         if (!info || i<info->option_count) {
           int res = ao_append_option(&is->ao.options, key, val);
           res = res;
-          TRACE68(ao68_cat, "libao68: add options [%s]='%s' -- *%s*\n",
+          TRACE68(ao68_cat, AOHD "add options [%s]='%s' -- *%s*\n",
                   key, val, strok68(!res));
         } else
-          msg68_warning("libao68: ignore option for driver '%s' -- [%s]='%s'\n",
+          msg68_warning(AOHD "ignore option for driver '%s' -- [%s]='%s'\n",
                         info->short_name, key, val);
       }
       *s2 = '=';
@@ -363,22 +369,22 @@ static int isao_open(vfs68_t * vfs)
     strcat68(is->defoutname,ext,sizeof(is->defoutname)-1);
     is->outname = is->defoutname;
     TRACE68(ao68_cat,
-            "libao68: open -- default *FILENAME* '%s'\n", is->outname);
+            AOHD "open -- default *FILENAME* '%s'\n", is->outname);
   }
 
   if (is->ao.options) {
     int i;
     ao_option * o;
-    TRACE68(ao68_cat,"%s\n", "libao68: options summary:");
+    TRACE68(ao68_cat,"%s\n", AOHD "options summary:");
     for (i=1, o=is->ao.options; o; o=o->next, ++i) {
       TRACE68(ao68_cat,
-              "libao68:  - #%d %-12s = '%s'\n", i, o->key, o->value);
+              AOHD " - #%d %-12s = '%s'\n", i, o->key, o->value);
     }
   }
 
   if (!is->ao.format.rate) {
     is->ao.format.rate = vfs68_ao_defaut_rate;
-    TRACE68(ao68_cat,"libao68: %s\n", "using default sampling rate");
+    TRACE68(ao68_cat,AOHD "%s\n", "using default sampling rate");
   }
   dump_ao_format(&is->ao.format);
   is->ao.device =
@@ -391,9 +397,9 @@ static int isao_open(vfs68_t * vfs)
   }
 
   if (info->type == AO_TYPE_LIVE) {
-    msg68_notice("libao68: live driver -- *%s*\n", info->short_name);
+    msg68_notice(AOHD "live driver -- *%s*\n", info->short_name);
   } else {
-    msg68_notice("libao68: file driver -- *%s* -- '%s''\n",
+    msg68_notice(AOHD "file driver -- *%s* -- '%s''\n",
                  info->short_name, is->outname);
   }
   dump_ao_format(&is->ao.format);
@@ -401,7 +407,7 @@ static int isao_open(vfs68_t * vfs)
   is->count = 0;
   err = 0;
 error:
-  TRACE68(ao68_cat, "libao68: open -- *%s*\n", strok68(err));
+  TRACE68(ao68_cat, AOHD "open -- *%s*\n", strok68(err));
   return err;
 }
 
@@ -419,7 +425,7 @@ static int isao_close(vfs68_t * vfs)
     is->ao.device = 0;
     err = 0;
   }
-  TRACE68(ao68_cat, "libao68: close -- *%s*\n", strok68(err));
+  TRACE68(ao68_cat, AOHD "close -- *%s*\n", strok68(err));
   return err;
 }
 
@@ -479,7 +485,7 @@ static int isao_seek(vfs68_t * vfs, int offset)
 
 static void isao_destroy(vfs68_t * vfs)
 {
-  TRACE68(ao68_cat, "libao68: destroy -- '%s'\n", vfs68_filename(vfs));
+  TRACE68(ao68_cat, AOHD "destroy -- '%s'\n", vfs68_filename(vfs));
   if (&ao_unic_vfs->vfs == vfs)
     ao_unic_vfs = 0;
   vfs68_ao_shutdown();
@@ -516,23 +522,24 @@ vfs68_t * vfs68_ao_create(const char * uri, int mode, int spr)
   int len;
   ao68_info_t ao;
 
-  TRACE68(ao68_cat,"libao68: create -- '%s' (%d) %dhz\n",
+  TRACE68(ao68_cat,
+          AOHD "create -- '%s' (%d) %dhz\n",
           strnevernull68(uri), mode, spr);
 
   if (!init) {
     if (init_aolib() || !init) {
-      msg68_critical("libao68: create error -- *libao*\n");
+      msg68_critical(AOHD "create error -- *libao*\n");
       goto error;
     }
   }
 
   if (!uri || !ao_ismine(uri)) {
-    msg68_error("libao68: create error -- *parameter*\n");
+    msg68_error(AOHD "create error -- *parameter*\n");
     goto error;
   }
 
   if (mode != VFS68_OPEN_WRITE) {
-    msg68_error("libao68: create error -- *mode*\n");
+    msg68_error(AOHD "create error -- *mode*\n");
     goto error;
   }
 
@@ -562,7 +569,8 @@ error:
   if (!ao_unic_vfs)
     ao_unic_vfs = isf;
   uri = vfs68_filename(&isf->vfs);
-  TRACE68(ao68_cat,"libao68: create -- *%s* -- '%s'\n",
+  TRACE68(ao68_cat,
+          AOHD "create -- *%s* -- '%s'\n",
           strok68(!isf),strnevernull68(uri));
   return isf ? &isf->vfs : 0;
 }

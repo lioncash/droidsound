@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2013-08-09 21:46:08 ben>
+ * Time-stamp: <2013-08-25 14:32:06 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -674,7 +674,6 @@ vfs68_t * rsc68_create_uri(const char *uri, int mode, rsc68_info_t * info)
   vfs = rsc68_open_uri(uri, mode, info);
   vfs68_close(vfs);
   return vfs;
-
 }
 
 vfs68_t * rsc68_open_uri(const char *uri, int mode, rsc68_info_t * info)

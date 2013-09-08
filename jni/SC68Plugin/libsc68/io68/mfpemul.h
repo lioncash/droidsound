@@ -1,24 +1,25 @@
+
 /**
  * @ingroup   io68_mfp_devel
  * @file      io68/mfpemul.h
+ * @brief     MFP-68901 emulator header.
  * @author    Benjamin Gerard
  * @date      1999/03/20
- * @brief     MFP-68901 emulator header.
  */
-/* Time-stamp: <2013-07-26 03:08:28 ben> */
+/* Time-stamp: <2013-09-01 09:58:17 ben> */
 
 /* Copyright (C) 1998-2013 Benjamin Gerard */
 
-#ifndef _IO68_MFPEMUL_H_
-#define _IO68_MFPEMUL_H
+#ifndef IO68_MFPEMUL_H
+#define IO68_MFPEMUL_H
 
 #include "io68_api.h"
 #include "emu68/struct68.h"
 
 /**
- *  @defgroup  io68_mfp_devel  MFP-68901 emulator
- *  @ingroup   io68_devel
- *  @brief     MFP-68901 (Atari-ST timers) emulator.
+ * @defgroup  io68_mfp_devel  MFP-68901 emulator
+ * @ingroup   io68_devel
+ * @brief     MFP-68901 (Atari-ST timers) emulator.
  *
  *  Motorola Multi Function Peripheral is a multi purpose IO chip:
  * - 8 bit parallele port.
@@ -29,7 +30,7 @@
  * - Integrated serial interface.
  * - 24 registers
  *
- *  @p Registers
+ * @p Registers
  *
  * - 00 @b GPIP (General Purpose I/O Interrupt port):
  *
@@ -165,7 +166,7 @@
  *
  *      Data to send (write access) or recieve (read access)
  *
- *  @p MFP interrupt vector table
+ * @p MFP interrupt vector table
  *
  *   MSB of the vector number (the x value below) is stored in the MFP
  *   vector register (register #11) bit#4 to bit#7.
@@ -188,18 +189,21 @@
  * - xE (initially disabled) RS-232 ring detect pin
  * - xF (initially disabled) Monochrome/color monitor change detecter
  *
- *  @p Programming MFP Timers
+ * @p Programming MFP Timers
  *
  *     TODO
  *
- *  @{
+ * @{
  */
 
-/** @name MFP-68901 timers
- *  @{
+/**
+ * @name MFP-68901 timers
+ * @{
  */
 
-/** MFP-68901 timer identifers. */
+/**
+ * MFP-68901 timer identifers.
+ */
 enum mfp_timer_e {
   TIMER_A=0,   /**< MFP timer 'A' */
   TIMER_B,     /**< MFP timer 'B' */
@@ -207,10 +211,14 @@ enum mfp_timer_e {
   TIMER_D      /**< MFP timer 'D' */
 };
 
-/** bogo-cycle definition (1 Bogo = 192 "8mhz 68K" = 625 "mfp" cycle). */
+/**
+ * bogo-cycle definition (1 Bogo = 192 "8mhz 68K" = 625 "mfp" cycle).
+ */
 typedef cycle68_t bogoc68_t;
 
-/** Timer definition struct. */
+/**
+ * Timer definition struct.
+ */
 typedef struct {
   addr68_t vector; /**< Interrupt vector.                         */
   u8 level;        /**< Interrupt level.                          */
@@ -219,7 +227,9 @@ typedef struct {
   u8 letter;       /**< 'A','B','C' or 'D'.                       */
 } mfp_timer_def_t;
 
-/** MFP-68901 timer struct. */
+/**
+ * MFP-68901 timer struct.
+ */
 typedef struct
 {
   mfp_timer_def_t def; /**< Timer definition. */
@@ -239,9 +249,13 @@ typedef struct
   interrupt68_t interrupt; /**< Interruption info.                     */
 } mfp_timer_t;
 
-/** @} */
+/**
+ * @}
+ */
 
-/** MFP register name. */
+/**
+ * MFP register name.
+ */
 enum {
   GPIP  = 0x01,
   AER   = 0x03,
@@ -269,147 +283,165 @@ enum {
   UDR   = 0x2F,
 };
 
-/** MFP-68901 emulator. */
+/**
+ * MFP-68901 emulator. */
 typedef struct {
   u8 map[0x40];                       /**< Registers map.        */
   mfp_timer_t timers[4];              /**< Timers.               */
 } mfp_t;
 
-/** @name  MFP-68901 emulator library.
- *  @{
+/**
+ * @name  MFP-68901 emulator library.
+ * @{
  */
 
 IO68_EXTERN
-/** MFP-68901 emulator library initialization.
+/**
+ * MFP-68901 emulator library initialization.
  *
  *     The mfp_init() function intialize MFP emulator library.  It
  *     must be call prior to any other mfp_ function.
  *
- *  @return  error-code
- *  @retval  0  Success
- *  @retval -1  Failure
+ * @return  error-code
+ * @retval  0  Success
+ * @retval -1  Failure
  */
 int mfp_init(void);
 
 IO68_EXTERN
-/** MFP-68901 emulator library shutdown.
+/**
+ * MFP-68901 emulator library shutdown.
  */
 void mfp_shutdown(void);
 
-/** @} */
+/**
+ * @} */
 
-/** @name MFP-68901 emulator functions.
- *  @{
+/**
+ * @name MFP-68901 emulator functions.
+ * @{
  */
 
 IO68_EXTERN
-/** Setup mfp instance.
+/**
+ * Setup mfp instance.
  *
- *  @param  mfp    mfp emulator instance.
+ * @param  mfp    mfp emulator instance.
  *
- *  @return Error-code
- *  @retval  0  Success
- *  @retval -1  Failure
+ * @return Error-code
+ * @retval  0  Success
+ * @retval -1  Failure
  */
 int mfp_setup(mfp_t * const mfp);
 
 IO68_EXTERN
-/** Cleanup mfp instance.
+/**
+ * Cleanup mfp instance.
  *
- *  @param  mfp    mfp emulator instance.
+ * @param  mfp    mfp emulator instance.
  *
  */
 void mfp_cleanup(mfp_t * const mfp);
 
 
 IO68_EXTERN
-/** Reset mfp instance.
+/**
+ * Reset mfp instance.
  *
- *  @param  mfp    mfp emulator instance.
+ * @param  mfp    mfp emulator instance.
  *
- *  @return Error-code
- *  @retval  0  Success
- *  @retval -1  Failure
+ * @return Error-code
+ * @retval  0  Success
+ * @retval -1  Failure
  */
 int mfp_reset(mfp_t * const mfp, const bogoc68_t bogoc);
 
 IO68_EXTERN
-/** Destroy mfp instance.
+/**
+ * Destroy mfp instance.
  *
- *  @param  mfp    mfp emulator instance.
+ * @param  mfp    mfp emulator instance.
  */
 void mfp_destroy(mfp_t * const mfp);
 
-/** @} */
+/**
+ * @}
+ */
 
 IO68_EXTERN
-/** MFP get Timer Data register.
+/**
+ * MFP get Timer Data register.
  *
- *  @param  mfp    mfp emulator instance.
- *  @param  timer  Timer-id (see mfp_timer_e).
- *  @param  bogoc  Current bogo-cycle.
+ * @param  mfp    mfp emulator instance.
+ * @param  timer  Timer-id (see mfp_timer_e).
+ * @param  bogoc  Current bogo-cycle.
  *
- *  @return timer data register (TDR) value
+ * @return timer data register (TDR) value
  */
 int68_t mfp_get_tdr(mfp_t * const mfp,
                     const int timer, const bogoc68_t bogoc);
 
 IO68_EXTERN
-/** MFP write Timer data register.
+/**
+ * MFP write Timer data register.
  *
- *  @param  mfp    mfp emulator instance.
- *  @param  timer  Timer-id (see mfp_timer_e).
- *  @param  v      New timer data register (TDR) value.
- *  @param  bogoc  Current bogo-cycle.
+ * @param  mfp    mfp emulator instance.
+ * @param  timer  Timer-id (see mfp_timer_e).
+ * @param  v      New timer data register (TDR) value.
+ * @param  bogoc  Current bogo-cycle.
  *
  */
 void mfp_put_tdr(mfp_t * const mfp,
                  int timer, int68_t v, const bogoc68_t bogoc);
 
 IO68_EXTERN
-/** MFP write Timer control register.
+/**
+ * MFP write Timer control register.
  *
- *  @param  mfp    mfp emulator instance.
- *  @param  timer  Timer-id (see mfp_timer_e).
- *  @param  v      New timer control register (TCR) value.
- *  @param  bogoc  Current bogo-cycle.
+ * @param  mfp    mfp emulator instance.
+ * @param  timer  Timer-id (see mfp_timer_e).
+ * @param  v      New timer control register (TCR) value.
+ * @param  bogoc  Current bogo-cycle.
  *
  */
 void mfp_put_tcr(mfp_t * const mfp,
                  int timer, int68_t v, const bogoc68_t bogoc);
 
 IO68_EXTERN
-/** Get MFP pending interruption.
+/**
+ * Get MFP pending interruption.
  *
- *  @param  mfp    mfp emulator instance.
- *  @param  bogoc  Current bogo-cycle.
+ * @param  mfp    mfp emulator instance.
+ * @param  bogoc  Current bogo-cycle.
  *
- *  @return interruption info structure.
- *  @retval 0 no pending interruption.
+ * @return interruption info structure.
+ * @retval 0 no pending interruption.
  *
  */
 interrupt68_t * mfp_interrupt(mfp_t * const mfp, const bogoc68_t bogoc);
 
 IO68_EXTERN
-/** Get cycle for the next MFP interruption.
+/**
+ * Get cycle for the next MFP interruption.
  *
- *  @param  mfp  mfp emulator instance.
+ * @param  mfp  mfp emulator instance.
  *
- *  @return CPU-cycle when MFP will interrupt
- *  @retval IO68_NO_INT no interrupt will occur.
+ * @return CPU-cycle when MFP will interrupt
+ * @retval IO68_NO_INT no interrupt will occur.
  */
 bogoc68_t mfp_nextinterrupt(const mfp_t * const mfp);
 
 IO68_EXTERN
-/** Change cycle count base.
+/**
+ * Change cycle count base.
  *
- *  @param  mfp    mfp emulator instance.
- *  @param  bogoc  New base for internal cycle counter.
+ * @param  mfp    mfp emulator instance.
+ * @param  bogoc  New base for internal cycle counter.
  */
 void mfp_adjust_bogoc(mfp_t * const mfp, const bogoc68_t bogoc);
 
 /**
- *  @}
+ * @}
  */
 
-#endif /* #ifndef _IO68_MFPEMUL_H_ */
+#endif

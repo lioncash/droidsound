@@ -5,7 +5,7 @@
  * @date      1999/03/20
  * @brief     all io68 headers.
  */
-/* Time-stamp: <2013-08-04 19:16:25 ben> */
+/* Time-stamp: <2013-09-06 22:25:23 ben> */
 
 /* Copyright (C) 1998-2013 Benjamin Gerard */
 
@@ -56,11 +56,24 @@ IO68_API
  * Destroy an chipset instance.
  *
  *   The io68_destroy() function calls the io68_t::destroy() callback
- *   function.
+ *   function or if it is null just free the memory.
  *
  *  @param  io  chipset instance
  */
 void io68_destroy(io68_t * const io);
+
+IO68_API
+/**
+ * Reset chipset.
+ *
+ *   The io68_reset() function calls the io68_t::reset() callback
+ *   function.
+ *
+ *  @param  io  chipset instance
+ *  @retval  0  on success
+ *  @retval -1  on failure
+ */
+int io68_reset(io68_t * const io);
 
 /**
  * @}

@@ -5,7 +5,7 @@
  * @author   Benjamin Gerard
  * @date     2003-08-22
  */
-/* Time-stamp: <2013-08-12 19:12:36 ben> */
+/* Time-stamp: <2013-08-30 10:23:09 ben> */
 
 /* Copyright (C) 1998-2013 Benjamin Gerard */
 
@@ -134,6 +134,10 @@ void msg68_cat_free(int cat);
 FILE68_API
 /**
  * Set all predefined categories mask according to given level.
+ *
+ * @param  cat    message category (@see msg68_cat_e)
+ *
+ * @return mofidied mask
  */
 int msg68_cat_level(int cat);
 

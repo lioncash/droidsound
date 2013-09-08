@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2013-07-22 02:49:08 ben>
+ * Time-stamp: <2013-09-06 22:59:38 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -27,6 +27,8 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+
+#include <assert.h>
 
 #include "io68.h"
 #include "sc68/file68_msg.h"
@@ -71,7 +73,21 @@ void io68_shutdown(void)
 
 void io68_destroy(io68_t * const io)
 {
-  if (io && io->destroy) {
-    io->destroy(io);
+  if (io) {
+    assert(!io->next);
+    if (io->next)
+      msg68_critical("io68: destroying an attached IO <%s>\n",io->name);
+    if (io->destroy)
+      io->destroy(io);
+    else
+      emu68_free(io);
   }
+}
+
+int io68_reset(io68_t * const io)
+{
+  return !io
+    ? -1
+    : io->reset ? io->reset(io) : 0
+    ;
 }

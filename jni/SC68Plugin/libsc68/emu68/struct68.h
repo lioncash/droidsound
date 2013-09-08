@@ -5,7 +5,7 @@
  * @author    Benjamin Gerard
  * @date      1999-03-13
  */
-/* Time-stamp: <2013-08-04 23:14:11 ben> */
+/* Time-stamp: <2013-09-06 18:52:05 ben> */
 
 /* Copyright (C) 1998-2013 Benjamin Gerard */
 
@@ -178,7 +178,9 @@ struct emu68_s {
   int  nerr;                            /**< Error counter.         */
 
   reg68_t   reg;                     /**< 68000 internal registers. */
-  int       save_sr;                 /**< SR before exec            */
+
+  int       inst_pc;               /**< PC of executed instruction. */
+  int       inst_sr;               /**< SR of executed instruction. */
 
   cycle68_t cycle;                   /**< Internal cycle counter.   */
   uint68_t  clock;                   /**< Master clock frequency.   */
@@ -196,11 +198,20 @@ struct emu68_s {
   io68_t * iohead;                    /**< Head of IO-list.         */
   io68_t * interrupt_io;              /**< Current interuptible IO. */
   io68_t * mapped_io[256];
+  io68_t * memio;
+  io68_t   ramio; /**< io used only in debug mode (access control). */
+  io68_t   errio; /**< io used invalid address                      */
 
   /* Memory access. */
   addr68_t bus_addr;        /**< bus address for memory access.     */
   int68_t  bus_data;        /**< bus data for memory access.        */
-  int      framechk;        /**< ORed chk change for current frame. */
+
+  int      frm_chk_fl;      /**< ORed chk change for current frame. */
+  struct {
+    unsigned pc;
+    unsigned ad;
+    int fl;
+  } fst_chk, lst_chk;
   u8     * chk;             /**< Access-Control-Memory buffer.      */
 
   emu68_bp_t breakpoints[31];           /**< Hardware breakpoints.  */

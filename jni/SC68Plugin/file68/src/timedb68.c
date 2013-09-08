@@ -5,7 +5,7 @@
  *
  * Copyright (C) 1998-2013 Benjamin Gerard
  *
- * Time-stamp: <2013-08-02 23:17:43 ben>
+ * Time-stamp: <2013-08-28 06:51:59 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -50,9 +50,11 @@ typedef struct {
   unsigned int frames : FBIT;           /* length in frames       */
 } dbentry_t;
 
-#define HAVE_TIMEDB_INC_H 1
+#ifndef HAVE_TIMEDB_INC_H
+# define HAVE_TIMEDB_INC_H 1
+#endif
 
-#ifdef HAVE_TIMEDB_INC_H
+#if HAVE_TIMEDB_INC_H
 
 #define STE TDB_STE
 #define YM  ( TDB_TA + TDB_TB + TDB_TC + TDB_TD )

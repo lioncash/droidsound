@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2001-2011 Benjamin Gerard
  *
- * Time-stamp: <2013-08-16 07:29:37 ben>
+ * Time-stamp: <2013-08-25 16:42:22 ben>
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -36,116 +36,145 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <assert.h>
 
 static option68_t * opts;
+static char empty[] = "";
 
 #define FOREACH_OPT(opt) for (opt=opts; opt; opt = opt->next)
 
-static inline int opt_isset(const option68_t * opt)
+static int in_range(const option68_t * const opt, const int val)
 {
-  return opt->has_arg < 0;
+  return opt->min == opt->max || (val >= opt->min && val <= opt->max);
+}
+
+static inline int opt_isset(const option68_t * const opt)
+{
+  return opt->org != opt68_UDF;
+}
+
+static inline int opt_type(const option68_t * const opt)
+{
+  return opt->type;
+}
+
+static inline int opt_org(const option68_t * const opt)
+{
+  return opt->org;
+}
+
+static int opt_policy(const option68_t * const opt, int set, int org)
+{
+  switch (set) {
+  case opt68_PRIO:   set = org >= opt->org; break;
+  case opt68_NOTSET: set = !opt_isset(opt); break;
+  case opt68_ISSET:  set =  opt_isset(opt); break;
+  }
+  return set;
 }
 
 static inline void opt_free_str(option68_t * opt)
 {
-  if (opt->has_arg == ~option68_STR) {
-    free((void *) opt->val.str);
-    opt->val.str = 0;
-    opt->has_arg = option68_STR;
+  if (opt->type == opt68_STR) {
+    if (opt->val.str != empty) {
+      free((void *) opt->val.str);
+      opt->val.str = empty;
+    }
   }
-}
-
-static inline int opt_type(const option68_t * opt)
-{
-  return opt->has_arg >= 0
-    ?  opt->has_arg
-    : ~opt->has_arg
-    ;
 }
 
 static inline void opt_unset(option68_t * opt)
 {
   opt_free_str(opt);
-  if (opt->has_arg < 0)
-    opt->has_arg = ~opt->has_arg;
-  opt->val.num = 0;
-  opt->val.str = 0;
+  opt->org = opt68_UDF;
 }
 
-static inline int opt_set_bool(option68_t * opt, int val)
+static inline void opt_set_int(option68_t * opt, int org, int val)
 {
   value68_t value;
-  value.num = -!!val;
-  if (!opt->onchange || !opt->onchange(opt, &value)) {
-    opt_free_str(opt);
-    opt->has_arg = ~option68_BOL;
-    opt->val.num = value.num;
-  }
-  return value.num;
-}
 
-static inline int opt_set_int(option68_t * opt, int val)
-{
-  value68_t value;
+  assert(opt->type == opt68_INT ||
+         opt->type == opt68_BOL ||
+         opt->type == opt68_ENU);
+
   value.num = val;
   if (!opt->onchange || !opt->onchange(opt, &value)) {
-    opt_free_str(opt);
-    opt->has_arg = ~option68_INT;
+    opt->org = org;
     opt->val.num = value.num;
   }
-  return value.num;
+  /* return value.num; */
 }
 
-static inline void opt_set_str(option68_t * opt, const char * val)
+static inline void opt_set_str(option68_t * opt, int org, const char * val)
 {
   value68_t value;
+
+  assert(opt->type == opt68_STR);
   value.str = val;
   if (!opt->onchange || !opt->onchange(opt, &value)) {
-    opt_free_str(opt);
-    opt->val.str = strdup68(value.str);
-    if (opt->val.str)
-      opt->has_arg = ~option68_STR;
+    char * s;
+    s = strdup68(value.str);
+    if (s) {
+      opt_free_str(opt);
+      opt->val.str = s;
+      opt->org = org;
+    }
   }
 }
 
-static int opt_set_strtol(option68_t * opt, const char * val)
+static int in_enum(const char * str, const char * enums[], const int n)
+{
+  int i;
+  for (i=0; i<n; ++i)
+    if (!strcmp68(str,enums[i]))
+      return i;
+  return -1;
+}
+
+const char * f_true[] = { "true", "yes", "on", "1" };
+const char * f_false[] = { "false", "no", "off", "0" };
+
+static void opt_set_strtol(option68_t * opt, int org, const char * val)
 {
   int res = 0, ok = 0;
   int type = opt_type(opt);
 
-  if (!val || !*val) {
-    if (type == option68_BOL) {
-      ok  = 1;
-      res = 1;
-    }
-  /* } else if (!strcmp68(val,"yes")  || */
-  /*            !strcmp68(val,"true") || */
-  /*            !strcmp68(val,"on")) { */
-  /*   ok  = 1; */
-  /*   res = -1; */
-  /* } else if (!strcmp68(val,"no")    || */
-  /*            !strcmp68(val,"false") || */
-  /*            !strcmp68(val,"off")) { */
-  /*   ok  = 1; */
-  /*   res = 0; */
-  } else {
-    ok = val[*val=='-'];
+  switch (type) {
+  case opt68_BOL:
+    ok = 1;
+    if (!val || !*val)
+      res = -1;
+    else if (in_enum(val,f_true,sizeof(f_true)/sizeof(*f_true)) >= 0)
+      res = -1;
+    else if (in_enum(val,f_false,sizeof(f_false)/sizeof(*f_false)) >= 0)
+      res = 0;
+    else
+      ok = 0;
+    break;
+
+  case opt68_ENU:
+    res = in_enum(val, (const char **)opt->set, opt->sets);
+    ok  = res >= 0;
+    if (ok)
+      break;
+
+  case opt68_INT:
+    ok = val[*val=='-' || *val=='+'];
     if (ok >= '0' && ok <= '9') {
       res = strtol(val,0,0);
-    } else {
-      ok = !option68_get_symb(val, &res);
+      ok = in_range(opt,res);
     }
+    break;
+
+  default:
+    assert(!"invalid option type");
   }
 
-  if (!ok) {
-    res = opt->val.num;
-  }
-  if (type == option68_BOL) {
-    res = opt_set_bool(opt, res);
-  } else {
-    res = opt_set_int(opt, res);
-  }
-  return res;
+  /* if (!ok) { */
+  /*   res = opt->val.num; */
+  /* } else { */
+  if (ok)
+    opt_set_int(opt, org, res);
 }
 
 static option68_t * opt_of(const char * key)
@@ -157,7 +186,7 @@ static option68_t * opt_of(const char * key)
 
 int option68_type(const option68_t * opt)
 {
-  return opt ? opt_type(opt) : option68_ERR;
+  return opt ? opt_type(opt) : -1;
 }
 
 int option68_unset(option68_t * opt)
@@ -176,55 +205,60 @@ void option68_unset_all(void)
   FOREACH_OPT(opt) opt_unset(opt);
 }
 
-int option68_set(option68_t * opt, const char * str)
+int option68_set(option68_t * opt, const char * str, int set, int org)
 {
   int err = -1;
   if (opt) {
-    err = 0;
-    switch (opt_type(opt)) {
-    case option68_STR:
-      opt_set_str(opt,str); break;
-    case option68_BOL:
-    case option68_INT:
-      opt_set_strtol(opt,str); break;
-    default:
-      err = -1;
+    if (opt_policy(opt, set, org)) {
+      err = 0;
+      switch (opt_type(opt)) {
+      case opt68_STR:
+        opt_set_str(opt,org,str); break;
+      case opt68_BOL: case opt68_INT: case opt68_ENU:
+        opt_set_strtol(opt,org,str); break;
+      default:
+        err = -1;
+      }
     }
   }
   return err;
 }
 
-int option68_iset(option68_t * opt, int val)
+int option68_iset(option68_t * opt, int val, int set, int org)
 {
   int err = -1;
   if (opt) {
-    err = 0;
-    switch (opt_type(opt)) {
-    case option68_BOL:
-      opt_set_bool(opt,val); break;
-    case option68_INT:
-      opt_set_int(opt,val); break;
-    case option68_STR: {
-      char tmp[128];
-      snprintf(tmp,sizeof(tmp),"%d",val);
-      tmp[sizeof(tmp)-1] = 0;
-      opt_set_str(opt,tmp);
-    } break;
-    default:
-      err = -1;
+    if (opt_policy(opt, set, org)) {
+      err = 0;
+      switch (opt_type(opt)) {
+      case opt68_BOL:
+        val = -!!val;
+      case opt68_ENU: case opt68_INT:
+        if (!in_range(opt,val))
+          err = -1;
+        else
+          /* err =  */opt_set_int(opt,org,val);
+        break;
+
+      case opt68_STR: {
+        char tmp[128];
+        snprintf(tmp,sizeof(tmp),"%d",val);
+        tmp[sizeof(tmp)-1] = 0;
+        /* err =  */opt_set_str(opt,org,tmp);
+        msg68_warning("option68: %s\n", "setting string option with integer");
+      } break;
+      default:
+        err = -1;
+      }
     }
   }
   return err;
 }
 
-int option68_parse(int argc, char ** argv, int reset)
+int option68_parse(int argc, char ** argv)
 {
   int i,n;
   option68_t * opt;
-
-  /* Reset options */
-  if (reset)
-    option68_unset_all();
 
   /* Parse arguments */
   for (i=n=1; i<argc; ++i) {
@@ -271,8 +305,9 @@ int option68_parse(int argc, char ** argv, int reset)
       }
 
       if (0 == *arg) {
-        if (opttype == option68_BOL) {
-          opt_set_bool(opt,!negate); /* No arg required, set the option */
+        if (opttype == opt68_BOL) {
+          opt_set_int(opt,opt68_CLI,-!negate);
+          /* No arg required, set the option */
           break;
         }
         if (i+1 >= argc) {
@@ -283,12 +318,12 @@ int option68_parse(int argc, char ** argv, int reset)
         ++arg;
       }
 
-      if (opttype == option68_STR) {
+      if (opttype == opt68_STR) {
         /* string option; ``negate'' does not have much meaning. */
-        opt_set_str(opt, arg);
+        opt_set_str(opt, opt68_CLI, arg);
       } else {
-        opt_set_strtol(opt, arg);
-        if (negate) opt_set_int(opt, ~opt->val.num);
+        opt_set_strtol(opt, opt68_CLI, arg);
+        if (negate) opt_set_int(opt, opt68_CLI, ~opt->val.num);
       }
       break;
     }
@@ -307,17 +342,12 @@ int option68_parse(int argc, char ** argv, int reset)
   }
   argc = n;
 
-  /* Get enviromment variables */
-  FOREACH_OPT(opt) {
-    if ( ! option68_isset(opt) )
-      option68_getenv(opt, 1);
-  }
-
   return argc;
 }
 
 int option68_init(void)
 {
+  assert(!opts);
   opts = 0;
   return 0;
 }
@@ -337,36 +367,51 @@ void option68_shutdown(void)
 int option68_append(option68_t * options, int n)
 {
   int i;
+
+  if (! (options && n > 0) )
+      *(int*)0 = 0;
+  assert(options && n > 0);
+
   for (i=0; i<n; ++i) {
-    if (!options[i].name || !*options[i].name) {
-      msg68_warning("option68: invalid options name\n");
-      continue;
+    option68_t * const opt = options+i;
+
+    assert(opt->name && *opt->name); /* valid name     */
+    assert(!opt->next);              /* not attached   */
+    assert(opt->org == opt68_UDF);   /* is not defined */
+    /* Either there is a set with at least 1 element or not */
+    assert( (opt->set && opt->sets > 0) || (!opt->set && !opt->sets) );
+    /* Either no limit (min=max=0) or valid limit (min < max) */
+    assert( (opt->min == opt->max && !opt->min) || opt->min < opt->max );
+
+    switch (opt->type) {
+    case opt68_STR:
+      opt->val.str = empty; break;
+    case opt68_BOL:
+      assert(opt->min == -1 && !opt->max); break;
+    case opt68_ENU:
+      assert(opt->set && !opt->min && opt->max == opt->sets-1); break;
+    case opt68_INT:
+      break;
+    default:
+      assert(!"invalid option type"); break;
     }
-    if (options[i].next) {
-      msg68_warning("option68: --%s%s already in used\n",
-                    options[i].prefix ? options[i].prefix : "",
-                    options[i].name);
-      continue;
-    }
-    if (opt_isset(&options[i])) {
-      msg68_warning("option68: --%s%s is already set\n",
-                    options[i].prefix ? options[i].prefix : "",
-                    options[i].name);
-    }
-    options[i].prefix_len = options[i].prefix ? strlen(options[i].prefix) : 0;
-    options[i].name_len   = strlen(options[i].name);
-    options[i].next       = opts;
-    opts = options+i;
+
+    opt->prefix_len = opt->prefix ? strlen(opt->prefix) : 0;
+    opt->name_len   = strlen(opt->name);
+    opt->next       = opts;
+    opts = opt;
+
+    option68_getenv(opt, opt68_ALWAYS);
   }
   return 0;
 }
 
-option68_t * option68_get(const char * key, int onlyset)
+option68_t * option68_get(const char * key, int set)
 {
   option68_t * opt = 0;
-  if (key && (opt = opt_of(key)) && onlyset && !opt_isset(opt)) {
+
+  if (key && (opt = opt_of(key)) && !opt_policy(opt,set,opt->org))
     opt = 0;
-  }
   return opt;
 }
 
@@ -378,52 +423,50 @@ int option68_isset(const option68_t * option)
     ;
 }
 
-
 /* Convert option name to envvar name */
 static
-char * opt2env(char * tmp, const int max, const char * name)
+char * opt2env(char * tmp, const int max,
+               const char * prefix, const char * name)
 {
-  int i,c;
-  for (i=0; i<max && (c=*name++); ) {
+  int i = 0,c;
+  if (!prefix) prefix = "sc68-";
+  for (; i<max && (c=*prefix++); )
     tmp[i++] = (c=='-')
       ? '_'
       : (c>'9') ? c+'A'-'a' : c
       ;
-  }
+  for (; i<max && (c=*name++); )
+    tmp[i++] = (c=='-')
+      ? '_'
+      : (c>'9') ? c+'A'-'a' : c
+      ;
   tmp[i] = 0;
   return tmp;
 }
 
 /* Get environment variable */
 static
-char * mygetenv(const char *name, const char * prefix, int prefix_len)
+char * mygetenv(const option68_t * opt)
 {
 #ifndef HAVE_GETENV
   return 0;
 #else
-  char tmp[256];
-  int  i = 0;
-  if (prefix) {
-    opt2env(tmp,sizeof(tmp)-1,prefix);
-    i = prefix_len;
-  }
-  opt2env(tmp+i,sizeof(tmp)-1-i,name);
+  char tmp[64];
+  opt2env(tmp,sizeof(tmp)-1,opt->prefix,opt->name);
   return getenv(tmp);
 #endif
 }
 
 const char * option68_getenv(option68_t * opt, int set)
 {
-  const char * val = opt
-    ? mygetenv(opt->name, opt->prefix, opt->prefix_len)
-    : 0
-    ;
+  const char * val = opt ? mygetenv(opt) : 0;
 
-  if (val && set) {
+  if (val && opt_policy(opt,set,opt68_ENV)) {
     switch (opt_type(opt)) {
-    case option68_STR: opt_set_str(opt,val); break;
-    case option68_BOL: /* if (!val) val = "yes"; */
-    case option68_INT: opt_set_strtol(opt,val); break;
+    case opt68_STR: opt_set_str(opt,opt68_ENV,val); break;
+    case opt68_BOL:
+    case opt68_ENU:
+    case opt68_INT: opt_set_strtol(opt,opt68_ENV,val); break;
     }
   }
 
@@ -432,20 +475,76 @@ const char * option68_getenv(option68_t * opt, int set)
 
 void option68_help(void * cookie, option68_help_t fct)
 {
-  if (fct) {
-    char option[64] = "--sc68-", envvar[64];
-    option68_t * opt;
+  option68_t * opt;
+  char option[64], envvar[64], values[256];
+  const int omax = sizeof(option)-1;
+  const int emax = sizeof(envvar)-1;
+  const int vmax = sizeof(values)-1;
+  option[omax] = envvar[emax] = values[vmax] = 0;
 
-    FOREACH_OPT(opt) {
-      strncpy(option+7,opt->name,sizeof(option)-8);
-      opt2env(envvar, sizeof(envvar)-1,option+2);
-      switch (opt_type(opt)) {
-      case option68_BOL: break;
-      case option68_STR: strcat68(option,"=<str>",sizeof(option)); break;
-      case option68_INT: strcat68(option,"=<int>",sizeof(option)); break;
+  assert(fct);
+
+  FOREACH_OPT(opt) {
+    int l, j;
+
+    /* Build envvar name */
+    /* snprintf(option, omax,"%s%s", */
+    /*          opt->prefix ? opt->prefix : "", opt->name); */
+    opt2env(envvar, emax, opt->prefix, opt->name);
+
+    /* Build option name */
+    l = snprintf(option,omax,"--%s%s%s",
+                 opt_type(opt) == opt68_BOL ? "(no-)" : "",
+                 opt->prefix ? opt->prefix : "",
+                 opt->name);
+
+    /* Build option values */
+    switch (opt_type(opt)) {
+    case opt68_BOL:
+      *values = 0;
+      break;
+    case opt68_INT:
+      if (!opt->sets) {
+        if (opt->min < opt->max)
+          snprintf(values,vmax,"[%d..%d]",opt->min,opt->max);
+        else
+          strncpy(values,"<int>",vmax);
+      } else {
+        values[0] = '['; values[1] = 0; l = 1;
+        for (j=0; j<opt->sets; ++j) {
+          const int * set = (const int*)opt->set;
+          const char * me
+            = opt_isset(opt) && opt->val.num == set[j] ? "*" : "";
+          l += snprintf(values+l, vmax-l,"%d%s%c",
+                        set[j], me, j+1 == opt->sets ? ']' : '|');
+        }
       }
-      fct (cookie, option, envvar, opt->desc);
+      break;
+    case opt68_STR:
+      if (!opt->sets) {
+        strncpy(values,"<str>",vmax);
+        break;
+      }
+    case opt68_ENU:
+      values[0] = '['; values[1] = 0; l = 1;
+      for (j=0; j<opt->sets; ++j) {
+        const char ** set = (const char **)opt->set;
+        const char * me = opt_isset(opt) &&
+          !strcmp68(set[j],(opt->type==opt68_STR)
+                    ? opt->val.str
+                    : set[opt->val.num])
+          ? "*" : "";
+        l += snprintf(values+l, vmax, "%s%s%c",
+                      set[j], me, j+1 == opt->sets ? ']' : '|');
+      }
+      break;
+
+    default:
+      assert(!"invalid option type");
+      break;
     }
+
+    fct (cookie, option, envvar, values, opt->desc);
   }
 }
 
@@ -457,47 +556,5 @@ option68_t * option68_enum(int idx)
     if (!idx--)
       return opt;
   }
-  return 0;
-}
-
-static struct {
-  const char * key;
-  int val;
-} symb[16] = {
-  { "yes" , -1 },
-  { "true", -1 },
-  { "on",   -1 },
-  { "no",    0 },
-  { "false", 0 },
-  { "off",   0 }
-};
-
-static int n_symb = 6;
-
-int option68_get_symb(const char * key, int * val)
-{
-  int i;
-  for (i = 0; i<n_symb; ++i)
-    if (!strcmp68(key, symb[i].key)) {
-      *val = symb[i].val;
-      return 0;
-    }
-  return -1;
-}
-
-int option68_add_symb(const char * key, int val)
-{
-  int v;
-
-  if (!option68_get_symb(key,&v))
-    return -(v != val);
-  if (n_symb == sizeof(symb)/sizeof(*symb)) {
-    msg68_critical("option68: %s\n", "symbol table is full");
-    return -1;
-  }
-  symb[n_symb].key = key;
-  symb[n_symb].val = val;
-
-  n_symb++;
   return 0;
 }
