@@ -14,7 +14,7 @@ int total_samples = 0;
 
 int ignore_loop;
 int force_loop;
-int loop_count = 0;
+int loop_count = 1;
 
 int channels;
 int samplerate = 44100;
